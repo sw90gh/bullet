@@ -13,6 +13,16 @@ export function getWeekNumber(d: Date): number {
   return 1 + Math.round(((dt.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
 }
 
+export function getMonthWeekNumber(d: Date): number {
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const firstMonday = new Date(first);
+  const day = first.getDay();
+  // 해당 월 첫 번째 월요일 구하기
+  firstMonday.setDate(first.getDate() + ((8 - day) % 7));
+  if (d < firstMonday) return 1;
+  return Math.floor((d.getDate() - firstMonday.getDate()) / 7) + (day === 1 ? 1 : 2);
+}
+
 export function getWeekDates(y: number, m: number, d: number): Date[] {
   const dt = new Date(y, m, d);
   const day = dt.getDay();

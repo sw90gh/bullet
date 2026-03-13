@@ -1,7 +1,7 @@
 import React from 'react';
 import { styles } from '../styles/theme';
 import { DAYS_KR, MONTHS_KR } from '../utils/constants';
-import { getWeekNumber } from '../utils/date';
+import { getWeekNumber, getMonthWeekNumber } from '../utils/date';
 import { ViewType } from '../types';
 
 interface HeaderProps {
@@ -22,7 +22,7 @@ export function Header({ curDate, view, nav, goToday, onSettings, notionConnecte
 
   let label = '';
   if (view === 'daily') label = `${m + 1}월 ${d}일 ${dow}요일`;
-  else if (view === 'weekly') label = `${m + 1}월 ${getWeekNumber(curDate)}주차`;
+  else if (view === 'weekly') label = `${m + 1}월 ${getMonthWeekNumber(curDate)}주차 (${getWeekNumber(curDate)}주차)`;
   else if (view === 'monthly') label = `${y}년 ${m + 1}월`;
   else if (view === 'gantt') label = `${y}년 ${m + 1}월 간트`;
   else label = `${y}년`;
