@@ -59,6 +59,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
     display: 'block',
     boxSizing: 'border-box',
     width: '100%',
+    height: 36,
   };
 
   return (
@@ -141,26 +142,26 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
               {/* 날짜: 시작일 + 종료일 한 줄 */}
               <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>시작일</label>
+                  <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>시작일</label>
                   <input type="date" style={inputSmall} value={date}
                     onChange={e => setDate(e.target.value)} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>종료일</label>
+                  <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>종료일</label>
                   <input type="date" style={inputSmall} value={endDate}
                     onChange={e => setEndDate(e.target.value)} />
                 </div>
               </div>
 
               {/* 시간 + 태그 한 줄 */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <div style={{ flex: 0.5, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>시간</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>시간</label>
                   <input type="time" style={inputSmall} value={time}
                     onChange={e => setTime(e.target.value)} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>태그</label>
+                  <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>태그</label>
                   <input style={inputSmall} value={tags}
                     placeholder="업무, 개인 (쉼표로 구분)"
                     onChange={e => setTags(e.target.value)} />
