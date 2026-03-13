@@ -123,6 +123,22 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           }}>{entry.text}</span>
           {entry.time && <span style={styles.timeTag}>{entry.time}</span>}
           {entry.notionPageId && <span style={styles.notionBadge}>N</span>}
+          {entry.tags && entry.tags.length > 0 && (
+            <div style={{ marginTop: 2 }}>
+              {entry.tags.map((tag, i) => (
+                <span key={i} style={{
+                  fontSize: 10, color: '#3a7ca5', background: '#3a7ca510',
+                  padding: '1px 5px', borderRadius: 3, marginRight: 3,
+                }}>#{tag}</span>
+              ))}
+            </div>
+          )}
+          {entry.memo && (
+            <div style={{ fontSize: 11, color: '#b8a99a', marginTop: 2, lineHeight: 1.4,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {entry.memo}
+            </div>
+          )}
         </div>
         <span style={{ ...styles.statusBadge, background: st.color + '18', color: st.color }}>
           {st.label}

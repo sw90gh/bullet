@@ -24,6 +24,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
   const [time, setTime] = useState<string>((modal.entry as Entry)?.time || '');
   const [done, setDone] = useState((modal.goal as Goal)?.done || false);
   const [month, setMonth] = useState<number | null | undefined>((modal.goal as Goal)?.month ?? modal.month ?? null);
+  const [tags, setTags] = useState<string>((modal.entry as Entry)?.tags?.join(', ') || '');
+  const [memo, setMemo] = useState<string>((modal.entry as Entry)?.memo || '');
 
   const handleSave = () => {
     if (!text.trim()) return;
@@ -35,6 +37,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
         done,
       });
     } else {
+      const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
       onSaveEntry({
         text: text.trim(),
         type: type as Entry['type'],
@@ -43,8 +46,19 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
         date,
         endDate: endDate || undefined,
         time: time || undefined,
+        tags: parsedTags.length > 0 ? parsedTags : undefined,
+        memo: memo.trim() || undefined,
       });
     }
+  };
+
+  const inputSmall: React.CSSProperties = {
+    ...styles.input,
+    padding: '7px 8px',
+    fontSize: 13,
+    display: 'block',
+    boxSizing: 'border-box',
+    width: '100%',
   };
 
   return (
@@ -124,23 +138,49 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
                 ))}
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 4, overflow: 'hidden' }}>
+              {/* 날짜: 시작일 + 종료일 한 줄 */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 4 }}>시작일</label>
-                  <input type="date" style={{ ...styles.input, padding: '8px 10px', fontSize: 13, display: 'block' }} value={date}
+                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>시작일</label>
+                  <input type="date" style={inputSmall} value={date}
                     onChange={e => setDate(e.target.value)} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 4 }}>종료일</label>
-                  <input type="date" style={{ ...styles.input, padding: '8px 10px', fontSize: 13, display: 'block' }} value={endDate}
+                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>종료일</label>
+                  <input type="date" style={inputSmall} value={endDate}
                     onChange={e => setEndDate(e.target.value)} />
                 </div>
-                <div style={{ flex: 0.7, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 4 }}>시간</label>
-                  <input type="time" style={{ ...styles.input, padding: '8px 10px', fontSize: 13, display: 'block' }} value={time}
+              </div>
+
+              {/* 시간 + 태그 한 줄 */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <div style={{ flex: 0.5, minWidth: 0 }}>
+                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>시간</label>
+                  <input type="time" style={inputSmall} value={time}
                     onChange={e => setTime(e.target.value)} />
                 </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={{ ...styles.fieldLabel, marginTop: 6, marginBottom: 3, fontSize: 11 }}>태그</label>
+                  <input style={inputSmall} value={tags}
+                    placeholder="업무, 개인 (쉼표로 구분)"
+                    onChange={e => setTags(e.target.value)} />
+                </div>
               </div>
+
+              {/* 메모 */}
+              <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 3, fontSize: 11 }}>메모</label>
+              <textarea
+                style={{
+                  ...inputSmall,
+                  minHeight: 50,
+                  maxHeight: 120,
+                  resize: 'vertical',
+                  lineHeight: 1.5,
+                } as React.CSSProperties}
+                placeholder="세부 내용이나 참고사항을 적어주세요"
+                value={memo}
+                onChange={e => setMemo(e.target.value)}
+              />
             </>
           )}
         </div>

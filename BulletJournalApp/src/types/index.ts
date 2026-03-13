@@ -14,6 +14,7 @@ export interface Entry {
   time?: string;
   createdAt: number;
   tags?: string[];
+  memo?: string;
   notionPageId?: string;
   notionLastSync?: number;
   recurring?: RecurringConfig;
