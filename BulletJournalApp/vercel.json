@@ -1,0 +1,9 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/notion", "destination": "/api/notion" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

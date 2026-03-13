@@ -1,7 +1,8 @@
 import { Entry, NotionConfig } from '../types';
 import { uid } from './date';
 
-const NOTION_API = 'https://api.notion.com/v1';
+// Vercel 서버리스 프록시를 경유하여 CORS 문제 해결
+const PROXY_API = '/api/notion';
 
 interface NotionPage {
   id: string;
@@ -9,37 +10,41 @@ interface NotionPage {
   last_edited_time: string;
 }
 
-export async function queryNotionDatabase(config: NotionConfig): Promise<Entry[]> {
-  const res = await fetch(`${NOTION_API}/databases/${config.databaseId}/query`, {
-    method: 'POST',
+async function notionFetch(path: string, token: string, method: string, body?: unknown): Promise<Response> {
+  const url = `${PROXY_API}?path=${encodeURIComponent(path)}`;
+  const options: RequestInit = {
+    method,
     headers: {
-      'Authorization': `Bearer ${config.accessToken}`,
-      'Notion-Version': '2022-06-28',
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      sorts: [{ property: 'Date', direction: 'ascending' }],
-    }),
-  });
+  };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+  return fetch(url, options);
+}
+
+export async function queryNotionDatabase(config: NotionConfig): Promise<Entry[]> {
+  const res = await notionFetch(
+    `databases/${config.databaseId}/query`,
+    config.accessToken,
+    'POST',
+    { sorts: [{ property: 'Date', direction: 'ascending' }] },
+  );
 
   if (!res.ok) throw new Error(`Notion API error: ${res.status}`);
   const data = await res.json();
-  return data.results.map(mapNotionToEntry);
+  return (data.results || []).map(mapNotionToEntry);
 }
 
 export async function createNotionPage(config: NotionConfig, entry: Entry): Promise<string> {
-  const res = await fetch(`${NOTION_API}/pages`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config.accessToken}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      parent: { database_id: config.databaseId },
-      properties: mapEntryToNotion(entry),
-    }),
-  });
+  const res = await notionFetch(
+    'pages',
+    config.accessToken,
+    'POST',
+    { parent: { database_id: config.databaseId }, properties: mapEntryToNotion(entry) },
+  );
 
   if (!res.ok) throw new Error(`Notion create error: ${res.status}`);
   const data = await res.json();
@@ -47,17 +52,12 @@ export async function createNotionPage(config: NotionConfig, entry: Entry): Prom
 }
 
 export async function updateNotionPage(config: NotionConfig, pageId: string, entry: Partial<Entry>): Promise<void> {
-  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${config.accessToken}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      properties: mapEntryToNotion(entry as Entry),
-    }),
-  });
+  const res = await notionFetch(
+    `pages/${pageId}`,
+    config.accessToken,
+    'PATCH',
+    { properties: mapEntryToNotion(entry as Entry) },
+  );
 
   if (!res.ok) throw new Error(`Notion update error: ${res.status}`);
 }
