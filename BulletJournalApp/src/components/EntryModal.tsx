@@ -9,9 +9,10 @@ interface EntryModalProps {
   onClose: () => void;
   onSaveEntry: (data: Partial<Entry>) => void;
   onSaveGoal: (data: Omit<Goal, 'id'>) => void;
+  allTags?: string[];
 }
 
-export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryModalProps) {
+export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = [] }: EntryModalProps) {
   const isGoal = modal.scope === 'goal' || modal.mode === 'edit-goal' || modal.mode === 'add-goal';
   const existing = modal.entry || modal.goal;
 
@@ -52,6 +53,24 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
     }
   };
 
+  // 현재 입력 중인 마지막 태그로 기존 태그 필터링
+  const currentInput = tags.split(',').pop()?.trim().toLowerCase() || '';
+  const currentTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+  const suggestedTags = allTags.filter(t =>
+    !currentTags.includes(t) && (currentInput === '' || t.toLowerCase().includes(currentInput))
+  );
+
+  const addTag = (tag: string) => {
+    const parts = tags.split(',').map(t => t.trim()).filter(Boolean);
+    // 마지막 입력 중인 부분을 선택한 태그로 교체
+    const before = parts.slice(0, -1);
+    if (currentInput && parts[parts.length - 1]?.toLowerCase().includes(currentInput)) {
+      setTags([...before, tag].join(', ') + ', ');
+    } else {
+      setTags([...parts, tag].join(', ') + ', ');
+    }
+  };
+
   const inputSmall: React.CSSProperties = {
     ...styles.input,
     padding: '0 8px',
@@ -64,10 +83,13 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
     margin: 0,
   };
 
+  const labelStyle: React.CSSProperties = { ...styles.fieldLabel, marginTop: 8, marginBottom: 2, fontSize: 11 };
+  const labelSmall: React.CSSProperties = { ...styles.fieldLabel, marginTop: 0, marginBottom: 2, fontSize: 11 };
+
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={e => e.stopPropagation()}>
-        <div style={styles.modalHeader as React.CSSProperties}>
+        <div style={{ ...styles.modalHeader as React.CSSProperties, padding: '14px 0 8px' }}>
           <h3 style={styles.modalTitle}>
             {isGoal
               ? (modal.mode === 'edit-goal' ? '목표 수정' : '목표 추가')
@@ -76,9 +98,9 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
           <button style={styles.modalClose} onClick={onClose}>✕</button>
         </div>
 
-        <div style={styles.modalBody}>
+        <div style={{ ...styles.modalBody, padding: '8px 0' }}>
           <input
-            style={styles.input}
+            style={{ ...styles.input, padding: '8px 14px', fontSize: 14 }}
             placeholder={isGoal ? '목표를 입력하세요' : '내용을 입력하세요'}
             value={text}
             onChange={e => setText(e.target.value)}
@@ -87,7 +109,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
 
           {isGoal ? (
             <>
-              <label style={styles.fieldLabel}>범위</label>
+              <label style={labelStyle}>범위</label>
               <div style={styles.chipRow as React.CSSProperties}>
                 <button
                   style={{ ...styles.chip, ...(month == null ? styles.chipActive : {}) }}
@@ -98,7 +120,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
                     onClick={() => setMonth(i)}>{ml}</button>
                 ))}
               </div>
-              <label style={styles.fieldLabel}>상태</label>
+              <label style={labelStyle}>상태</label>
               <div style={styles.chipRow as React.CSSProperties}>
                 <button style={{ ...styles.chip, ...(!done ? styles.chipActive : {}) }}
                   onClick={() => setDone(false)}>진행 중</button>
@@ -108,7 +130,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
             </>
           ) : (
             <>
-              <label style={styles.fieldLabel}>유형</label>
+              <label style={labelStyle}>유형</label>
               <div style={styles.chipRow as React.CSSProperties}>
                 {Object.entries(TYPES).map(([k, v]) => (
                   <button key={k}
@@ -119,7 +141,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
                 ))}
               </div>
 
-              <label style={styles.fieldLabel}>상태</label>
+              <label style={labelStyle}>상태</label>
               <div style={styles.chipRow as React.CSSProperties}>
                 {Object.entries(STATUS).map(([k, v]) => (
                   <button key={k}
@@ -130,7 +152,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
                 ))}
               </div>
 
-              <label style={styles.fieldLabel}>우선순위</label>
+              <label style={labelStyle}>우선순위</label>
               <div style={styles.chipRow as React.CSSProperties}>
                 {Object.entries(PRIORITY).map(([k, v]) => (
                   <button key={k}
@@ -142,53 +164,71 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
               </div>
 
               {/* 시작일 + 종료일 한 줄 */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>시작일</label>
+                  <label style={labelSmall}>시작일</label>
                   <input type="date" style={inputSmall} value={date}
                     onChange={e => setDate(e.target.value)} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>종료일</label>
+                  <label style={labelSmall}>종료일</label>
                   <input type="date" style={inputSmall} value={endDate}
                     onChange={e => setEndDate(e.target.value)} />
                 </div>
               </div>
 
               {/* 시간 */}
-              <div style={{ marginTop: 6 }}>
-                <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>시간</label>
+              <div style={{ marginTop: 4 }}>
+                <label style={labelSmall}>시간</label>
                 <input type="time" style={inputSmall} value={time}
                   onChange={e => setTime(e.target.value)} />
               </div>
 
               {/* 태그 */}
-              <div style={{ marginTop: 6 }}>
-                <label style={{ ...styles.fieldLabel, marginTop: 0, marginBottom: 3, fontSize: 11 }}>태그</label>
+              <div style={{ marginTop: 4 }}>
+                <label style={labelSmall}>태그</label>
                 <input style={inputSmall} value={tags}
                   placeholder="업무, 개인 (쉼표로 구분)"
                   onChange={e => setTags(e.target.value)} />
+                {suggestedTags.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                    {suggestedTags.slice(0, 8).map(tag => (
+                      <button key={tag}
+                        style={{
+                          padding: '2px 8px', borderRadius: 10, fontSize: 10,
+                          border: '1px solid #3a7ca530', background: '#3a7ca508',
+                          color: '#3a7ca5', cursor: 'pointer',
+                          fontFamily: '-apple-system, sans-serif',
+                        }}
+                        onClick={() => addTag(tag)}>#{tag}</button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 메모 */}
-              <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 3, fontSize: 11 }}>메모</label>
-              <textarea
-                style={{
-                  ...inputSmall,
-                  minHeight: 50,
-                  maxHeight: 120,
-                  resize: 'vertical',
-                  lineHeight: 1.5,
-                } as React.CSSProperties}
-                placeholder="세부 내용이나 참고사항을 적어주세요"
-                value={memo}
-                onChange={e => setMemo(e.target.value)}
-              />
+              <div style={{ marginTop: 4 }}>
+                <label style={labelSmall}>메모</label>
+                <textarea
+                  style={{
+                    ...inputSmall,
+                    minHeight: 40,
+                    maxHeight: 80,
+                    resize: 'vertical',
+                    lineHeight: 1.4,
+                    height: 'auto',
+                    padding: '6px 8px',
+                  } as React.CSSProperties}
+                  placeholder="세부 내용이나 참고사항"
+                  value={memo}
+                  onChange={e => setMemo(e.target.value)}
+                />
+              </div>
             </>
           )}
         </div>
 
-        <button style={styles.saveBtn} onClick={handleSave}>
+        <button style={{ ...styles.saveBtn, padding: 12 }} onClick={handleSave}>
           {modal.mode === 'edit' || modal.mode === 'edit-goal' ? '수정 완료' : '추가'}
         </button>
       </div>

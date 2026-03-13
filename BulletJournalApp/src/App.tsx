@@ -213,6 +213,7 @@ export default function App() {
         <EntryModal
           modal={modal}
           onClose={() => setModal(null)}
+          allTags={allTags}
           onSaveEntry={(data) => {
             if (modal.mode === 'edit' && modal.entry) {
               updateEntry(modal.entry.id, data);
