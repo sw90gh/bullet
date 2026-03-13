@@ -43,6 +43,11 @@ export default function App() {
     });
   }, [view]);
 
+  const toggleGoalDone = useCallback((id: string) => {
+    const goal = goals.find(g => g.id === id);
+    if (goal) updateGoal(id, { done: !goal.done });
+  }, [goals, updateGoal]);
+
   const handleSyncNotion = async () => {
     const notionEntries = await syncFromNotion();
     if (notionEntries.length > 0) {
@@ -128,6 +133,7 @@ export default function App() {
             onDeleteGoal={(id) => setDeleteConfirm('goal-' + id)}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDayTap={(d) => { setCurDate(new Date(curY, curM, d)); setView('daily'); }}
+            onToggleGoalDone={toggleGoalDone}
           />
         )}
 
@@ -139,6 +145,7 @@ export default function App() {
             onAdd={() => setModal({ mode: 'add-goal', scope: 'goal', year: curY })}
             onEdit={(g) => setModal({ mode: 'edit-goal', goal: g })}
             onMonthTap={(m) => { setCurDate(new Date(curY, m, 1)); setView('monthly'); }}
+            onToggleGoalDone={toggleGoalDone}
           />
         )}
 

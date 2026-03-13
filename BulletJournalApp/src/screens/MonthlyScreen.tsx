@@ -16,11 +16,12 @@ interface MonthlyScreenProps {
   onDeleteGoal: (id: string) => void;
   onEdit: (entry: Entry) => void;
   onDayTap: (d: number) => void;
+  onToggleGoalDone: (id: string) => void;
 }
 
 export function MonthlyScreen({
   year, month, entries, goals, cycleStatus,
-  onAddEntry, onEdit, onDayTap, onAddGoal, onEditGoal, onDeleteGoal
+  onAddEntry, onEdit, onDayTap, onAddGoal, onEditGoal, onDeleteGoal, onToggleGoalDone
 }: MonthlyScreenProps) {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
@@ -82,7 +83,9 @@ export function MonthlyScreen({
         <button style={styles.sectionAdd as React.CSSProperties} onClick={onAddGoal}>+</button>
       </div>
       {monthGoals.map(g => (
-        <div key={g.id} style={styles.goalRow as React.CSSProperties} onClick={() => onEditGoal(g)}>
+        <div key={g.id} style={styles.goalRow as React.CSSProperties}
+          onClick={() => onToggleGoalDone(g.id)}
+          onContextMenu={(e) => { e.preventDefault(); onEditGoal(g); }}>
           <span style={{ fontSize: 15, color: g.done ? '#4a8c3f' : '#2c2416', marginRight: 8, fontWeight: 700 }}>
             {g.done ? '×' : '·'}
           </span>
@@ -90,6 +93,9 @@ export function MonthlyScreen({
             fontSize: 14, color: g.done ? '#b8a99a' : '#3d3427', flex: 1,
             textDecoration: g.done ? 'line-through' : 'none',
           }}>{g.text}</span>
+          <span style={{ fontSize: 10, color: g.done ? '#4a8c3f' : '#b8a99a', flexShrink: 0 }}>
+            {g.done ? '완료' : '진행 중'}
+          </span>
         </div>
       ))}
     </div>

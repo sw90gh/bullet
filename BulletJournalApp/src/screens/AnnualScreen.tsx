@@ -11,9 +11,10 @@ interface AnnualScreenProps {
   onAdd: () => void;
   onEdit: (g: Goal) => void;
   onMonthTap: (m: number) => void;
+  onToggleGoalDone: (id: string) => void;
 }
 
-export function AnnualScreen({ year, goals, entries, onAdd, onEdit, onMonthTap }: AnnualScreenProps) {
+export function AnnualScreen({ year, goals, entries, onAdd, onEdit, onMonthTap, onToggleGoalDone }: AnnualScreenProps) {
   const yearGoals = goals.filter(g => g.year === year && (g.month === undefined || g.month === null));
   const today = new Date();
 
@@ -28,7 +29,9 @@ export function AnnualScreen({ year, goals, entries, onAdd, onEdit, onMonthTap }
         <p style={{ fontSize: 13, color: '#b8a99a', textAlign: 'center', padding: 16 }}>연간 목표를 추가해보세요</p>
       ) : (
         yearGoals.map(g => (
-          <div key={g.id} style={styles.goalRow as React.CSSProperties} onClick={() => onEdit(g)}>
+          <div key={g.id} style={styles.goalRow as React.CSSProperties}
+            onClick={() => onToggleGoalDone(g.id)}
+            onContextMenu={(e) => { e.preventDefault(); onEdit(g); }}>
             <span style={{ fontSize: 15, color: g.done ? '#4a8c3f' : '#2c2416', marginRight: 8, fontWeight: 700 }}>
               {g.done ? '×' : '·'}
             </span>
@@ -36,6 +39,9 @@ export function AnnualScreen({ year, goals, entries, onAdd, onEdit, onMonthTap }
               fontSize: 14, color: g.done ? '#b8a99a' : '#3d3427', flex: 1,
               textDecoration: g.done ? 'line-through' : 'none',
             }}>{g.text}</span>
+            <span style={{ fontSize: 10, color: g.done ? '#4a8c3f' : '#b8a99a', flexShrink: 0 }}>
+              {g.done ? '완료' : '진행 중'}
+            </span>
           </div>
         ))
       )}

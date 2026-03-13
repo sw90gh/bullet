@@ -112,11 +112,18 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
     return st ? st.color : '#2c2416';
   };
 
+  const [hideInactive, setHideInactive] = useState(false);
+
   const getBarOpacity = (entry: Entry) => {
-    if (entry.status === 'cancelled') return 0.4;
+    if (entry.status === 'migrated' || entry.status === 'migrated_up') return 0.25;
+    if (entry.status === 'cancelled') return 0.3;
     if (entry.status === 'done') return 0.7;
     return 1;
   };
+
+  const displayEntries = hideInactive
+    ? ganttEntries.filter(e => e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled')
+    : ganttEntries;
 
   return (
     <div>
@@ -139,18 +146,30 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
         ))}
       </div>
 
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+      {/* Legend + Filter */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         {Object.entries(STATUS).map(([k, v]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: v.color,
-              opacity: k === 'cancelled' ? 0.4 : k === 'done' ? 0.7 : 1 }} />
+              opacity: k === 'cancelled' || k === 'migrated' || k === 'migrated_up' ? 0.3 : k === 'done' ? 0.7 : 1 }} />
             <span style={{ color: '#6b5d4d' }}>{v.label}</span>
           </div>
         ))}
+        <button
+          style={{
+            marginLeft: 'auto', fontSize: 10, padding: '3px 8px', borderRadius: 6,
+            border: '1px solid #ddd5c9', cursor: 'pointer',
+            background: hideInactive ? '#2c2416' : 'white',
+            color: hideInactive ? 'white' : '#6b5d4d',
+            fontFamily: '-apple-system, sans-serif',
+          }}
+          onClick={() => setHideInactive(!hideInactive)}
+        >
+          {hideInactive ? '전체 보기' : '이관/취소 숨김'}
+        </button>
       </div>
 
-      {ganttEntries.length === 0 ? (
+      {displayEntries.length === 0 ? (
         <div style={styles.emptyState as React.CSSProperties}>
           <p style={{ color: '#b8a99a', fontSize: 14 }}>해당 기간에 일정이 없습니다</p>
           <p style={{ color: '#ccc4b8', fontSize: 12, marginTop: 8 }}>
@@ -163,8 +182,9 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             {/* Fixed label column */}
             <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: '2px solid #ddd5c9' }}>
               <div style={{ height: 28, borderBottom: '1px solid #ddd5c9', boxSizing: 'border-box' }} />
-              {ganttEntries.map(entry => {
+              {displayEntries.map(entry => {
                 const pr = PRIORITY[entry.priority] || PRIORITY.none;
+                const isInactive = entry.status === 'done' || entry.status === 'cancelled' || entry.status === 'migrated' || entry.status === 'migrated_up';
                 return (
                   <div key={entry.id} style={{
                     height: ROW_HEIGHT,
@@ -176,6 +196,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     borderBottom: '1px solid #ebe5dc',
                     boxSizing: 'border-box',
                     cursor: 'pointer',
+                    opacity: entry.status === 'migrated' || entry.status === 'migrated_up' ? 0.4 : 1,
                   } as React.CSSProperties}
                     onClick={() => onEdit(entry)}
                   >
@@ -186,8 +207,8 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     )}
                     <span style={{
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      textDecoration: entry.status === 'done' || entry.status === 'cancelled' ? 'line-through' : 'none',
-                      color: entry.status === 'done' || entry.status === 'cancelled' ? '#b8a99a' : '#2c2416',
+                      textDecoration: isInactive ? 'line-through' : 'none',
+                      color: isInactive ? '#b8a99a' : '#2c2416',
                     }}>{entry.text}</span>
                   </div>
                 );
@@ -222,7 +243,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                 </div>
 
                 {/* Bars */}
-                {ganttEntries.map(entry => {
+                {displayEntries.map(entry => {
                   const { left, width } = getBarPosition(entry);
                   const color = getBarColor(entry);
                   const opacity = getBarOpacity(entry);
