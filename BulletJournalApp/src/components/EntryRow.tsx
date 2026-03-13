@@ -17,11 +17,30 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, compact }: Entr
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
   const isStrike = ('strike' in st && st.strike) || entry.status === 'done';
 
-  const touchStart = useRef<number | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
+  const touchStart = useRef<{ x: number; time: number } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, time: Date.now() };
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      onEdit();
+    }, 500);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStart.current && Math.abs(e.touches[0].clientX - touchStart.current.x) > 10) {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    }
+  };
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart.current === null) return;
-    const diff = e.changedTouches[0].clientX - touchStart.current;
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    if (didLongPress.current || touchStart.current === null) {
+      touchStart.current = null;
+      return;
+    }
+    const diff = e.changedTouches[0].clientX - touchStart.current.x;
     if (diff < -60) setSwiped(true);
     else if (diff > 60) setSwiped(false);
     touchStart.current = null;
@@ -29,7 +48,9 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, compact }: Entr
 
   if (compact) {
     return (
-      <div style={styles.weekEntry as React.CSSProperties} onClick={() => cycleStatus(entry.id)}>
+      <div style={styles.weekEntry as React.CSSProperties}
+        onClick={() => cycleStatus(entry.id)}
+        onContextMenu={(e) => { e.preventDefault(); onEdit(); }}>
         {pr.symbol ? <span style={{ color: '#c0583f', fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (
           <span style={{ color: '#c0583f', fontSize: 12, marginRight: 6 }}>○</span>
@@ -52,7 +73,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, compact }: Entr
 
   return (
     <div style={styles.entryOuter as React.CSSProperties}
-      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <div style={{
         ...styles.entrySwipeBg as React.CSSProperties,
         opacity: swiped ? 1 : 0,
