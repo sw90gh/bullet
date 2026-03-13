@@ -1,5 +1,5 @@
 import React from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { getDaysInMonth, pad, getTodayStr } from '../utils/date';
 import { Entry, Goal } from '../types';
@@ -23,6 +23,7 @@ export function MonthlyScreen({
   year, month, entries, goals, cycleStatus,
   onAddEntry, onEdit, onDayTap, onAddGoal, onEditGoal, onDeleteGoal, onToggleGoalDone
 }: MonthlyScreenProps) {
+  const { styles } = useTheme();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;

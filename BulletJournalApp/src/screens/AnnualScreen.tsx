@@ -1,5 +1,5 @@
 import React from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { MONTHS_KR } from '../utils/constants';
 import { pad } from '../utils/date';
 import { Entry, Goal } from '../types';
@@ -15,6 +15,7 @@ interface AnnualScreenProps {
 }
 
 export function AnnualScreen({ year, goals, entries, onAdd, onEdit, onMonthTap, onToggleGoalDone }: AnnualScreenProps) {
+  const { styles } = useTheme();
   const yearGoals = goals.filter(g => g.year === year && (g.month === undefined || g.month === null));
   const today = new Date();
 

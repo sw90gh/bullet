@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
 
@@ -17,6 +17,7 @@ interface EntryRowProps {
 type SwipeDir = 'none' | 'left' | 'right';
 
 export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact }: EntryRowProps) {
+  const { styles } = useTheme();
   const [swipeDir, setSwipeDir] = useState<SwipeDir>('none');
   const st = STATUS[entry.status] || STATUS.todo;
   const pr = PRIORITY[entry.priority] || PRIORITY.none;

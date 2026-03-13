@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { getStyles } from './styles/theme';
 import { COLORS_DARK } from './utils/constants';
+import { DarkModeProvider } from './hooks/useDarkModeContext';
 import { Header } from './components/Header';
 import { EntryModal } from './components/EntryModal';
 import { MigrateModal } from './components/MigrateModal';
@@ -155,15 +156,19 @@ export default function App() {
 
   if (!entriesLoaded || !goalsLoaded) {
     return (
-      <div style={styles.loadingWrap as React.CSSProperties}>
-        <div style={styles.loadingDot}>·</div>
-        <p style={{ color: isDark ? COLORS_DARK.textSecondary : '#6b5d4d', fontSize: 14, marginTop: 8 }}>불러오는 중...</p>
-      </div>
+      <DarkModeProvider isDark={isDark}>
+        <div style={styles.loadingWrap as React.CSSProperties}>
+          <div style={styles.loadingDot}>·</div>
+          <p style={{ color: isDark ? COLORS_DARK.textSecondary : '#6b5d4d', fontSize: 14, marginTop: 8 }}>불러오는 중...</p>
+        </div>
+      </DarkModeProvider>
     );
   }
 
   return (
+    <DarkModeProvider isDark={isDark}>
     <div style={styles.app as React.CSSProperties}>
+      <div style={styles.stickyTop as React.CSSProperties}>
       <Header
         curDate={curDate}
         view={view}
@@ -241,6 +246,7 @@ export default function App() {
           </div>
         </div>
       )}
+      </div>{/* end stickyTop */}
 
       {/* Content */}
       <main style={styles.main}>
@@ -420,5 +426,6 @@ export default function App() {
         />
       )}
     </div>
+    </DarkModeProvider>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, PRIORITY } from '../utils/constants';
 import { Entry } from '../types';
 
@@ -10,6 +10,7 @@ interface SearchModalProps {
 }
 
 export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
+  const { styles, C } = useTheme();
   const [query, setQuery] = useState('');
 
   const results = useMemo(() => {
@@ -30,8 +31,8 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
         maxHeight: '90vh',
       }} onClick={e => e.stopPropagation()}>
         <div style={{
-          padding: '14px 0 8px', borderBottom: '1px solid #ebe5dc',
-          position: 'sticky', top: 0, background: '#faf6f0', zIndex: 1,
+          padding: '14px 0 8px', borderBottom: `1px solid ${C.borderLight}`,
+          position: 'sticky', top: 0, background: C.bg, zIndex: 1,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 18 }}>🔍</span>
@@ -51,7 +52,7 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
 
         <div style={{ padding: '8px 0', maxHeight: '70vh', overflowY: 'auto' }}>
           {query.trim() && results.length === 0 && (
-            <p style={{ textAlign: 'center', color: '#b8a99a', fontSize: 13, padding: 20 }}>
+            <p style={{ textAlign: 'center', color: C.textMuted, fontSize: 13, padding: 20 }}>
               검색 결과가 없습니다
             </p>
           )}
@@ -61,7 +62,7 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
             return (
               <div key={entry.id} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 4px', borderBottom: '1px solid #f5f0e8',
+                padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
                 cursor: 'pointer',
               }} onClick={() => { onEdit(entry); onClose(); }}>
                 <span style={{
@@ -70,16 +71,16 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
                 }}>{st.symbol}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    fontSize: 13, color: '#2c2416',
+                    fontSize: 13, color: C.textPrimary,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
-                    {pr.symbol && <span style={{ color: '#c0583f', marginRight: 3 }}>{pr.symbol}</span>}
+                    {pr.symbol && <span style={{ color: C.accent, marginRight: 3 }}>{pr.symbol}</span>}
                     {entry.text}
                   </div>
-                  <div style={{ fontSize: 10, color: '#b8a99a', marginTop: 1 }}>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
                     {entry.date?.replace(/-/g, '.')}
                     {entry.tags && entry.tags.length > 0 && (
-                      <span style={{ marginLeft: 6, color: '#3a7ca5' }}>
+                      <span style={{ marginLeft: 6, color: C.blue }}>
                         {entry.tags.map(t => `#${t}`).join(' ')}
                       </span>
                     )}
@@ -93,7 +94,7 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
             );
           })}
           {!query.trim() && (
-            <p style={{ textAlign: 'center', color: '#b8a99a', fontSize: 13, padding: 20 }}>
+            <p style={{ textAlign: 'center', color: C.textMuted, fontSize: 13, padding: 20 }}>
               제목, 메모, 태그로 검색할 수 있습니다
             </p>
           )}

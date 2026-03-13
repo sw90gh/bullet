@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY, MONTHS_KR } from '../utils/constants';
 import { getTodayStr } from '../utils/date';
 import { ModalState, Entry, Goal, RecurringConfig } from '../types';
@@ -13,6 +13,7 @@ interface EntryModalProps {
 }
 
 export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = [] }: EntryModalProps) {
+  const { styles, C } = useTheme();
   const isGoal = modal.scope === 'goal' || modal.mode === 'edit-goal' || modal.mode === 'add-goal';
   const existing = modal.entry || modal.goal;
 
@@ -101,8 +102,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
         {/* 헤더: 제목 + 추가/수정 버튼 + 닫기 */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '14px 0 8px', borderBottom: '1px solid #ebe5dc',
-          position: 'sticky', top: 0, background: '#faf6f0', zIndex: 1,
+          padding: '14px 0 8px', borderBottom: `1px solid ${C.borderLight}`,
+          position: 'sticky', top: 0, background: C.bg, zIndex: 1,
         }}>
           <h3 style={styles.modalTitle}>
             {isGoal
@@ -111,7 +112,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
           </h3>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button style={{
-              background: '#2c2416', color: 'white', border: 'none',
+              background: C.primary, color: C.headerText, border: 'none',
               padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
               cursor: 'pointer', fontFamily: '-apple-system, sans-serif',
             }} onClick={handleSave}>{saveLabel}</button>
@@ -232,8 +233,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
                       <button key={tag}
                         style={{
                           padding: '2px 8px', borderRadius: 10, fontSize: 10,
-                          border: '1px solid #3a7ca530', background: '#3a7ca508',
-                          color: '#3a7ca5', cursor: 'pointer',
+                          border: `1px solid ${C.blue}30`, background: `${C.blue}08`,
+                          color: C.blue, cursor: 'pointer',
                           fontFamily: '-apple-system, sans-serif',
                         }}
                         onClick={() => addTag(tag)}>#{tag}</button>

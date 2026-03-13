@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, PRIORITY, DAYS_KR } from '../utils/constants';
 import { getDaysInMonth, pad, daysBetween, formatDateKey, getWeekDates, addDays } from '../utils/date';
 import { Entry } from '../types';
@@ -17,6 +17,7 @@ const ROW_HEIGHT = 36;
 const LABEL_WIDTH = 110;
 
 export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) {
+  const { styles } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<GanttRange>('month');
   const todayStr = formatDateKey(new Date());

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { MONTHS_KR } from '../utils/constants';
 import { getTodayStr, addDays } from '../utils/date';
 import { Entry } from '../types';
@@ -13,6 +13,7 @@ interface MigrateModalProps {
 }
 
 export function MigrateModal({ entry, type, onClose, onMigrate, onMigrateUp }: MigrateModalProps) {
+  const { styles } = useTheme();
   const today = getTodayStr();
   const [targetDate, setTargetDate] = useState(addDays(today, 1));
   const [goalYear, setGoalYear] = useState(new Date().getFullYear());

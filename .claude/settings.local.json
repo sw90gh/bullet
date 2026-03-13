@@ -35,7 +35,10 @@
       "Bash(where node:*)",
       "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && npx tsc --noEmit 2>&1 | head -50)",
       "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && npx tsc --noEmit 2>&1)",
-      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && npm run build 2>&1)"
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && npm run build 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && git push 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/CSW/project/bullet/BulletJournalApp && npm run build 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/CSW/project/bullet/BulletJournalApp && npx tsc --noEmit 2>&1)"
     ]
   }
 }

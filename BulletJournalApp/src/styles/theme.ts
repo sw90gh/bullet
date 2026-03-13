@@ -29,6 +29,12 @@ export function getStyles(isDark: boolean): Styles {
       borderRadius: '0 0 20px 20px',
       paddingTop: 'env(safe-area-inset-top, 14px)',
     },
+    stickyTop: {
+      position: 'sticky',
+      top: 0,
+      zIndex: 30,
+      background: C.bg,
+    },
     headerTop: {
       display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8,
     },

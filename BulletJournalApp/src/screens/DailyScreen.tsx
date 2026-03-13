@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
 import { formatDateKey, getTodayStr, daysBetween } from '../utils/date';
@@ -29,6 +29,7 @@ function timeToMinutes(t: string): number {
 }
 
 export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority }: DailyScreenProps) {
+  const { styles, isDark, C } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
@@ -81,25 +82,25 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
         <button style={{
           flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-          border: '1px solid #ddd5c9', fontFamily: '-apple-system, sans-serif',
-          background: viewMode === 'list' ? '#2c2416' : 'white',
-          color: viewMode === 'list' ? 'white' : '#6b5d4d',
+          border: `1px solid ${C.border}`, fontFamily: '-apple-system, sans-serif',
+          background: viewMode === 'list' ? C.primary : C.bgWhite,
+          color: viewMode === 'list' ? C.headerText : C.textSecondary,
         }} onClick={() => setViewMode('list')}>목록</button>
         <button style={{
           flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-          border: '1px solid #ddd5c9', fontFamily: '-apple-system, sans-serif',
-          background: viewMode === 'timeline' ? '#2c2416' : 'white',
-          color: viewMode === 'timeline' ? 'white' : '#6b5d4d',
+          border: `1px solid ${C.border}`, fontFamily: '-apple-system, sans-serif',
+          background: viewMode === 'timeline' ? C.primary : C.bgWhite,
+          color: viewMode === 'timeline' ? C.headerText : C.textSecondary,
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
 
       {/* 마감 임박 */}
       {urgentEntries.length > 0 && (
         <div style={{
-          background: 'white', borderRadius: 12, padding: '10px 14px', marginBottom: 10,
-          boxShadow: '0 1px 3px rgba(44,36,22,0.06)', border: '1px solid #c0583f20',
+          background: C.bgWhite, borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+          boxShadow: `0 1px 3px ${C.cardShadow}`, border: `1px solid ${C.accent}20`,
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#c0583f', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.accent, marginBottom: 6 }}>
             ⏰ 마감 임박 ({urgentEntries.length})
           </div>
           {urgentEntries.map(entry => {
@@ -107,7 +108,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
             return (
               <div key={entry.id} style={{
                 display: 'flex', alignItems: 'center', padding: '5px 0',
-                borderBottom: '1px solid #f5f0e8', cursor: 'pointer',
+                borderBottom: `1px solid ${C.borderLight}`, cursor: 'pointer',
               }} onClick={() => onEdit(entry)}>
                 <span style={{
                   fontSize: 10, fontWeight: 700, color: dday.color,
@@ -115,10 +116,10 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                   marginRight: 8, flexShrink: 0, minWidth: 36, textAlign: 'center',
                 }}>{dday.label}</span>
                 <span style={{
-                  fontSize: 12, color: '#2c2416', flex: 1,
+                  fontSize: 12, color: C.textPrimary, flex: 1,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{entry.text}</span>
-                <span style={{ fontSize: 10, color: '#b8a99a', flexShrink: 0 }}>~{entry.endDate?.slice(5)}</span>
+                <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>~{entry.endDate?.slice(5)}</span>
               </div>
             );
           })}
@@ -130,7 +131,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
         dayEntries.length === 0 ? (
           <div style={styles.emptyState as React.CSSProperties}>
             <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>·</div>
-            <p style={{ color: '#b8a99a', fontSize: 14 }}>기록이 없습니다</p>
+            <p style={{ color: C.textMuted, fontSize: 14 }}>기록이 없습니다</p>
             <button style={styles.emptyAdd} onClick={onAdd}>+ 새 항목 추가</button>
           </div>
         ) : (
@@ -152,13 +153,13 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       ) : (
         /* 타임라인 모드 */
         <div style={{
-          background: 'white', borderRadius: 14, overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(44,36,22,0.06)',
+          background: C.bgWhite, borderRadius: 14, overflow: 'hidden',
+          boxShadow: `0 1px 3px ${C.cardShadow}`,
         }}>
           {/* 시간 미지정 항목 */}
           {untimedEntries.length > 0 && (
-            <div style={{ padding: '8px 12px', borderBottom: '2px solid #ebe5dc' }}>
-              <div style={{ fontSize: 10, color: '#b8a99a', marginBottom: 4, fontWeight: 600 }}>시간 미지정</div>
+            <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>시간 미지정</div>
               {untimedEntries.map(entry => {
                 const st = STATUS[entry.status] || STATUS.todo;
                 return (
@@ -168,7 +169,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                   }} onClick={() => onEdit(entry)}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
                     <span style={{
-                      fontSize: 12, color: '#2c2416', flex: 1,
+                      fontSize: 12, color: C.textPrimary, flex: 1,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{entry.text}</span>
                   </div>
@@ -183,11 +184,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
               const hour = START_HOUR + i;
               return (
                 <div key={hour} style={{
-                  height: HOUR_HEIGHT, borderBottom: '1px solid #f5f0e8',
+                  height: HOUR_HEIGHT, borderBottom: `1px solid ${C.borderLight}`,
                   position: 'relative',
                 }}>
                   <span style={{
-                    position: 'absolute', left: -44, top: -7, fontSize: 10, color: '#b8a99a',
+                    position: 'absolute', left: -44, top: -7, fontSize: 10, color: C.textMuted,
                     width: 36, textAlign: 'right',
                   }}>
                     {hour.toString().padStart(2, '0')}:00
@@ -195,7 +196,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                   {/* 30분 점선 */}
                   <div style={{
                     position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0,
-                    borderBottom: '1px dashed #f5f0e8',
+                    borderBottom: `1px dashed ${C.borderLight}`,
                   }} />
                 </div>
               );
@@ -239,12 +240,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                   onClick={() => onEdit(entry)}>
                   <div style={{
                     fontSize: 11, fontWeight: 600,
-                    color: isDone ? '#b8a99a' : '#2c2416',
+                    color: isDone ? C.textMuted : C.textPrimary,
                     textDecoration: isDone ? 'line-through' : 'none',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{entry.text}</div>
                   {height > 30 && (
-                    <div style={{ fontSize: 9, color: '#b8a99a', marginTop: 1 }}>
+                    <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>
                       {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
                     </div>
                   )}

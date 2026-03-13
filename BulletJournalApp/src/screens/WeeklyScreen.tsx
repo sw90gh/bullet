@@ -1,5 +1,5 @@
 import React from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DAYS_KR } from '../utils/constants';
 import { getWeekDates, formatDateKey, getTodayStr } from '../utils/date';
@@ -16,6 +16,7 @@ interface WeeklyScreenProps {
 }
 
 export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, setCurDate, setView }: WeeklyScreenProps) {
+  const { styles } = useTheme();
   const weekDates = getWeekDates(date.getFullYear(), date.getMonth(), date.getDate());
   const todayStr = getTodayStr();
 

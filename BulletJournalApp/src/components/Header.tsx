@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 import { DAYS_KR } from '../utils/constants';
 import { getWeekNumber, getMonthWeekNumber } from '../utils/date';
 import { getRandomQuote, getDailyQuote } from '../utils/quotes';
@@ -18,6 +18,7 @@ interface HeaderProps {
 }
 
 export function Header({ curDate, view, nav, goToday, onSettings, notionConnected, syncing, urgentCount = 0, onSearch }: HeaderProps) {
+  const { styles } = useTheme();
   const y = curDate.getFullYear();
   const m = curDate.getMonth();
   const d = curDate.getDate();

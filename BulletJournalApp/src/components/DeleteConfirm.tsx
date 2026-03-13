@@ -1,5 +1,5 @@
 import React from 'react';
-import { styles } from '../styles/theme';
+import { useTheme } from '../hooks/useDarkModeContext';
 
 interface DeleteConfirmProps {
   onCancel: () => void;
@@ -7,6 +7,7 @@ interface DeleteConfirmProps {
 }
 
 export function DeleteConfirm({ onCancel, onDelete }: DeleteConfirmProps) {
+  const { styles } = useTheme();
   return (
     <div style={styles.overlay} onClick={onCancel}>
       <div style={styles.confirmBox} onClick={e => e.stopPropagation()}>
