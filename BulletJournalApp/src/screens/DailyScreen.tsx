@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -17,18 +17,36 @@ interface DailyScreenProps {
   onMigrate?: (entry: Entry) => void;
   onMigrateUp?: (entry: Entry) => void;
   onChangePriority?: (id: string, priority: EntryPriority) => void;
+  onUpdateEntry?: (id: string, updates: Partial<Entry>) => void;
 }
 
 const HOUR_HEIGHT = 52;
 const START_HOUR = 6;
 const END_HOUR = 23;
+const SNAP_MINUTES = 15;
+const TOTAL_MINUTES = (END_HOUR - START_HOUR + 1) * 60;
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
 
-export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority }: DailyScreenProps) {
+function minutesToTime(m: number): string {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+}
+
+function snapMinutes(m: number): number {
+  return Math.round(m / SNAP_MINUTES) * SNAP_MINUTES;
+}
+
+function yToMinutes(y: number): number {
+  const raw = START_HOUR * 60 + (y / HOUR_HEIGHT) * 60;
+  return snapMinutes(Math.max(START_HOUR * 60, Math.min(END_HOUR * 60, raw)));
+}
+
+export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry }: DailyScreenProps) {
   const { styles, isDark, C } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const dateStr = formatDateKey(date);
@@ -43,26 +61,18 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     });
   const isToday = dateStr === todayStr;
 
-  // 시간이 있는 항목 (타임라인용)
   const timedEntries = dayEntries.filter(e => e.time);
   const untimedEntries = dayEntries.filter(e => !e.time);
 
-  // 현재 시간 위치
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const nowTop = ((nowMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
 
-  // 마감 임박 항목
   const urgentEntries = isToday ? allEntries.filter(e => {
     if (!e.endDate) return false;
     if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
-    const daysLeft = daysBetween(todayStr, e.endDate);
-    return daysLeft <= 3;
-  }).sort((a, b) => {
-    const da = daysBetween(todayStr, a.endDate!);
-    const db = daysBetween(todayStr, b.endDate!);
-    return da - db;
-  }) : [];
+    return daysBetween(todayStr, e.endDate) <= 3;
+  }).sort((a, b) => daysBetween(todayStr, a.endDate!) - daysBetween(todayStr, b.endDate!)) : [];
 
   const getDdayLabel = (endDate: string) => {
     const d = daysBetween(todayStr, endDate);
@@ -71,11 +81,107 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     return { label: `D-${d}`, color: d === 1 ? '#c0883f' : '#3a7ca5', bg: d === 1 ? '#c0883f10' : '#3a7ca510' };
   };
 
+  // === Drag state ===
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<{
+    type: 'move' | 'resize' | 'place';
+    entryId: string;
+    startY: number;
+    origMinutes: number;
+    origEndMinutes: number;
+    currentTop: number;
+    currentHeight: number;
+  } | null>(null);
+
+  const getTimelineY = useCallback((clientY: number) => {
+    if (!timelineRef.current) return 0;
+    const rect = timelineRef.current.getBoundingClientRect();
+    return clientY - rect.top;
+  }, []);
+
+  // Drag: move a timed entry
+  const handleEntryTouchStart = useCallback((e: React.TouchEvent, entry: Entry, mode: 'move' | 'resize') => {
+    if (!onUpdateEntry) return;
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const startMin = timeToMinutes(entry.time!);
+    const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+    const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+    const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+    setDragState({
+      type: mode,
+      entryId: entry.id,
+      startY: touch.clientY,
+      origMinutes: startMin,
+      origEndMinutes: endMin,
+      currentTop: top,
+      currentHeight: height,
+    });
+  }, [onUpdateEntry]);
+
+  // Drag: place an untimed entry onto timeline
+  const handleUntimedTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
+    if (!onUpdateEntry) return;
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const y = getTimelineY(touch.clientY);
+    const minutes = yToMinutes(y);
+    const top = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+    setDragState({
+      type: 'place',
+      entryId: entry.id,
+      startY: touch.clientY,
+      origMinutes: minutes,
+      origEndMinutes: minutes + 60,
+      currentTop: top,
+      currentHeight: HOUR_HEIGHT - 2,
+    });
+  }, [onUpdateEntry, getTimelineY]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!dragState) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const deltaY = touch.clientY - dragState.startY;
+    const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
+
+    if (dragState.type === 'move' || dragState.type === 'place') {
+      const newStart = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - 15, dragState.origMinutes + deltaMinutes));
+      const duration = dragState.origEndMinutes - dragState.origMinutes;
+      const newTop = ((newStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      setDragState(prev => prev ? { ...prev, currentTop: newTop } : null);
+    } else if (dragState.type === 'resize') {
+      const newEnd = Math.max(dragState.origMinutes + 15, Math.min((END_HOUR + 1) * 60, dragState.origEndMinutes + deltaMinutes));
+      const newHeight = Math.max(24, ((newEnd - dragState.origMinutes) / 60) * HOUR_HEIGHT - 2);
+      setDragState(prev => prev ? { ...prev, currentHeight: newHeight } : null);
+    }
+  }, [dragState]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!dragState || !onUpdateEntry) return;
+
+    if (dragState.type === 'move' || dragState.type === 'place') {
+      const newStartMin = snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60);
+      const duration = dragState.origEndMinutes - dragState.origMinutes;
+      const newEndMin = newStartMin + duration;
+      onUpdateEntry(dragState.entryId, {
+        time: minutesToTime(newStartMin),
+        endTime: minutesToTime(newEndMin),
+      });
+    } else if (dragState.type === 'resize') {
+      const newEndMin = snapMinutes(dragState.origMinutes + ((dragState.currentHeight + 2) / HOUR_HEIGHT) * 60);
+      onUpdateEntry(dragState.entryId, {
+        endTime: minutesToTime(Math.max(dragState.origMinutes + 15, newEndMin)),
+      });
+    }
+
+    setDragState(null);
+  }, [dragState, onUpdateEntry]);
+
   return (
     <div>
       {isToday && <div style={styles.todayBadge}>TODAY</div>}
 
-      {/* 일간 요약 위젯 */}
       <DailySummary date={date} entries={allEntries} />
 
       {/* 뷰 모드 토글 */}
@@ -127,7 +233,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       )}
 
       {viewMode === 'list' ? (
-        /* 리스트 모드 */
         dayEntries.length === 0 ? (
           <div style={styles.emptyState as React.CSSProperties}>
             <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>·</div>
@@ -155,23 +260,36 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
         <div style={{
           background: C.bgWhite, borderRadius: 14, overflow: 'hidden',
           boxShadow: `0 1px 3px ${C.cardShadow}`,
-        }}>
-          {/* 시간 미지정 항목 */}
+        }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        >
+          {/* 시간 미지정 항목 - 드래그 가능 */}
           {untimedEntries.length > 0 && (
             <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>시간 미지정</div>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>
+                시간 미지정 (끌어서 시간표에 배치)
+              </div>
               {untimedEntries.map(entry => {
                 const st = STATUS[entry.status] || STATUS.todo;
+                const isDragging = dragState?.entryId === entry.id;
                 return (
                   <div key={entry.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0',
-                    cursor: 'pointer',
-                  }} onClick={() => onEdit(entry)}>
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '5px 4px',
+                    cursor: 'grab', borderRadius: 6,
+                    background: isDragging ? `${C.blue}15` : 'transparent',
+                    border: `1px dashed ${isDragging ? C.blue : 'transparent'}`,
+                    marginBottom: 2, transition: 'background 0.15s',
+                  }}
+                  onTouchStart={e => handleUntimedTouchStart(e, entry)}
+                  onClick={() => !dragState && onEdit(entry)}
+                  >
                     <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
                     <span style={{
                       fontSize: 12, color: C.textPrimary, flex: 1,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{entry.text}</span>
+                    <span style={{ fontSize: 10, color: C.textMuted }}>⠿</span>
                   </div>
                 );
               })}
@@ -179,7 +297,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
           )}
 
           {/* 타임라인 그리드 */}
-          <div style={{ position: 'relative', marginLeft: 44, marginRight: 8 }}>
+          <div ref={timelineRef} style={{ position: 'relative', marginLeft: 44, marginRight: 8 }}>
             {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => {
               const hour = START_HOUR + i;
               return (
@@ -193,7 +311,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                   }}>
                     {hour.toString().padStart(2, '0')}:00
                   </span>
-                  {/* 30분 점선 */}
                   <div style={{
                     position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0,
                     borderBottom: `1px dashed ${C.borderLight}`,
@@ -206,12 +323,34 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
             {isToday && nowMinutes >= START_HOUR * 60 && nowMinutes <= END_HOUR * 60 && (
               <div style={{
                 position: 'absolute', left: -8, right: 0, top: nowTop,
-                borderTop: '2px solid #c0583f', zIndex: 10,
+                borderTop: `2px solid ${C.accent}`, zIndex: 10,
               }}>
                 <div style={{
                   position: 'absolute', left: -6, top: -5, width: 8, height: 8,
-                  borderRadius: '50%', background: '#c0583f',
+                  borderRadius: '50%', background: C.accent,
                 }} />
+              </div>
+            )}
+
+            {/* 드래그 중 고스트 표시 */}
+            {dragState && (
+              <div style={{
+                position: 'absolute', left: 4, right: 4,
+                top: dragState.currentTop,
+                height: dragState.currentHeight,
+                background: `${C.blue}30`,
+                borderLeft: `3px solid ${C.blue}`,
+                borderRadius: '0 6px 6px 0',
+                padding: '3px 8px',
+                zIndex: 20,
+                opacity: 0.8,
+                pointerEvents: 'none',
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: C.blue }}>
+                  {minutesToTime(snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60))}
+                  {' - '}
+                  {minutesToTime(snapMinutes(START_HOUR * 60 + ((dragState.currentTop + dragState.currentHeight + 2) / HOUR_HEIGHT) * 60))}
+                </div>
               </div>
             )}
 
@@ -219,29 +358,38 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
             {timedEntries.map(entry => {
               const startMin = timeToMinutes(entry.time!);
               const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-              const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-              const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+              const isDraggingThis = dragState?.entryId === entry.id;
+              const top = isDraggingThis && dragState.type === 'move'
+                ? dragState.currentTop
+                : ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+              const height = isDraggingThis && dragState.type === 'resize'
+                ? dragState.currentHeight
+                : Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
               const st = STATUS[entry.status] || STATUS.todo;
-              const isDone = entry.status === 'done' || entry.status === 'cancelled';
+              const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
               return (
                 <div key={entry.id}
                   style={{
                     position: 'absolute', left: 4, right: 4, top, height,
-                    background: st.color + '20',
+                    background: isDraggingThis ? `${st.color}40` : st.color + '20',
                     borderLeft: `3px solid ${st.color}`,
                     borderRadius: '0 6px 6px 0',
                     padding: '3px 8px',
-                    cursor: 'pointer',
+                    cursor: 'grab',
                     overflow: 'hidden',
-                    zIndex: 5,
-                    opacity: isDone ? 0.6 : 1,
+                    zIndex: isDraggingThis ? 15 : 5,
+                    opacity: isEntryDone ? 0.6 : 1,
+                    transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
+                    touchAction: 'none',
                   }}
-                  onClick={() => onEdit(entry)}>
+                  onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
+                  onClick={() => !dragState && onEdit(entry)}
+                >
                   <div style={{
                     fontSize: 11, fontWeight: 600,
-                    color: isDone ? C.textMuted : C.textPrimary,
-                    textDecoration: isDone ? 'line-through' : 'none',
+                    color: isEntryDone ? C.textMuted : C.textPrimary,
+                    textDecoration: isEntryDone ? 'line-through' : 'none',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{entry.text}</div>
                   {height > 30 && (
@@ -249,6 +397,23 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                       {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
                     </div>
                   )}
+                  {/* 하단 리사이즈 핸들 */}
+                  <div
+                    style={{
+                      position: 'absolute', left: 0, right: 0, bottom: 0, height: 12,
+                      cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      touchAction: 'none',
+                    }}
+                    onTouchStart={e => {
+                      e.stopPropagation();
+                      handleEntryTouchStart(e, entry, 'resize');
+                    }}
+                  >
+                    <div style={{
+                      width: 24, height: 3, borderRadius: 2,
+                      background: C.textMuted, opacity: 0.4,
+                    }} />
+                  </div>
                 </div>
               );
             })}

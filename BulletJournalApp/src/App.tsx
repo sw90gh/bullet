@@ -262,6 +262,7 @@ export default function App() {
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
             onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
             onChangePriority={changePriority}
+            onUpdateEntry={updateEntry}
           />
         )}
 
