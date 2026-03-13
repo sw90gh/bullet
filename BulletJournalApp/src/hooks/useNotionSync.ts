@@ -28,7 +28,13 @@ export function useNotionSync() {
     if (cleanToken.toLowerCase().startsWith('bearer ')) {
       cleanToken = cleanToken.slice(7).trim();
     }
-    const cleanDbId = databaseId.trim().replace(/-/g, '');
+    // Extract database ID from Notion URL if user pasted full URL
+    let cleanDbId = databaseId.trim();
+    // Handle full Notion URLs like https://www.notion.so/workspace/DB_ID?v=...
+    const urlMatch = cleanDbId.match(/([a-f0-9]{32})/i) || cleanDbId.match(/([a-f0-9-]{36})/i);
+    if (urlMatch) {
+      cleanDbId = urlMatch[1];
+    }
     saveConfig({ accessToken: cleanToken, databaseId: cleanDbId, connected: true, lastSync: undefined });
   }, [saveConfig]);
 
