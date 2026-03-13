@@ -41,8 +41,8 @@ export function Header({ curDate, view, nav, goToday, onSettings, notionConnecte
     <>
       <header style={styles.header}>
         <div style={styles.headerTop}>
-          <h1 style={{ ...styles.logo, fontSize: 16, letterSpacing: 2 }}>Bullet Journal</h1>
-          <div style={styles.headerActions as React.CSSProperties}>
+          <h1 style={{ ...styles.logo, fontSize: 13, letterSpacing: 1, whiteSpace: 'nowrap', flexShrink: 0 }}>BulletJournal</h1>
+          <div style={{ ...styles.headerActions as React.CSSProperties, flexShrink: 0 }}>
             {notionConnected && (
               <span style={{ fontSize: 10, color: syncing ? '#c0883f' : '#4a8c3f', marginRight: 4 }}>
                 {syncing ? '동기화 중...' : '● Notion'}
@@ -50,15 +50,15 @@ export function Header({ curDate, view, nav, goToday, onSettings, notionConnecte
             )}
             <button style={{
               ...styles.todayBtn,
-              fontSize: 11, padding: '4px 10px',
+              fontSize: 11, padding: '4px 8px',
             }} onClick={refreshQuote}>💡</button>
             {onSearch && (
               <button style={{
                 ...styles.todayBtn,
-                fontSize: 12, padding: '4px 10px',
+                fontSize: 12, padding: '4px 8px',
               }} onClick={onSearch}>🔍</button>
             )}
-            <button style={styles.todayBtn} onClick={goToday}>
+            <button style={{ ...styles.todayBtn, padding: '5px 10px', whiteSpace: 'nowrap' }} onClick={goToday}>
               오늘
               {urgentCount > 0 && (
                 <span style={{
