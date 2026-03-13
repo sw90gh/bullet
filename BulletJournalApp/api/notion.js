@@ -1,30 +1,29 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Notion-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const { path } = req.query;
+  const { path, token } = req.query;
   if (!path) {
     return res.status(400).json({ error: 'path parameter required' });
   }
 
-  const notionUrl = `https://api.notion.com/v1/${path}`;
-  const authorization = req.headers['authorization'];
-
-  if (!authorization) {
-    return res.status(401).json({ error: 'Authorization header required' });
+  if (!token) {
+    return res.status(401).json({ error: 'token parameter required' });
   }
+
+  const notionUrl = `https://api.notion.com/v1/${path}`;
 
   try {
     const fetchOptions = {
       method: req.method,
       headers: {
-        'Authorization': authorization,
+        'Authorization': `Bearer ${token}`,
         'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
       },
@@ -39,6 +38,7 @@ export default async function handler(req, res) {
 
     return res.status(response.status).json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error('Notion proxy error:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
-}
+};
