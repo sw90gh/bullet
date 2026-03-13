@@ -11,11 +11,10 @@ interface NotionPage {
 }
 
 async function notionFetch(path: string, token: string, method: string, body?: unknown): Promise<Response> {
-  const url = `${PROXY_API}?path=${encodeURIComponent(path)}`;
+  const url = `${PROXY_API}?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
   const options: RequestInit = {
     method,
     headers: {
-      'X-Notion-Token': token,
       'Content-Type': 'application/json',
     },
   };
