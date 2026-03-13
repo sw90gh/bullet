@@ -124,19 +124,17 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
                 ))}
               </div>
 
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={styles.fieldLabel}>시작일</label>
-                  <input type="date" style={styles.input} value={date}
-                    onChange={e => setDate(e.target.value)} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={styles.fieldLabel}>종료일 (선택)</label>
-                  <input type="date" style={styles.input} value={endDate}
-                    onChange={e => setEndDate(e.target.value)} />
-                </div>
-              </div>
               <div style={{ marginTop: 4 }}>
+                <label style={styles.fieldLabel}>시작일</label>
+                <input type="date" style={{ ...styles.input, marginBottom: 8 }} value={date}
+                  onChange={e => setDate(e.target.value)} />
+              </div>
+              <div>
+                <label style={styles.fieldLabel}>종료일 (선택)</label>
+                <input type="date" style={{ ...styles.input, marginBottom: 8 }} value={endDate}
+                  onChange={e => setEndDate(e.target.value)} />
+              </div>
+              <div>
                 <label style={styles.fieldLabel}>시간 (선택)</label>
                 <input type="time" style={styles.input} value={time}
                   onChange={e => setTime(e.target.value)} />
