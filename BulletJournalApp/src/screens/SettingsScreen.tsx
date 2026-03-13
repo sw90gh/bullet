@@ -3,6 +3,11 @@ import { styles } from '../styles/theme';
 import { exportAllData, importAllData } from '../utils/storage';
 import { NotionConfig } from '../types';
 
+interface TagInfo {
+  name: string;
+  count: number;
+}
+
 interface SettingsScreenProps {
   onClose: () => void;
   notionConfig: NotionConfig | null;
@@ -11,10 +16,13 @@ interface SettingsScreenProps {
   onNotionSync: () => void;
   syncing: boolean;
   lastError: string | null;
+  tagList?: TagInfo[];
+  onDeleteTag?: (tag: string) => void;
 }
 
 export function SettingsScreen({
   onClose, notionConfig, onNotionConnect, onNotionDisconnect, onNotionSync, syncing, lastError,
+  tagList = [], onDeleteTag,
 }: SettingsScreenProps) {
   const [token, setToken] = useState('');
   const [dbId, setDbId] = useState('');
@@ -52,6 +60,41 @@ export function SettingsScreen({
         </div>
 
         <div style={styles.modalBody}>
+          {/* Tag Management */}
+          {tagList.length > 0 && (
+            <div style={styles.settingsSection}>
+              <div style={styles.settingsLabel}>태그 관리 ({tagList.length}개)</div>
+              <p style={{ fontSize: 11, color: '#b8a99a', marginBottom: 8 }}>
+                사용 빈도순 정렬. 삭제하면 모든 항목에서 해당 태그가 제거됩니다.
+              </p>
+              {tagList.map(t => (
+                <div key={t.name} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '6px 0', borderBottom: '1px solid #f5f0e8',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      fontSize: 12, color: '#3a7ca5', background: '#3a7ca510',
+                      padding: '2px 8px', borderRadius: 6,
+                    }}>#{t.name}</span>
+                    <span style={{ fontSize: 10, color: '#b8a99a' }}>{t.count}개</span>
+                  </div>
+                  {onDeleteTag && (
+                    <button style={{
+                      background: 'none', border: '1px solid #c0583f40', color: '#c0583f',
+                      fontSize: 10, padding: '2px 8px', borderRadius: 6, cursor: 'pointer',
+                      fontFamily: '-apple-system, sans-serif',
+                    }} onClick={() => {
+                      if (confirm(`"${t.name}" 태그를 모든 항목에서 제거하시겠습니까?`)) {
+                        onDeleteTag(t.name);
+                      }
+                    }}>삭제</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Notion Integration */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>Notion 캘린더 연동</div>
@@ -142,7 +185,7 @@ export function SettingsScreen({
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>정보</div>
             <p style={{ fontSize: 12, color: '#6b5d4d', lineHeight: 1.6 }}>
-              B·J Bullet Journal v1.0
+              Bullet Journal v1.0
               <br />
               개인용 불렛저널 PWA
               <br />

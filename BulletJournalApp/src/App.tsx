@@ -27,6 +27,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [tagBarExpanded, setTagBarExpanded] = useState(false);
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, mergeNotionEntries } = useEntries();
   const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal } = useGoals();
@@ -56,11 +57,31 @@ export default function App() {
     if (goal) updateGoal(id, { done: !goal.done });
   }, [goals, updateGoal]);
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    entries.forEach(e => e.tags?.forEach(t => tagSet.add(t)));
-    return Array.from(tagSet).sort();
+  const tagCountMap = useMemo(() => {
+    const m = new Map<string, number>();
+    entries.forEach(e => e.tags?.forEach(t => m.set(t, (m.get(t) || 0) + 1)));
+    return m;
   }, [entries]);
+
+  const allTags = useMemo(() => {
+    return Array.from(tagCountMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag]) => tag);
+  }, [tagCountMap]);
+
+  const tagList = useMemo(() => {
+    return allTags.map(t => ({ name: t, count: tagCountMap.get(t) || 0 }));
+  }, [allTags, tagCountMap]);
+
+  const deleteTag = useCallback((tag: string) => {
+    entries.forEach(e => {
+      if (e.tags?.includes(tag)) {
+        const newTags = e.tags.filter(t => t !== tag);
+        updateEntry(e.id, { tags: newTags.length > 0 ? newTags : undefined });
+      }
+    });
+    if (selectedTag === tag) setSelectedTag(null);
+  }, [entries, updateEntry, selectedTag]);
 
   const filteredEntries = useMemo(() => {
     if (!selectedTag) return entries;
@@ -128,29 +149,47 @@ export default function App() {
       {/* Tag Filter */}
       {allTags.length > 0 && view !== 'annual' && (
         <div style={{
-          display: 'flex', gap: 4, padding: '6px 16px 0', overflowX: 'auto',
-          scrollbarWidth: 'none', msOverflowStyle: 'none',
-        } as React.CSSProperties}>
-          <button
-            style={{
-              padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
-              border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
-              fontFamily: '-apple-system, sans-serif',
-              background: selectedTag === null ? '#2c2416' : 'white',
-              color: selectedTag === null ? 'white' : '#6b5d4d',
-            }}
-            onClick={() => setSelectedTag(null)}>전체</button>
-          {allTags.map(tag => (
-            <button key={tag}
+          padding: '6px 16px 0',
+        }}>
+          <div style={{
+            display: 'flex', gap: 4, flexWrap: tagBarExpanded ? 'wrap' : 'nowrap',
+            overflow: tagBarExpanded ? 'visible' : 'hidden',
+            maxHeight: tagBarExpanded ? 'none' : 28,
+          }}>
+            <button
               style={{
                 padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
                 border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
                 fontFamily: '-apple-system, sans-serif',
-                background: selectedTag === tag ? '#3a7ca5' : 'white',
-                color: selectedTag === tag ? 'white' : '#3a7ca5',
+                background: selectedTag === null ? '#2c2416' : 'white',
+                color: selectedTag === null ? 'white' : '#6b5d4d',
+                flexShrink: 0,
               }}
-              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
-          ))}
+              onClick={() => setSelectedTag(null)}>전체</button>
+            {allTags.map(tag => (
+              <button key={tag}
+                style={{
+                  padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+                  border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
+                  fontFamily: '-apple-system, sans-serif',
+                  background: selectedTag === tag ? '#3a7ca5' : 'white',
+                  color: selectedTag === tag ? 'white' : '#3a7ca5',
+                  flexShrink: 0,
+                }}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
+            ))}
+            {allTags.length > 4 && (
+              <button
+                style={{
+                  padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
+                  border: 'none', background: 'transparent', color: '#b8a99a',
+                  fontFamily: '-apple-system, sans-serif', flexShrink: 0,
+                }}
+                onClick={() => setTagBarExpanded(!tagBarExpanded)}>
+                {tagBarExpanded ? '접기 ▲' : `+${allTags.length - 4} ▼`}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -314,6 +353,8 @@ export default function App() {
           onNotionSync={handleSyncNotion}
           syncing={syncing}
           lastError={lastError}
+          tagList={tagList}
+          onDeleteTag={deleteTag}
         />
       )}
     </div>

@@ -41,7 +41,7 @@ export function Header({ curDate, view, nav, goToday, onSettings, notionConnecte
     <>
       <header style={styles.header}>
         <div style={styles.headerTop}>
-          <h1 style={styles.logo}>B · J</h1>
+          <h1 style={{ ...styles.logo, fontSize: 16, letterSpacing: 2 }}>Bullet Journal</h1>
           <div style={styles.headerActions as React.CSSProperties}>
             {notionConnected && (
               <span style={{ fontSize: 10, color: syncing ? '#c0883f' : '#4a8c3f', marginRight: 4 }}>
