@@ -83,7 +83,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
 
   // === Drag state ===
   const timelineRef = useRef<HTMLDivElement>(null);
-  const justDragged = useRef(false);
+  const didDragMove = useRef(false);
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'place';
     entryId: string;
@@ -104,6 +104,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const handleEntryTouchStart = useCallback((e: React.TouchEvent, entry: Entry, mode: 'move' | 'resize') => {
     if (!onUpdateEntry) return;
     e.stopPropagation();
+    didDragMove.current = false;
     const touch = e.touches[0];
     const startMin = timeToMinutes(entry.time!);
     const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
@@ -124,6 +125,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const handleUntimedTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     if (!onUpdateEntry) return;
     e.stopPropagation();
+    didDragMove.current = false;
     const touch = e.touches[0];
     const y = getTimelineY(touch.clientY);
     const minutes = yToMinutes(y);
@@ -144,6 +146,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     e.preventDefault();
     const touch = e.touches[0];
     const deltaY = touch.clientY - dragState.startY;
+    if (Math.abs(deltaY) > 5) didDragMove.current = true;
     const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
 
     if (dragState.type === 'move' || dragState.type === 'place') {
@@ -159,24 +162,27 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   }, [dragState]);
 
   const handleTouchEnd = useCallback(() => {
-    if (!dragState || !onUpdateEntry) return;
+    if (!dragState || !onUpdateEntry) {
+      setDragState(null);
+      return;
+    }
 
-    justDragged.current = true;
-    setTimeout(() => { justDragged.current = false; }, 300);
-
-    if (dragState.type === 'move' || dragState.type === 'place') {
-      const newStartMin = snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60);
-      const duration = dragState.origEndMinutes - dragState.origMinutes;
-      const newEndMin = newStartMin + duration;
-      onUpdateEntry(dragState.entryId, {
-        time: minutesToTime(newStartMin),
-        endTime: minutesToTime(newEndMin),
-      });
-    } else if (dragState.type === 'resize') {
-      const newEndMin = snapMinutes(dragState.origMinutes + ((dragState.currentHeight + 2) / HOUR_HEIGHT) * 60);
-      onUpdateEntry(dragState.entryId, {
-        endTime: minutesToTime(Math.max(dragState.origMinutes + 15, newEndMin)),
-      });
+    // Only save if actually dragged (moved > 5px)
+    if (didDragMove.current) {
+      if (dragState.type === 'move' || dragState.type === 'place') {
+        const newStartMin = snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60);
+        const duration = dragState.origEndMinutes - dragState.origMinutes;
+        const newEndMin = newStartMin + duration;
+        onUpdateEntry(dragState.entryId, {
+          time: minutesToTime(newStartMin),
+          endTime: minutesToTime(newEndMin),
+        });
+      } else if (dragState.type === 'resize') {
+        const newEndMin = snapMinutes(dragState.origMinutes + ((dragState.currentHeight + 2) / HOUR_HEIGHT) * 60);
+        onUpdateEntry(dragState.entryId, {
+          endTime: minutesToTime(Math.max(dragState.origMinutes + 15, newEndMin)),
+        });
+      }
     }
 
     setDragState(null);
@@ -286,7 +292,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                     marginBottom: 2, transition: 'background 0.15s',
                   }}
                   onTouchStart={e => handleUntimedTouchStart(e, entry)}
-                  onClick={() => { if (!dragState && !justDragged.current) onEdit(entry); }}
+                  onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
                     <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
                     <span style={{
@@ -431,7 +437,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                       touchAction: 'none',
                     }}
                     onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
-                    onClick={() => { if (!dragState && !justDragged.current) onEdit(entry); }}
+                    onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
                     <div style={{
                       fontSize: 11, fontWeight: 600,
