@@ -11,9 +11,11 @@ interface DailyScreenProps {
   onAdd: () => void;
   onEdit: (entry: Entry) => void;
   onDelete: (id: string) => void;
+  onMigrate?: (entry: Entry) => void;
+  onMigrateUp?: (entry: Entry) => void;
 }
 
-export function DailyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete }: DailyScreenProps) {
+export function DailyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp }: DailyScreenProps) {
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
   const dayEntries = entries
@@ -44,6 +46,8 @@ export function DailyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelet
               cycleStatus={cycleStatus}
               onEdit={() => onEdit(entry)}
               onDelete={() => onDelete(entry.id)}
+              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+              onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
             />
           ))}
         </div>

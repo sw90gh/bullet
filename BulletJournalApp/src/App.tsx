@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { styles } from './styles/theme';
 import { Header } from './components/Header';
 import { EntryModal } from './components/EntryModal';
+import { MigrateModal } from './components/MigrateModal';
 import { DeleteConfirm } from './components/DeleteConfirm';
 import { DailyScreen } from './screens/DailyScreen';
 import { WeeklyScreen } from './screens/WeeklyScreen';
@@ -20,9 +21,10 @@ export default function App() {
   const [curDate, setCurDate] = useState(new Date());
   const [modal, setModal] = useState<ModalState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [migrateTarget, setMigrateTarget] = useState<{ entry: Entry; type: 'migrated' | 'migrated_up' } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, mergeNotionEntries } = useEntries();
+  const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, mergeNotionEntries } = useEntries();
   const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal } = useGoals();
   const { config, syncing, lastError, connect, disconnect, syncFromNotion, isConnected } = useNotionSync();
 
@@ -96,6 +98,8 @@ export default function App() {
             onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
+            onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
+            onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
           />
         )}
 
@@ -191,6 +195,24 @@ export default function App() {
               deleteEntry(deleteConfirm);
             }
             setDeleteConfirm(null);
+          }}
+        />
+      )}
+
+      {/* Migrate Modal */}
+      {migrateTarget && (
+        <MigrateModal
+          entry={migrateTarget.entry}
+          type={migrateTarget.type}
+          onClose={() => setMigrateTarget(null)}
+          onMigrate={(targetDate) => {
+            migrateEntry(migrateTarget.entry.id, targetDate);
+            setMigrateTarget(null);
+          }}
+          onMigrateUp={(goalText, year, month) => {
+            migrateUpEntry(migrateTarget.entry.id);
+            addGoal({ text: goalText, year, month, done: false });
+            setMigrateTarget(null);
           }}
         />
       )}

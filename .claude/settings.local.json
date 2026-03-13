@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-expo-app@latest BulletJournalApp --template blank-typescript 2>&1 | tail -20)",
+      "Bash(which node:*)",
+      "Bash(cmd.exe //c \"where node\" 2>/dev/null; cmd.exe //c \"where npm\" 2>/dev/null)",
+      "Bash(gh auth:*)",
+      "Bash(git init:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Bash(git add:*)",
+      "Bash(gh run:*)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\" && node --version && npm --version)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && node --version && npm --version)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && npm install -g vercel 2>&1)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npm install 2>&1)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npx vercel --yes --prod 2>&1)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npx vercel login 2>&1)"
+    ]
+  }
+}

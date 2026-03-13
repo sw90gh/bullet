@@ -43,6 +43,34 @@ export function useEntries() {
     }));
   }, []);
 
+  // 이관: 원본을 migrated로 표시하고, 새 날짜에 복사본 생성
+  const migrateEntry = useCallback((id: string, targetDate: string) => {
+    setEntries(prev => {
+      const original = prev.find(e => e.id === id);
+      if (!original) return prev;
+      const migrated = prev.map(e =>
+        e.id === id ? { ...e, status: 'migrated' as EntryStatus } : e
+      );
+      const newEntry: Entry = {
+        ...original,
+        id: uid(),
+        date: targetDate,
+        startDate: targetDate,
+        endDate: original.endDate ? targetDate : undefined,
+        status: 'todo' as EntryStatus,
+        createdAt: Date.now(),
+      };
+      return [...migrated, newEntry];
+    });
+  }, []);
+
+  // 상위 이관: 원본을 migrated_up으로 표시 (목표 생성은 App에서 처리)
+  const migrateUpEntry = useCallback((id: string) => {
+    setEntries(prev => prev.map(e =>
+      e.id === id ? { ...e, status: 'migrated_up' as EntryStatus } : e
+    ));
+  }, []);
+
   const mergeNotionEntries = useCallback((notionEntries: Entry[]) => {
     setEntries(prev => {
       const existing = new Map(prev.filter(e => e.notionPageId).map(e => [e.notionPageId!, e]));
@@ -68,5 +96,5 @@ export function useEntries() {
     });
   }, []);
 
-  return { entries, loaded, addEntry, updateEntry, deleteEntry, cycleStatus, mergeNotionEntries, setEntries };
+  return { entries, loaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, mergeNotionEntries, setEntries };
 }

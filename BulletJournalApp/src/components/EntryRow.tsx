@@ -8,10 +8,12 @@ interface EntryRowProps {
   cycleStatus: (id: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onMigrate?: () => void;
+  onMigrateUp?: () => void;
   compact?: boolean;
 }
 
-export function EntryRow({ entry, cycleStatus, onEdit, onDelete, compact }: EntryRowProps) {
+export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, compact }: EntryRowProps) {
   const [swiped, setSwiped] = useState(false);
   const st = STATUS[entry.status] || STATUS.todo;
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
@@ -75,15 +77,26 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, compact }: Entr
     <div style={styles.entryOuter as React.CSSProperties}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <div style={{
-        ...styles.entrySwipeBg as React.CSSProperties,
+        position: 'absolute', right: 0, top: 0, bottom: 0, width: 200,
+        display: 'flex', transition: 'opacity 0.2s',
         opacity: swiped ? 1 : 0,
       }}>
-        <button style={styles.swipeEdit} onClick={() => { onEdit(); setSwiped(false); }}>수정</button>
-        <button style={styles.swipeDelete} onClick={() => { onDelete(); setSwiped(false); }}>삭제</button>
+        {onMigrate && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
+          <button style={{ flex: 1, background: '#c0883f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+            onClick={() => { onMigrate(); setSwiped(false); }}>이관 →</button>
+        )}
+        {onMigrateUp && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
+          <button style={{ flex: 1, background: '#3a7ca5', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+            onClick={() => { onMigrateUp(); setSwiped(false); }}>상위 ←</button>
+        )}
+        <button style={{ flex: 1, background: '#6b5d4d', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+          onClick={() => { onEdit(); setSwiped(false); }}>수정</button>
+        <button style={{ flex: 1, background: '#c0583f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+          onClick={() => { onDelete(); setSwiped(false); }}>삭제</button>
       </div>
       <div style={{
         ...styles.entryRow as React.CSSProperties,
-        transform: swiped ? 'translateX(-120px)' : 'translateX(0)',
+        transform: swiped ? 'translateX(-200px)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
       }}
         onClick={() => !swiped && cycleStatus(entry.id)}
