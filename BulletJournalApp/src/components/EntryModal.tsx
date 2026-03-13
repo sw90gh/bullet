@@ -124,20 +124,22 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal }: EntryMod
                 ))}
               </div>
 
-              <div style={{ marginTop: 4, overflow: 'hidden' }}>
-                <label style={styles.fieldLabel}>시작일</label>
-                <input type="date" style={{ ...styles.input, marginBottom: 8, display: 'block' }} value={date}
-                  onChange={e => setDate(e.target.value)} />
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <label style={styles.fieldLabel}>종료일 (선택)</label>
-                <input type="date" style={{ ...styles.input, marginBottom: 8, display: 'block' }} value={endDate}
-                  onChange={e => setEndDate(e.target.value)} />
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <label style={styles.fieldLabel}>시간 (선택)</label>
-                <input type="time" style={{ ...styles.input, display: 'block' }} value={time}
-                  onChange={e => setTime(e.target.value)} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 4, overflow: 'hidden' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 4 }}>시작일</label>
+                  <input type="date" style={{ ...styles.input, padding: '8px 10px', fontSize: 13, display: 'block' }} value={date}
+                    onChange={e => setDate(e.target.value)} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 4 }}>종료일</label>
+                  <input type="date" style={{ ...styles.input, padding: '8px 10px', fontSize: 13, display: 'block' }} value={endDate}
+                    onChange={e => setEndDate(e.target.value)} />
+                </div>
+                <div style={{ flex: 0.7, minWidth: 0 }}>
+                  <label style={{ ...styles.fieldLabel, marginTop: 8, marginBottom: 4 }}>시간</label>
+                  <input type="time" style={{ ...styles.input, padding: '8px 10px', fontSize: 13, display: 'block' }} value={time}
+                    onChange={e => setTime(e.target.value)} />
+                </div>
               </div>
             </>
           )}
