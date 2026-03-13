@@ -14,7 +14,6 @@ export function getStyles(isDark: boolean): Styles {
       fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
       position: 'relative',
       paddingBottom: 80,
-      overflowX: 'hidden',
     },
     loadingWrap: {
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
