@@ -1,0 +1,104 @@
+import React, { useState, useMemo } from 'react';
+import { styles } from '../styles/theme';
+import { STATUS, PRIORITY } from '../utils/constants';
+import { Entry } from '../types';
+
+interface SearchModalProps {
+  entries: Entry[];
+  onClose: () => void;
+  onEdit: (entry: Entry) => void;
+}
+
+export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
+  const [query, setQuery] = useState('');
+
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return entries.filter(e =>
+      e.text.toLowerCase().includes(q) ||
+      e.memo?.toLowerCase().includes(q) ||
+      e.tags?.some(t => t.toLowerCase().includes(q))
+    ).sort((a, b) => b.createdAt - a.createdAt).slice(0, 30);
+  }, [entries, query]);
+
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={{
+        ...styles.modal,
+        borderRadius: '20px 20px 0 0',
+        maxHeight: '90vh',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{
+          padding: '14px 0 8px', borderBottom: '1px solid #ebe5dc',
+          position: 'sticky', top: 0, background: '#faf6f0', zIndex: 1,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18 }}>🔍</span>
+            <input
+              style={{
+                ...styles.input,
+                flex: 1, padding: '8px 12px', fontSize: 14,
+              }}
+              placeholder="검색어를 입력하세요"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              autoFocus
+            />
+            <button style={styles.modalClose} onClick={onClose}>✕</button>
+          </div>
+        </div>
+
+        <div style={{ padding: '8px 0', maxHeight: '70vh', overflowY: 'auto' }}>
+          {query.trim() && results.length === 0 && (
+            <p style={{ textAlign: 'center', color: '#b8a99a', fontSize: 13, padding: 20 }}>
+              검색 결과가 없습니다
+            </p>
+          )}
+          {results.map(entry => {
+            const st = STATUS[entry.status] || STATUS.todo;
+            const pr = PRIORITY[entry.priority] || PRIORITY.none;
+            return (
+              <div key={entry.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 4px', borderBottom: '1px solid #f5f0e8',
+                cursor: 'pointer',
+              }} onClick={() => { onEdit(entry); onClose(); }}>
+                <span style={{
+                  fontSize: 14, fontWeight: 800, color: st.color,
+                  width: 18, textAlign: 'center', flexShrink: 0,
+                }}>{st.symbol}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13, color: '#2c2416',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {pr.symbol && <span style={{ color: '#c0583f', marginRight: 3 }}>{pr.symbol}</span>}
+                    {entry.text}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#b8a99a', marginTop: 1 }}>
+                    {entry.date?.replace(/-/g, '.')}
+                    {entry.tags && entry.tags.length > 0 && (
+                      <span style={{ marginLeft: 6, color: '#3a7ca5' }}>
+                        {entry.tags.map(t => `#${t}`).join(' ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 9, color: st.color, background: st.color + '18',
+                  padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                }}>{st.label}</span>
+              </div>
+            );
+          })}
+          {!query.trim() && (
+            <p style={{ textAlign: 'center', color: '#b8a99a', fontSize: 13, padding: 20 }}>
+              제목, 메모, 태그로 검색할 수 있습니다
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -2,7 +2,7 @@ import React from 'react';
 import { styles } from '../styles/theme';
 import { EntryRow } from '../components/EntryRow';
 import { formatDateKey, getTodayStr, daysBetween } from '../utils/date';
-import { Entry } from '../types';
+import { Entry, EntryPriority } from '../types';
 
 interface DailyScreenProps {
   date: Date;
@@ -14,9 +14,10 @@ interface DailyScreenProps {
   onDelete: (id: string) => void;
   onMigrate?: (entry: Entry) => void;
   onMigrateUp?: (entry: Entry) => void;
+  onChangePriority?: (id: string, priority: EntryPriority) => void;
 }
 
-export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp }: DailyScreenProps) {
+export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority }: DailyScreenProps) {
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
   const dayEntries = entries
@@ -101,6 +102,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
               onDelete={() => onDelete(entry.id)}
               onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
               onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+              onChangePriority={onChangePriority}
             />
           ))}
         </div>

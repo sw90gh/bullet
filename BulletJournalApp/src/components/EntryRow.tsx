@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { styles } from '../styles/theme';
 import { STATUS, TYPES, PRIORITY } from '../utils/constants';
-import { Entry } from '../types';
+import { Entry, EntryPriority } from '../types';
 
 interface EntryRowProps {
   entry: Entry;
@@ -10,11 +10,14 @@ interface EntryRowProps {
   onDelete: () => void;
   onMigrate?: () => void;
   onMigrateUp?: () => void;
+  onChangePriority?: (id: string, priority: EntryPriority) => void;
   compact?: boolean;
 }
 
-export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, compact }: EntryRowProps) {
-  const [swiped, setSwiped] = useState(false);
+type SwipeDir = 'none' | 'left' | 'right';
+
+export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact }: EntryRowProps) {
+  const [swipeDir, setSwipeDir] = useState<SwipeDir>('none');
   const st = STATUS[entry.status] || STATUS.todo;
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
   const isStrike = ('strike' in st && st.strike) || entry.status === 'done';
@@ -43,10 +46,21 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       return;
     }
     const diff = e.changedTouches[0].clientX - touchStart.current.x;
-    if (diff < -60) setSwiped(true);
-    else if (diff > 60) setSwiped(false);
+    if (diff < -60) setSwipeDir('left');
+    else if (diff > 60) setSwipeDir(swipeDir === 'none' ? 'right' : 'none');
+    else if (Math.abs(diff) < 10) {
+      // tap - only if not swiped
+      if (swipeDir !== 'none') setSwipeDir('none');
+    }
     touchStart.current = null;
   };
+
+  const priorityBtnStyle = (key: string, active: boolean): React.CSSProperties => ({
+    flex: 1, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+    fontFamily: '-apple-system, sans-serif',
+    background: active ? '#2c2416' : key === 'urgent' ? '#c0583f' : key === 'important' ? '#c0883f' : '#b8a99a',
+    color: 'white',
+  });
 
   if (compact) {
     return (
@@ -76,30 +90,56 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   return (
     <div style={styles.entryOuter as React.CSSProperties}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+
+      {/* 좌측: 우선순위 버튼 (우→좌 스와이프 = right) */}
+      {onChangePriority && (
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: 160,
+          display: 'flex', transition: 'opacity 0.2s',
+          opacity: swipeDir === 'right' ? 1 : 0,
+          pointerEvents: swipeDir === 'right' ? 'auto' : 'none',
+        }}>
+          {(['none', 'important', 'urgent'] as EntryPriority[]).map(key => {
+            const p = PRIORITY[key];
+            return (
+              <button key={key}
+                style={priorityBtnStyle(key, entry.priority === key)}
+                onClick={() => { onChangePriority(entry.id, key); setSwipeDir('none'); }}>
+                {p.symbol ? p.symbol + ' ' : ''}{p.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 우측: 액션 버튼 (좌→우 스와이프 = left) */}
       <div style={{
         position: 'absolute', right: 0, top: 0, bottom: 0, width: 200,
         display: 'flex', transition: 'opacity 0.2s',
-        opacity: swiped ? 1 : 0,
+        opacity: swipeDir === 'left' ? 1 : 0,
+        pointerEvents: swipeDir === 'left' ? 'auto' : 'none',
       }}>
         {onMigrate && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
           <button style={{ flex: 1, background: '#c0883f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
-            onClick={() => { onMigrate(); setSwiped(false); }}>이관 →</button>
+            onClick={() => { onMigrate(); setSwipeDir('none'); }}>이관 →</button>
         )}
         {onMigrateUp && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
           <button style={{ flex: 1, background: '#3a7ca5', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
-            onClick={() => { onMigrateUp(); setSwiped(false); }}>상위 ←</button>
+            onClick={() => { onMigrateUp(); setSwipeDir('none'); }}>상위 ←</button>
         )}
         <button style={{ flex: 1, background: '#6b5d4d', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
-          onClick={() => { onEdit(); setSwiped(false); }}>수정</button>
+          onClick={() => { onEdit(); setSwipeDir('none'); }}>수정</button>
         <button style={{ flex: 1, background: '#c0583f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
-          onClick={() => { onDelete(); setSwiped(false); }}>삭제</button>
+          onClick={() => { onDelete(); setSwipeDir('none'); }}>삭제</button>
       </div>
+
+      {/* 메인 콘텐츠 */}
       <div style={{
         ...styles.entryRow as React.CSSProperties,
-        transform: swiped ? 'translateX(-200px)' : 'translateX(0)',
+        transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(160px)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
       }}
-        onClick={() => !swiped && cycleStatus(entry.id)}
+        onClick={() => swipeDir === 'none' && cycleStatus(entry.id)}
       >
         {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? '#c0583f' : '#c0883f' }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (

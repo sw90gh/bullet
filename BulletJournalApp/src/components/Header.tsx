@@ -14,9 +14,10 @@ interface HeaderProps {
   notionConnected: boolean;
   syncing: boolean;
   urgentCount?: number;
+  onSearch?: () => void;
 }
 
-export function Header({ curDate, view, nav, goToday, onSettings, notionConnected, syncing, urgentCount = 0 }: HeaderProps) {
+export function Header({ curDate, view, nav, goToday, onSettings, notionConnected, syncing, urgentCount = 0, onSearch }: HeaderProps) {
   const y = curDate.getFullYear();
   const m = curDate.getMonth();
   const d = curDate.getDate();
@@ -51,6 +52,12 @@ export function Header({ curDate, view, nav, goToday, onSettings, notionConnecte
               ...styles.todayBtn,
               fontSize: 11, padding: '4px 10px',
             }} onClick={refreshQuote}>💡</button>
+            {onSearch && (
+              <button style={{
+                ...styles.todayBtn,
+                fontSize: 12, padding: '4px 10px',
+              }} onClick={onSearch}>🔍</button>
+            )}
             <button style={styles.todayBtn} onClick={goToday}>
               오늘
               {urgentCount > 0 && (

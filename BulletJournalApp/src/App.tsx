@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { EntryModal } from './components/EntryModal';
 import { MigrateModal } from './components/MigrateModal';
 import { DeleteConfirm } from './components/DeleteConfirm';
+import { SearchModal } from './components/SearchModal';
 import { DailyScreen } from './screens/DailyScreen';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { MonthlyScreen } from './screens/MonthlyScreen';
@@ -15,7 +16,7 @@ import { useEntries } from './hooks/useEntries';
 import { useGoals } from './hooks/useGoals';
 import { useNotionSync } from './hooks/useNotionSync';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
-import { ViewType, ModalState, Entry, Goal } from './types';
+import { ViewType, ModalState, Entry, Goal, EntryPriority } from './types';
 
 export default function App() {
   const [view, setView] = useState<ViewType>('daily');
@@ -24,6 +25,7 @@ export default function App() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [migrateTarget, setMigrateTarget] = useState<{ entry: Entry; type: 'migrated' | 'migrated_up' } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, mergeNotionEntries } = useEntries();
@@ -44,6 +46,10 @@ export default function App() {
       return d;
     });
   }, [view]);
+
+  const changePriority = useCallback((id: string, priority: EntryPriority) => {
+    updateEntry(id, { priority });
+  }, [updateEntry]);
 
   const toggleGoalDone = useCallback((id: string) => {
     const goal = goals.find(g => g.id === id);
@@ -98,6 +104,7 @@ export default function App() {
         notionConnected={isConnected}
         syncing={syncing}
         urgentCount={urgentCount}
+        onSearch={() => setShowSearch(true)}
       />
 
       {/* View Tabs */}
@@ -160,6 +167,7 @@ export default function App() {
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
             onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
+            onChangePriority={changePriority}
           />
         )}
 
@@ -284,6 +292,15 @@ export default function App() {
             addGoal({ text: goalText, year, month, done: false });
             setMigrateTarget(null);
           }}
+        />
+      )}
+
+      {/* Search */}
+      {showSearch && (
+        <SearchModal
+          entries={entries}
+          onClose={() => setShowSearch(false)}
+          onEdit={(e) => { setModal({ mode: 'edit', entry: e }); setShowSearch(false); }}
         />
       )}
 
