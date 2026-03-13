@@ -413,8 +413,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                 const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
                 // Overlap layout: each column takes proportional width, later columns overlap earlier ones
-                const colWidth = totalCols > 1 ? (100 / totalCols) : 100;
-                const leftPct = col * (colWidth * 0.75);
+                // Each overlapping entry shifts 12% to the right
+                const leftPct = col * 12;
                 const widthPct = 100 - leftPct;
 
                 return (
