@@ -29,11 +29,11 @@ export async function queryNotionDatabase(config: NotionConfig): Promise<Entry[]
     `databases/${config.databaseId}/query`,
     config.accessToken,
     'POST',
-    { sorts: [{ property: 'Date', direction: 'ascending' }] },
+    {},
   );
 
   const data = await res.json();
-  if (!res.ok) throw new Error(`Notion API error ${res.status}: ${data?.message || data?.error || JSON.stringify(data)}`);
+  if (!res.ok) throw new Error(`Notion ${res.status}: ${data?.message || JSON.stringify(data)} [DB: ${config.databaseId?.slice(0, 8)}...]`);
   return (data.results || []).map(mapNotionToEntry);
 }
 

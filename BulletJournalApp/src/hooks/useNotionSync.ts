@@ -30,10 +30,13 @@ export function useNotionSync() {
     }
     // Extract database ID from Notion URL if user pasted full URL
     let cleanDbId = databaseId.trim();
-    // Handle full Notion URLs like https://www.notion.so/workspace/DB_ID?v=...
-    const urlMatch = cleanDbId.match(/([a-f0-9]{32})/i) || cleanDbId.match(/([a-f0-9-]{36})/i);
-    if (urlMatch) {
-      cleanDbId = urlMatch[1];
+    // Remove hyphens first to normalize, then extract 32 hex chars
+    const stripped = cleanDbId.replace(/-/g, '');
+    const hexMatch = stripped.match(/([a-f0-9]{32})/i);
+    if (hexMatch) {
+      const h = hexMatch[1];
+      // Convert to UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+      cleanDbId = `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20,32)}`;
     }
     saveConfig({ accessToken: cleanToken, databaseId: cleanDbId, connected: true, lastSync: undefined });
   }, [saveConfig]);
