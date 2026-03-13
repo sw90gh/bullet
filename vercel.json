@@ -1,0 +1,10 @@
+{
+  "framework": "vite",
+  "buildCommand": "cd BulletJournalApp && npm install && npm run build",
+  "outputDirectory": "BulletJournalApp/dist",
+  "installCommand": "echo skip",
+  "rewrites": [
+    { "source": "/api/notion", "destination": "/api/notion" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
