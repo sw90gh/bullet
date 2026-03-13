@@ -243,11 +243,11 @@ export const styles: Styles = {
     marginTop: 14, marginBottom: 6,
   },
   input: {
-    width: '100%', padding: '10px 14px', borderRadius: 10,
+    width: '100%', maxWidth: '100%', padding: '10px 14px', borderRadius: 10,
     border: `1.5px solid ${COLORS.border}`, background: 'white',
-    fontSize: 15, color: COLORS.primary, outline: 'none',
+    fontSize: 14, color: COLORS.primary, outline: 'none',
     fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box', WebkitAppearance: 'none', appearance: 'none',
   },
   chipRow: { display: 'flex', gap: 5, flexWrap: 'wrap', overflow: 'hidden' },
   chip: {
