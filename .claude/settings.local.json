@@ -16,7 +16,9 @@
       "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && npm install -g vercel 2>&1)",
       "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npm install 2>&1)",
       "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npx vercel --yes --prod 2>&1)",
-      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npx vercel login 2>&1)"
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npx vercel login 2>&1)",
+      "WebFetch(domain:bullet-brown.vercel.app)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/sw90/AppData/Roaming/npm:$PATH\" && cd /c/CSW/project/bullet/BulletJournalApp && npm run build 2>&1)"
     ]
   }
 }

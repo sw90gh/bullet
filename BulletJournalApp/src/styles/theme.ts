@@ -12,6 +12,7 @@ export const styles: Styles = {
     fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
     position: 'relative',
     paddingBottom: 80,
+    overflowX: 'hidden',
   },
   loadingWrap: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -224,6 +225,7 @@ export const styles: Styles = {
     maxHeight: '85vh', overflow: 'auto', padding: '0 20px 24px',
     animation: 'slideUp 0.3s ease',
     paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+    boxSizing: 'border-box',
   },
   modalHeader: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -235,7 +237,7 @@ export const styles: Styles = {
     background: 'none', border: 'none', fontSize: 18, color: COLORS.textMuted,
     cursor: 'pointer', padding: 4,
   },
-  modalBody: { padding: '16px 0' },
+  modalBody: { padding: '16px 0', overflow: 'hidden' },
   fieldLabel: {
     display: 'block', fontSize: 12, fontWeight: 600, color: COLORS.textSecondary,
     marginTop: 14, marginBottom: 6,
@@ -245,14 +247,15 @@ export const styles: Styles = {
     border: `1.5px solid ${COLORS.border}`, background: 'white',
     fontSize: 15, color: COLORS.primary, outline: 'none',
     fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+    boxSizing: 'border-box',
   },
-  chipRow: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  chipRow: { display: 'flex', gap: 5, flexWrap: 'wrap', overflow: 'hidden' },
   chip: {
-    padding: '6px 12px', borderRadius: 8,
+    padding: '5px 8px', borderRadius: 8,
     border: `1.5px solid ${COLORS.border}`, background: 'white',
-    fontSize: 12, color: COLORS.textSecondary, cursor: 'pointer',
+    fontSize: 11, color: COLORS.textSecondary, cursor: 'pointer',
     fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s', whiteSpace: 'nowrap',
   },
   chipActive: {
     background: COLORS.primary, borderColor: COLORS.primary, color: COLORS.headerText,
@@ -262,6 +265,7 @@ export const styles: Styles = {
     background: COLORS.primary, color: COLORS.headerText, border: 'none',
     fontSize: 15, fontWeight: 600, cursor: 'pointer',
     fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+    boxSizing: 'border-box',
   },
 
   /* confirm dialog */
