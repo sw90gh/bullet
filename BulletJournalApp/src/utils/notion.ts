@@ -33,8 +33,8 @@ export async function queryNotionDatabase(config: NotionConfig): Promise<Entry[]
     { sorts: [{ property: 'Date', direction: 'ascending' }] },
   );
 
-  if (!res.ok) throw new Error(`Notion API error: ${res.status}`);
   const data = await res.json();
+  if (!res.ok) throw new Error(`Notion API error ${res.status}: ${data?.message || data?.error || JSON.stringify(data)}`);
   return (data.results || []).map(mapNotionToEntry);
 }
 
