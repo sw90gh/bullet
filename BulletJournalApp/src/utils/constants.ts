@@ -41,6 +41,6 @@ export const PRIORITY = {
 export const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'];
 export const MONTHS_KR = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-export const STATUS_CYCLE: Array<'todo' | 'progress' | 'done' | 'migrated' | 'cancelled'> = [
-  'todo', 'progress', 'done', 'migrated', 'cancelled'
+export const STATUS_CYCLE: Array<'todo' | 'progress' | 'done' | 'cancelled'> = [
+  'todo', 'progress', 'done', 'cancelled'
 ];
