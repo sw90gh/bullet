@@ -83,6 +83,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
 
   // === Drag state ===
   const timelineRef = useRef<HTMLDivElement>(null);
+  const justDragged = useRef(false);
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'place';
     entryId: string;
@@ -159,6 +160,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
 
   const handleTouchEnd = useCallback(() => {
     if (!dragState || !onUpdateEntry) return;
+
+    justDragged.current = true;
+    setTimeout(() => { justDragged.current = false; }, 300);
 
     if (dragState.type === 'move' || dragState.type === 'place') {
       const newStartMin = snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60);
@@ -282,7 +286,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                     marginBottom: 2, transition: 'background 0.15s',
                   }}
                   onTouchStart={e => handleUntimedTouchStart(e, entry)}
-                  onClick={() => !dragState && onEdit(entry)}
+                  onClick={() => { if (!dragState && !justDragged.current) onEdit(entry); }}
                   >
                     <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
                     <span style={{
@@ -354,69 +358,113 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
               </div>
             )}
 
-            {/* 시간 지정 항목 블록 */}
-            {timedEntries.map(entry => {
-              const startMin = timeToMinutes(entry.time!);
-              const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-              const isDraggingThis = dragState?.entryId === entry.id;
-              const top = isDraggingThis && dragState.type === 'move'
-                ? dragState.currentTop
-                : ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-              const height = isDraggingThis && dragState.type === 'resize'
-                ? dragState.currentHeight
-                : Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
-              const st = STATUS[entry.status] || STATUS.todo;
-              const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
+            {/* 시간 지정 항목 블록 - 겹침 계산 */}
+            {(() => {
+              // Sort by start time for overlap calculation
+              const sorted = [...timedEntries].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
+              // Calculate overlap groups: each entry gets a column index and total columns
+              const layout: { entry: Entry; col: number; totalCols: number }[] = [];
+              const active: { entry: Entry; endMin: number; col: number }[] = [];
 
-              return (
-                <div key={entry.id}
-                  style={{
-                    position: 'absolute', left: 4, right: 4, top, height,
-                    background: isDraggingThis ? `${st.color}40` : st.color + '20',
-                    borderLeft: `3px solid ${st.color}`,
-                    borderRadius: '0 6px 6px 0',
-                    padding: '3px 8px',
-                    cursor: 'grab',
-                    overflow: 'hidden',
-                    zIndex: isDraggingThis ? 15 : 5,
-                    opacity: isEntryDone ? 0.6 : 1,
-                    transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
-                    touchAction: 'none',
-                  }}
-                  onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
-                  onClick={() => !dragState && onEdit(entry)}
-                >
-                  <div style={{
-                    fontSize: 11, fontWeight: 600,
-                    color: isEntryDone ? C.textMuted : C.textPrimary,
-                    textDecoration: isEntryDone ? 'line-through' : 'none',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{entry.text}</div>
-                  {height > 30 && (
-                    <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>
-                      {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
-                    </div>
-                  )}
-                  {/* 하단 리사이즈 핸들 */}
-                  <div
+              sorted.forEach(entry => {
+                const startMin = timeToMinutes(entry.time!);
+                const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+                // Remove entries that have ended
+                const overlapping = active.filter(a => a.endMin > startMin);
+                const usedCols = new Set(overlapping.map(a => a.col));
+                let col = 0;
+                while (usedCols.has(col)) col++;
+                active.push({ entry, endMin, col });
+                layout.push({ entry, col, totalCols: 0 });
+              });
+
+              // Calculate totalCols for each group
+              layout.forEach((item, i) => {
+                const startMin = timeToMinutes(item.entry.time!);
+                const endMin = item.entry.endTime ? timeToMinutes(item.entry.endTime) : startMin + 60;
+                let maxCol = item.col;
+                layout.forEach(other => {
+                  const otherStart = timeToMinutes(other.entry.time!);
+                  const otherEnd = other.entry.endTime ? timeToMinutes(other.entry.endTime) : otherStart + 60;
+                  if (otherStart < endMin && otherEnd > startMin) {
+                    maxCol = Math.max(maxCol, other.col);
+                  }
+                });
+                item.totalCols = maxCol + 1;
+              });
+
+              return layout.map(({ entry, col, totalCols }) => {
+                const startMin = timeToMinutes(entry.time!);
+                const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+                const isDraggingThis = dragState?.entryId === entry.id;
+                const top = isDraggingThis && dragState.type === 'move'
+                  ? dragState.currentTop
+                  : ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+                const height = isDraggingThis && dragState.type === 'resize'
+                  ? dragState.currentHeight
+                  : Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+                const st = STATUS[entry.status] || STATUS.todo;
+                const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
+
+                // Overlap layout: each column takes proportional width, later columns overlap earlier ones
+                const colWidth = totalCols > 1 ? (100 / totalCols) : 100;
+                const leftPct = col * (colWidth * 0.75);
+                const widthPct = 100 - leftPct;
+
+                return (
+                  <div key={entry.id}
                     style={{
-                      position: 'absolute', left: 0, right: 0, bottom: 0, height: 12,
-                      cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'absolute',
+                      left: totalCols > 1 ? `calc(4px + ${leftPct}%)` : 4,
+                      right: 4,
+                      width: totalCols > 1 ? `calc(${widthPct}% - 8px)` : undefined,
+                      top, height,
+                      background: isDraggingThis ? `${st.color}40` : st.color + '20',
+                      borderLeft: `3px solid ${st.color}`,
+                      borderRadius: '0 6px 6px 0',
+                      padding: '3px 8px',
+                      cursor: 'grab',
+                      overflow: 'hidden',
+                      zIndex: isDraggingThis ? 15 : 5 + col,
+                      opacity: isEntryDone ? 0.6 : 1,
+                      transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
                       touchAction: 'none',
                     }}
-                    onTouchStart={e => {
-                      e.stopPropagation();
-                      handleEntryTouchStart(e, entry, 'resize');
-                    }}
+                    onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
+                    onClick={() => { if (!dragState && !justDragged.current) onEdit(entry); }}
                   >
                     <div style={{
-                      width: 24, height: 3, borderRadius: 2,
-                      background: C.textMuted, opacity: 0.4,
-                    }} />
+                      fontSize: 11, fontWeight: 600,
+                      color: isEntryDone ? C.textMuted : C.textPrimary,
+                      textDecoration: isEntryDone ? 'line-through' : 'none',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{entry.text}</div>
+                    {height > 30 && (
+                      <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>
+                        {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
+                      </div>
+                    )}
+                    {/* 하단 리사이즈 핸들 */}
+                    <div
+                      style={{
+                        position: 'absolute', left: 0, right: 0, bottom: 0, height: 12,
+                        cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        touchAction: 'none',
+                      }}
+                      onTouchStart={e => {
+                        e.stopPropagation();
+                        handleEntryTouchStart(e, entry, 'resize');
+                      }}
+                    >
+                      <div style={{
+                        width: 24, height: 3, borderRadius: 2,
+                        background: C.textMuted, opacity: 0.4,
+                      }} />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
