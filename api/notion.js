@@ -2,7 +2,7 @@ module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Notion-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Notion-Version, X-Notion-Token');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -13,12 +13,15 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'path parameter required' });
   }
 
-  const notionUrl = `https://api.notion.com/v1/${path}`;
-  const authorization = req.headers['authorization'];
+  // Get token from custom header (avoids proxy header stripping issues)
+  const token = req.headers['x-notion-token'];
+  const authorization = token ? `Bearer ${token}` : req.headers['authorization'];
 
   if (!authorization) {
     return res.status(401).json({ error: 'Authorization header required' });
   }
+
+  const notionUrl = `https://api.notion.com/v1/${path}`;
 
   try {
     const fetchOptions = {

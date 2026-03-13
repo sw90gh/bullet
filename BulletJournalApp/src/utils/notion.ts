@@ -15,7 +15,7 @@ async function notionFetch(path: string, token: string, method: string, body?: u
   const options: RequestInit = {
     method,
     headers: {
-      'Authorization': `Bearer ${token}`,
+      'X-Notion-Token': token,
       'Content-Type': 'application/json',
     },
   };

@@ -11,7 +11,9 @@
     <title>B·J Bullet Journal</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body, #root { height: 100%; overflow: hidden; }
       body { background: #faf6f0; overscroll-behavior: none; }
+      @media (prefers-color-scheme: dark) { body { background: #1a1612; } }
       ::-webkit-scrollbar { display: none; }
       @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }

@@ -9,11 +9,13 @@ export function getStyles(isDark: boolean): Styles {
     app: {
       maxWidth: 430,
       margin: '0 auto',
-      minHeight: '100vh',
+      height: '100vh',
       background: C.bg,
       fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
       position: 'relative',
-      paddingBottom: 80,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
     },
     loadingWrap: {
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -29,8 +31,7 @@ export function getStyles(isDark: boolean): Styles {
       paddingTop: 'env(safe-area-inset-top, 14px)',
     },
     stickyTop: {
-      position: 'sticky',
-      top: 0,
+      flexShrink: 0,
       zIndex: 30,
       background: C.bg,
     },
@@ -81,7 +82,7 @@ export function getStyles(isDark: boolean): Styles {
     },
 
     /* main */
-    main: { padding: '12px 16px' },
+    main: { padding: '12px 16px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 80 },
 
     /* today badge */
     todayBadge: {

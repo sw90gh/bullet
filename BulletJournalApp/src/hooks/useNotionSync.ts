@@ -23,7 +23,13 @@ export function useNotionSync() {
   }, []);
 
   const connect = useCallback((accessToken: string, databaseId: string) => {
-    saveConfig({ accessToken, databaseId, connected: true, lastSync: undefined });
+    // Trim whitespace and strip "Bearer " prefix if user accidentally included it
+    let cleanToken = accessToken.trim();
+    if (cleanToken.toLowerCase().startsWith('bearer ')) {
+      cleanToken = cleanToken.slice(7).trim();
+    }
+    const cleanDbId = databaseId.trim().replace(/-/g, '');
+    saveConfig({ accessToken: cleanToken, databaseId: cleanDbId, connected: true, lastSync: undefined });
   }, [saveConfig]);
 
   const disconnect = useCallback(() => {

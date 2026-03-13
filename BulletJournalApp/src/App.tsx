@@ -46,6 +46,10 @@ function useDarkMode() {
 
   const isDark = pref === 'dark' || (pref === 'system' && systemDark);
 
+  useEffect(() => {
+    document.body.style.background = isDark ? '#1a1a1a' : '#faf6f0';
+  }, [isDark]);
+
   return { isDark, pref, setPref };
 }
 
