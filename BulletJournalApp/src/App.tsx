@@ -9,11 +9,12 @@ import { WeeklyScreen } from './screens/WeeklyScreen';
 import { MonthlyScreen } from './screens/MonthlyScreen';
 import { AnnualScreen } from './screens/AnnualScreen';
 import { GanttScreen } from './screens/GanttScreen';
+import { NotesScreen } from './screens/NotesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useEntries } from './hooks/useEntries';
 import { useGoals } from './hooks/useGoals';
 import { useNotionSync } from './hooks/useNotionSync';
-import { formatDateKey, pad } from './utils/date';
+import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { ViewType, ModalState, Entry, Goal } from './types';
 
 export default function App() {
@@ -60,6 +61,16 @@ export default function App() {
     return entries.filter(e => e.tags?.includes(selectedTag));
   }, [entries, selectedTag]);
 
+  // 마감 임박 개수 (D-3 이내)
+  const urgentCount = useMemo(() => {
+    const today = getTodayStr();
+    return entries.filter(e => {
+      if (!e.endDate) return false;
+      if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
+      return daysBetween(today, e.endDate) <= 3;
+    }).length;
+  }, [entries]);
+
   const handleSyncNotion = async () => {
     const notionEntries = await syncFromNotion();
     if (notionEntries.length > 0) {
@@ -86,6 +97,7 @@ export default function App() {
         onSettings={() => setShowSettings(true)}
         notionConnected={isConnected}
         syncing={syncing}
+        urgentCount={urgentCount}
       />
 
       {/* View Tabs */}
@@ -96,6 +108,7 @@ export default function App() {
           { key: 'monthly' as ViewType, label: '월간' },
           { key: 'annual' as ViewType, label: '연간' },
           { key: 'gantt' as ViewType, label: '간트' },
+          { key: 'notes' as ViewType, label: '메모' },
         ]).map(t => (
           <button key={t.key}
             style={{ ...styles.tab, ...(view === t.key ? styles.tabActive : {}) }}
@@ -140,6 +153,7 @@ export default function App() {
           <DailyScreen
             date={curDate}
             entries={filteredEntries}
+            allEntries={entries}
             cycleStatus={cycleStatus}
             onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
@@ -194,6 +208,13 @@ export default function App() {
           <GanttScreen
             year={curY}
             month={curM}
+            entries={filteredEntries}
+            onEdit={(e) => setModal({ mode: 'edit', entry: e })}
+          />
+        )}
+
+        {view === 'notes' && (
+          <NotesScreen
             entries={filteredEntries}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
           />
