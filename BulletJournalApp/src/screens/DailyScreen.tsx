@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { styles } from '../styles/theme';
 import { EntryRow } from '../components/EntryRow';
+import { DailySummary } from '../components/DailySummary';
 import { formatDateKey, getTodayStr, daysBetween } from '../utils/date';
 import { STATUS } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
@@ -72,6 +73,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   return (
     <div>
       {isToday && <div style={styles.todayBadge}>TODAY</div>}
+
+      {/* 일간 요약 위젯 */}
+      <DailySummary date={date} entries={allEntries} />
 
       {/* 뷰 모드 토글 */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>

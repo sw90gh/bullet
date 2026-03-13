@@ -17,6 +17,25 @@ export const COLORS = {
   headerText: '#faf6f0',
 } as const;
 
+export const COLORS_DARK = {
+  bg: '#1a1a1a',
+  bgWhite: '#2a2a2a',
+  primary: '#e8e0d4',
+  accent: '#c0583f',
+  blue: '#5a9cc5',
+  green: '#5aac4f',
+  amber: '#d0a85f',
+  textPrimary: '#e8e0d4',
+  textSecondary: '#a89888',
+  textMuted: '#6b5d4d',
+  textLight: '#4a4038',
+  border: '#3a3530',
+  borderLight: '#2e2a25',
+  cardShadow: 'rgba(0,0,0,0.3)',
+  headerBg: '#1e1e1e',
+  headerText: '#faf6f0',
+} as const;
+
 export const STATUS = {
   todo:        { symbol: '·', label: '할 일',    color: '#2c2416' },
   done:        { symbol: '×', label: '완료',     color: '#4a8c3f' },

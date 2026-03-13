@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { styles } from '../styles/theme';
 import { STATUS, TYPES, PRIORITY, MONTHS_KR } from '../utils/constants';
 import { getTodayStr } from '../utils/date';
-import { ModalState, Entry, Goal } from '../types';
+import { ModalState, Entry, Goal, RecurringConfig } from '../types';
 
 interface EntryModalProps {
   modal: ModalState;
@@ -28,6 +28,9 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
   const [month, setMonth] = useState<number | null | undefined>((modal.goal as Goal)?.month ?? modal.month ?? null);
   const [tags, setTags] = useState<string>((modal.entry as Entry)?.tags?.join(', ') || '');
   const [memo, setMemo] = useState<string>((modal.entry as Entry)?.memo || '');
+  const [recurringType, setRecurringType] = useState<string>((modal.entry as Entry)?.recurring?.type || 'none');
+  const [recurringInterval, setRecurringInterval] = useState<number>((modal.entry as Entry)?.recurring?.interval || 1);
+  const [recurringEndDate, setRecurringEndDate] = useState<string>((modal.entry as Entry)?.recurring?.endDate || '');
 
   const handleSave = () => {
     if (!text.trim()) return;
@@ -40,6 +43,9 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
       });
     } else {
       const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+      const recurring: RecurringConfig | undefined = recurringType !== 'none'
+        ? { type: recurringType as RecurringConfig['type'], interval: recurringInterval, endDate: recurringEndDate || undefined }
+        : undefined;
       onSaveEntry({
         text: text.trim(),
         type: type as Entry['type'],
@@ -51,6 +57,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
         endTime: endTime || undefined,
         tags: parsedTags.length > 0 ? parsedTags : undefined,
         memo: memo.trim() || undefined,
+        recurring,
       });
     }
   };
@@ -240,6 +247,39 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
                 <input style={inputSmall} value={memo}
                   placeholder="세부 내용이나 참고사항"
                   onChange={e => setMemo(e.target.value)} />
+              </div>
+
+              {/* 반복 설정 */}
+              <div style={{ marginTop: 4 }}>
+                <label style={labelSmall}>반복</label>
+                <div style={{ ...styles.chipRow as React.CSSProperties, flexWrap: 'nowrap' }}>
+                  {([
+                    { key: 'none', label: '없음' },
+                    { key: 'daily', label: '매일' },
+                    { key: 'weekly', label: '매주' },
+                    { key: 'monthly', label: '매월' },
+                  ]).map(opt => (
+                    <button key={opt.key}
+                      style={{ ...styles.chip, ...(recurringType === opt.key ? styles.chipActive : {}), padding: '4px 6px', fontSize: 10 }}
+                      onClick={() => setRecurringType(opt.key)}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {recurringType !== 'none' && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <label style={labelSmall}>간격</label>
+                      <input type="number" style={inputSmall} value={recurringInterval} min={1} max={99}
+                        onChange={e => setRecurringInterval(Math.max(1, parseInt(e.target.value) || 1))} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <label style={labelSmall}>반복 종료일</label>
+                      <input type="date" style={inputSmall} value={recurringEndDate}
+                        onChange={e => setRecurringEndDate(e.target.value)} />
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

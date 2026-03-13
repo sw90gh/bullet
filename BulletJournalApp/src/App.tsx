@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { styles } from './styles/theme';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { getStyles } from './styles/theme';
+import { COLORS_DARK } from './utils/constants';
 import { Header } from './components/Header';
 import { EntryModal } from './components/EntryModal';
 import { MigrateModal } from './components/MigrateModal';
@@ -11,14 +12,46 @@ import { MonthlyScreen } from './screens/MonthlyScreen';
 import { AnnualScreen } from './screens/AnnualScreen';
 import { GanttScreen } from './screens/GanttScreen';
 import { NotesScreen } from './screens/NotesScreen';
+import { StatsScreen } from './screens/StatsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useEntries } from './hooks/useEntries';
 import { useGoals } from './hooks/useGoals';
 import { useNotionSync } from './hooks/useNotionSync';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
+import { generateRecurringEntries } from './utils/recurring';
+import { autoBackup } from './utils/storage';
 import { ViewType, ModalState, Entry, Goal, EntryPriority } from './types';
 
+type DarkModePref = 'system' | 'light' | 'dark';
+
+function useDarkMode() {
+  const [pref, setPref] = useState<DarkModePref>(() => {
+    return (localStorage.getItem('darkModePref') as DarkModePref) || 'system';
+  });
+  const [systemDark, setSystemDark] = useState(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('darkModePref', pref);
+  }, [pref]);
+
+  const isDark = pref === 'dark' || (pref === 'system' && systemDark);
+
+  return { isDark, pref, setPref };
+}
+
 export default function App() {
+  const { isDark, pref, setPref } = useDarkMode();
+  const styles = useMemo(() => getStyles(isDark), [isDark]);
+
   const [view, setView] = useState<ViewType>('daily');
   const [curDate, setCurDate] = useState(new Date());
   const [modal, setModal] = useState<ModalState | null>(null);
@@ -98,6 +131,21 @@ export default function App() {
     }).length;
   }, [entries]);
 
+  // 반복 항목 자동 생성
+  useEffect(() => {
+    if (!entriesLoaded) return;
+    const newEntries = generateRecurringEntries(entries);
+    newEntries.forEach(e => addEntry(e));
+  }, [entriesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 자동 백업 (1시간마다)
+  useEffect(() => {
+    if (!entriesLoaded || !goalsLoaded) return;
+    autoBackup();
+    const interval = setInterval(autoBackup, 1000 * 60 * 60);
+    return () => clearInterval(interval);
+  }, [entriesLoaded, goalsLoaded, entries, goals]);
+
   const handleSyncNotion = async () => {
     const notionEntries = await syncFromNotion();
     if (notionEntries.length > 0) {
@@ -109,7 +157,7 @@ export default function App() {
     return (
       <div style={styles.loadingWrap as React.CSSProperties}>
         <div style={styles.loadingDot}>·</div>
-        <p style={{ color: '#6b5d4d', fontSize: 14, marginTop: 8 }}>불러오는 중...</p>
+        <p style={{ color: isDark ? COLORS_DARK.textSecondary : '#6b5d4d', fontSize: 14, marginTop: 8 }}>불러오는 중...</p>
       </div>
     );
   }
@@ -137,6 +185,7 @@ export default function App() {
           { key: 'annual' as ViewType, label: '연간' },
           { key: 'gantt' as ViewType, label: '간트' },
           { key: 'notes' as ViewType, label: '메모' },
+          { key: 'stats' as ViewType, label: '통계' },
         ]).map(t => (
           <button key={t.key}
             style={{ ...styles.tab, ...(view === t.key ? styles.tabActive : {}) }}
@@ -159,10 +208,10 @@ export default function App() {
             <button
               style={{
                 padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
-                border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
+                border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
                 fontFamily: '-apple-system, sans-serif',
-                background: selectedTag === null ? '#2c2416' : 'white',
-                color: selectedTag === null ? 'white' : '#6b5d4d',
+                background: selectedTag === null ? (isDark ? COLORS_DARK.primary : '#2c2416') : (isDark ? COLORS_DARK.bgWhite : 'white'),
+                color: selectedTag === null ? (isDark ? '#1a1a1a' : 'white') : (isDark ? COLORS_DARK.textSecondary : '#6b5d4d'),
                 flexShrink: 0,
               }}
               onClick={() => setSelectedTag(null)}>전체</button>
@@ -170,10 +219,10 @@ export default function App() {
               <button key={tag}
                 style={{
                   padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
-                  border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
+                  border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
                   fontFamily: '-apple-system, sans-serif',
-                  background: selectedTag === tag ? '#3a7ca5' : 'white',
-                  color: selectedTag === tag ? 'white' : '#3a7ca5',
+                  background: selectedTag === tag ? (isDark ? COLORS_DARK.blue : '#3a7ca5') : (isDark ? COLORS_DARK.bgWhite : 'white'),
+                  color: selectedTag === tag ? 'white' : (isDark ? COLORS_DARK.blue : '#3a7ca5'),
                   flexShrink: 0,
                 }}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
@@ -182,7 +231,7 @@ export default function App() {
               <button
                 style={{
                   padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
-                  border: 'none', background: 'transparent', color: '#b8a99a',
+                  border: 'none', background: 'transparent', color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
                   fontFamily: '-apple-system, sans-serif', flexShrink: 0,
                 }}
                 onClick={() => setTagBarExpanded(!tagBarExpanded)}>
@@ -266,10 +315,20 @@ export default function App() {
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
           />
         )}
+
+        {view === 'stats' && (
+          <StatsScreen
+            year={curY}
+            month={curM}
+            entries={entries}
+            goals={goals}
+            isDark={isDark}
+          />
+        )}
       </main>
 
       {/* FAB */}
-      {view !== 'gantt' && (
+      {view !== 'gantt' && view !== 'stats' && (
         <button style={styles.fab as React.CSSProperties} onClick={() => {
           if (view === 'annual') setModal({ mode: 'add-goal', scope: 'goal', year: curY });
           else setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) });
@@ -355,6 +414,9 @@ export default function App() {
           lastError={lastError}
           tagList={tagList}
           onDeleteTag={deleteTag}
+          isDark={isDark}
+          darkModePref={pref}
+          onDarkModeChange={setPref}
         />
       )}
     </div>

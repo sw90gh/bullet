@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { styles } from '../styles/theme';
-import { exportAllData, importAllData } from '../utils/storage';
+import { getStyles } from '../styles/theme';
+import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup } from '../utils/storage';
 import { NotionConfig } from '../types';
+
+type DarkModePref = 'system' | 'light' | 'dark';
 
 interface TagInfo {
   name: string;
@@ -18,12 +20,16 @@ interface SettingsScreenProps {
   lastError: string | null;
   tagList?: TagInfo[];
   onDeleteTag?: (tag: string) => void;
+  isDark?: boolean;
+  darkModePref?: DarkModePref;
+  onDarkModeChange?: (pref: DarkModePref) => void;
 }
 
 export function SettingsScreen({
   onClose, notionConfig, onNotionConnect, onNotionDisconnect, onNotionSync, syncing, lastError,
-  tagList = [], onDeleteTag,
+  tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
 }: SettingsScreenProps) {
+  const styles = getStyles(isDark);
   const [token, setToken] = useState('');
   const [dbId, setDbId] = useState('');
   const [importText, setImportText] = useState('');
@@ -60,24 +66,51 @@ export function SettingsScreen({
         </div>
 
         <div style={styles.modalBody}>
+          {/* Dark Mode */}
+          <div style={styles.settingsSection}>
+            <div style={styles.settingsLabel}>화면 모드</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([
+                { key: 'system' as DarkModePref, label: '시스템' },
+                { key: 'light' as DarkModePref, label: '라이트' },
+                { key: 'dark' as DarkModePref, label: '다크' },
+              ]).map(opt => (
+                <button
+                  key={opt.key}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 10, fontSize: 13, fontWeight: 500,
+                    cursor: 'pointer', fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+                    border: darkModePref === opt.key ? 'none' : `1.5px solid ${isDark ? '#3a3530' : '#ddd5c9'}`,
+                    background: darkModePref === opt.key ? (isDark ? '#e8e0d4' : '#2c2416') : 'transparent',
+                    color: darkModePref === opt.key ? (isDark ? '#1a1a1a' : 'white') : (isDark ? '#a89888' : '#6b5d4d'),
+                    transition: 'all 0.2s',
+                  }}
+                  onClick={() => onDarkModeChange?.(opt.key)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Tag Management */}
           {tagList.length > 0 && (
             <div style={styles.settingsSection}>
               <div style={styles.settingsLabel}>태그 관리 ({tagList.length}개)</div>
-              <p style={{ fontSize: 11, color: '#b8a99a', marginBottom: 8 }}>
+              <p style={{ fontSize: 11, color: isDark ? '#6b5d4d' : '#b8a99a', marginBottom: 8 }}>
                 사용 빈도순 정렬. 삭제하면 모든 항목에서 해당 태그가 제거됩니다.
               </p>
               {tagList.map(t => (
                 <div key={t.name} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '6px 0', borderBottom: '1px solid #f5f0e8',
+                  padding: '6px 0', borderBottom: `1px solid ${isDark ? '#3a3530' : '#f5f0e8'}`,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{
                       fontSize: 12, color: '#3a7ca5', background: '#3a7ca510',
                       padding: '2px 8px', borderRadius: 6,
                     }}>#{t.name}</span>
-                    <span style={{ fontSize: 10, color: '#b8a99a' }}>{t.count}개</span>
+                    <span style={{ fontSize: 10, color: isDark ? '#6b5d4d' : '#b8a99a' }}>{t.count}개</span>
                   </div>
                   {onDeleteTag && (
                     <button style={{
@@ -120,7 +153,7 @@ export function SettingsScreen({
               </div>
             ) : (
               <div>
-                <p style={{ fontSize: 12, color: '#6b5d4d', marginBottom: 12, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 12, color: isDark ? '#a89888' : '#6b5d4d', marginBottom: 12, lineHeight: 1.6 }}>
                   Notion Integration Token과 Database ID를 입력하여 연동합니다.
                   <br />
                   Notion에서 Integration을 생성한 후, 대상 데이터베이스에 연결해주세요.
@@ -153,6 +186,29 @@ export function SettingsScreen({
           {/* Data Management */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>데이터 관리</div>
+            {(() => {
+              const backup = getAutoBackup();
+              return backup ? (
+                <div style={{
+                  padding: '8px 12px', borderRadius: 8, marginBottom: 10,
+                  background: isDark ? '#333' : '#f5f0e8', fontSize: 11, color: isDark ? '#a89888' : '#6b5d4d',
+                }}>
+                  자동 백업: {new Date(backup.time).toLocaleString('ko-KR')}
+                  <button style={{
+                    marginLeft: 8, fontSize: 10, padding: '2px 8px', borderRadius: 6,
+                    border: '1px solid #3a7ca540', background: 'transparent', color: '#3a7ca5',
+                    cursor: 'pointer', fontFamily: '-apple-system, sans-serif',
+                  }} onClick={() => {
+                    if (confirm('자동 백업 데이터를 복원하시겠습니까? 현재 데이터가 덮어씌워집니다.')) {
+                      if (restoreAutoBackup()) {
+                        alert('복원되었습니다. 페이지를 새로고침합니다.');
+                        window.location.reload();
+                      }
+                    }
+                  }}>복원</button>
+                </div>
+              ) : null;
+            })()}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <button style={styles.successBtn} onClick={handleExport}>
                 데이터 내보내기 (JSON)
@@ -184,7 +240,7 @@ export function SettingsScreen({
           {/* About */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>정보</div>
-            <p style={{ fontSize: 12, color: '#6b5d4d', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: isDark ? '#a89888' : '#6b5d4d', lineHeight: 1.6 }}>
               Bullet Journal v1.0
               <br />
               개인용 불렛저널 PWA
