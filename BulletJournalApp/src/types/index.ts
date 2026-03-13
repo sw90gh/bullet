@@ -12,6 +12,7 @@ export interface Entry {
   startDate?: string;   // for Gantt: defaults to date
   endDate?: string;     // for Gantt: defaults to date
   time?: string;
+  endTime?: string;
   createdAt: number;
   tags?: string[];
   memo?: string;

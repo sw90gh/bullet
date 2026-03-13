@@ -23,6 +23,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
   const [date, setDate] = useState<string>((modal.entry as Entry)?.date || modal.date || getTodayStr());
   const [endDate, setEndDate] = useState<string>((modal.entry as Entry)?.endDate || '');
   const [time, setTime] = useState<string>((modal.entry as Entry)?.time || '');
+  const [endTime, setEndTime] = useState<string>((modal.entry as Entry)?.endTime || '');
   const [done, setDone] = useState((modal.goal as Goal)?.done || false);
   const [month, setMonth] = useState<number | null | undefined>((modal.goal as Goal)?.month ?? modal.month ?? null);
   const [tags, setTags] = useState<string>((modal.entry as Entry)?.tags?.join(', ') || '');
@@ -47,6 +48,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
         date,
         endDate: endDate || undefined,
         time: time || undefined,
+        endTime: endTime || undefined,
         tags: parsedTags.length > 0 ? parsedTags : undefined,
         memo: memo.trim() || undefined,
       });
@@ -199,10 +201,17 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
               </div>
 
               {/* 시간 + 태그 + 메모 한 줄씩 */}
-              <div style={{ marginTop: 4 }}>
-                <label style={labelSmall}>시간</label>
-                <input type="time" style={inputSmall} value={time}
-                  onChange={e => setTime(e.target.value)} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={labelSmall}>시작 시간</label>
+                  <input type="time" style={inputSmall} value={time}
+                    onChange={e => setTime(e.target.value)} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label style={labelSmall}>종료 시간</label>
+                  <input type="time" style={inputSmall} value={endTime}
+                    onChange={e => setEndTime(e.target.value)} />
+                </div>
               </div>
 
               <div style={{ marginTop: 4 }}>

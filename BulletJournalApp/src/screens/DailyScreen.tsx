@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { styles } from '../styles/theme';
 import { EntryRow } from '../components/EntryRow';
 import { formatDateKey, getTodayStr, daysBetween } from '../utils/date';
+import { STATUS } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
 
 interface DailyScreenProps {
@@ -17,7 +18,17 @@ interface DailyScreenProps {
   onChangePriority?: (id: string, priority: EntryPriority) => void;
 }
 
+const HOUR_HEIGHT = 52;
+const START_HOUR = 6;
+const END_HOUR = 23;
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
 export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority }: DailyScreenProps) {
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
   const dayEntries = entries
@@ -30,7 +41,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     });
   const isToday = dateStr === todayStr;
 
-  // 마감 임박 항목 (오늘 기준 D-3 이내 + 기한 초과 미완료)
+  // 시간이 있는 항목 (타임라인용)
+  const timedEntries = dayEntries.filter(e => e.time);
+  const untimedEntries = dayEntries.filter(e => !e.time);
+
+  // 현재 시간 위치
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowTop = ((nowMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+
+  // 마감 임박 항목
   const urgentEntries = isToday ? allEntries.filter(e => {
     if (!e.endDate) return false;
     if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
@@ -52,6 +72,22 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   return (
     <div>
       {isToday && <div style={styles.todayBadge}>TODAY</div>}
+
+      {/* 뷰 모드 토글 */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+        <button style={{
+          flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+          border: '1px solid #ddd5c9', fontFamily: '-apple-system, sans-serif',
+          background: viewMode === 'list' ? '#2c2416' : 'white',
+          color: viewMode === 'list' ? 'white' : '#6b5d4d',
+        }} onClick={() => setViewMode('list')}>목록</button>
+        <button style={{
+          flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+          border: '1px solid #ddd5c9', fontFamily: '-apple-system, sans-serif',
+          background: viewMode === 'timeline' ? '#2c2416' : 'white',
+          color: viewMode === 'timeline' ? 'white' : '#6b5d4d',
+        }} onClick={() => setViewMode('timeline')}>시간표</button>
+      </div>
 
       {/* 마감 임박 */}
       {urgentEntries.length > 0 && (
@@ -85,26 +121,133 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
         </div>
       )}
 
-      {dayEntries.length === 0 ? (
-        <div style={styles.emptyState as React.CSSProperties}>
-          <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>·</div>
-          <p style={{ color: '#b8a99a', fontSize: 14 }}>기록이 없습니다</p>
-          <button style={styles.emptyAdd} onClick={onAdd}>+ 새 항목 추가</button>
-        </div>
+      {viewMode === 'list' ? (
+        /* 리스트 모드 */
+        dayEntries.length === 0 ? (
+          <div style={styles.emptyState as React.CSSProperties}>
+            <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>·</div>
+            <p style={{ color: '#b8a99a', fontSize: 14 }}>기록이 없습니다</p>
+            <button style={styles.emptyAdd} onClick={onAdd}>+ 새 항목 추가</button>
+          </div>
+        ) : (
+          <div>
+            {dayEntries.map(entry => (
+              <EntryRow
+                key={entry.id}
+                entry={entry}
+                cycleStatus={cycleStatus}
+                onEdit={() => onEdit(entry)}
+                onDelete={() => onDelete(entry.id)}
+                onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+                onChangePriority={onChangePriority}
+              />
+            ))}
+          </div>
+        )
       ) : (
-        <div>
-          {dayEntries.map(entry => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              cycleStatus={cycleStatus}
-              onEdit={() => onEdit(entry)}
-              onDelete={() => onDelete(entry.id)}
-              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-              onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-              onChangePriority={onChangePriority}
-            />
-          ))}
+        /* 타임라인 모드 */
+        <div style={{
+          background: 'white', borderRadius: 14, overflow: 'hidden',
+          boxShadow: '0 1px 3px rgba(44,36,22,0.06)',
+        }}>
+          {/* 시간 미지정 항목 */}
+          {untimedEntries.length > 0 && (
+            <div style={{ padding: '8px 12px', borderBottom: '2px solid #ebe5dc' }}>
+              <div style={{ fontSize: 10, color: '#b8a99a', marginBottom: 4, fontWeight: 600 }}>시간 미지정</div>
+              {untimedEntries.map(entry => {
+                const st = STATUS[entry.status] || STATUS.todo;
+                return (
+                  <div key={entry.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0',
+                    cursor: 'pointer',
+                  }} onClick={() => onEdit(entry)}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
+                    <span style={{
+                      fontSize: 12, color: '#2c2416', flex: 1,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{entry.text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 타임라인 그리드 */}
+          <div style={{ position: 'relative', marginLeft: 44, marginRight: 8 }}>
+            {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => {
+              const hour = START_HOUR + i;
+              return (
+                <div key={hour} style={{
+                  height: HOUR_HEIGHT, borderBottom: '1px solid #f5f0e8',
+                  position: 'relative',
+                }}>
+                  <span style={{
+                    position: 'absolute', left: -44, top: -7, fontSize: 10, color: '#b8a99a',
+                    width: 36, textAlign: 'right',
+                  }}>
+                    {hour.toString().padStart(2, '0')}:00
+                  </span>
+                  {/* 30분 점선 */}
+                  <div style={{
+                    position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0,
+                    borderBottom: '1px dashed #f5f0e8',
+                  }} />
+                </div>
+              );
+            })}
+
+            {/* 현재 시간 인디케이터 */}
+            {isToday && nowMinutes >= START_HOUR * 60 && nowMinutes <= END_HOUR * 60 && (
+              <div style={{
+                position: 'absolute', left: -8, right: 0, top: nowTop,
+                borderTop: '2px solid #c0583f', zIndex: 10,
+              }}>
+                <div style={{
+                  position: 'absolute', left: -6, top: -5, width: 8, height: 8,
+                  borderRadius: '50%', background: '#c0583f',
+                }} />
+              </div>
+            )}
+
+            {/* 시간 지정 항목 블록 */}
+            {timedEntries.map(entry => {
+              const startMin = timeToMinutes(entry.time!);
+              const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+              const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+              const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+              const st = STATUS[entry.status] || STATUS.todo;
+              const isDone = entry.status === 'done' || entry.status === 'cancelled';
+
+              return (
+                <div key={entry.id}
+                  style={{
+                    position: 'absolute', left: 4, right: 4, top, height,
+                    background: st.color + '20',
+                    borderLeft: `3px solid ${st.color}`,
+                    borderRadius: '0 6px 6px 0',
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    zIndex: 5,
+                    opacity: isDone ? 0.6 : 1,
+                  }}
+                  onClick={() => onEdit(entry)}>
+                  <div style={{
+                    fontSize: 11, fontWeight: 600,
+                    color: isDone ? '#b8a99a' : '#2c2416',
+                    textDecoration: isDone ? 'line-through' : 'none',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{entry.text}</div>
+                  {height > 30 && (
+                    <div style={{ fontSize: 9, color: '#b8a99a', marginTop: 1 }}>
+                      {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
