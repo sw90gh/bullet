@@ -28,6 +28,9 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const didLongPress = useRef(false);
 
   const onTouchStart = (e: React.TouchEvent) => {
+    // Don't track swipe if touching action buttons
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON') return;
     touchStart.current = { x: e.touches[0].clientX, time: Date.now() };
     didLongPress.current = false;
     longPressTimer.current = setTimeout(() => {
@@ -42,7 +45,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    if (didLongPress.current || touchStart.current === null) {
+    if (!touchStart.current || didLongPress.current) {
       touchStart.current = null;
       return;
     }
@@ -92,7 +95,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
     <div style={styles.entryOuter as React.CSSProperties}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
 
-      {/* 좌측: 우선순위 버튼 (우→좌 스와이프 = right) */}
+      {/* 좌측: 우선순위 버튼 (좌→우 스와이프) */}
       {onChangePriority && (
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0, width: 160,
@@ -105,6 +108,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             return (
               <button key={key}
                 style={priorityBtnStyle(key, entry.priority === key)}
+                onTouchEnd={(e) => { e.stopPropagation(); onChangePriority(entry.id, key); setSwipeDir('none'); }}
                 onClick={() => { onChangePriority(entry.id, key); setSwipeDir('none'); }}>
                 {p.symbol ? p.symbol + ' ' : ''}{p.label}
               </button>
@@ -113,7 +117,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         </div>
       )}
 
-      {/* 우측: 액션 버튼 (좌→우 스와이프 = left) */}
+      {/* 우측: 액션 버튼 (우→좌 스와이프) */}
       <div style={{
         position: 'absolute', right: 0, top: 0, bottom: 0, width: 200,
         display: 'flex', transition: 'opacity 0.2s',
@@ -122,15 +126,19 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       }}>
         {onMigrate && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
           <button style={{ flex: 1, background: '#c0883f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+            onTouchEnd={(e) => { e.stopPropagation(); onMigrate(); setSwipeDir('none'); }}
             onClick={() => { onMigrate(); setSwipeDir('none'); }}>이관 →</button>
         )}
         {onMigrateUp && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
           <button style={{ flex: 1, background: '#3a7ca5', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+            onTouchEnd={(e) => { e.stopPropagation(); onMigrateUp(); setSwipeDir('none'); }}
             onClick={() => { onMigrateUp(); setSwipeDir('none'); }}>상위 ←</button>
         )}
         <button style={{ flex: 1, background: '#6b5d4d', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+          onTouchEnd={(e) => { e.stopPropagation(); onEdit(); setSwipeDir('none'); }}
           onClick={() => { onEdit(); setSwipeDir('none'); }}>수정</button>
         <button style={{ flex: 1, background: '#c0583f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
+          onTouchEnd={(e) => { e.stopPropagation(); onDelete(); setSwipeDir('none'); }}
           onClick={() => { onDelete(); setSwipeDir('none'); }}>삭제</button>
       </div>
 
