@@ -1,7 +1,7 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { styles } from '../styles/theme';
-import { STATUS, PRIORITY } from '../utils/constants';
-import { getDaysInMonth, pad, daysBetween, formatDateKey } from '../utils/date';
+import { STATUS, PRIORITY, DAYS_KR } from '../utils/constants';
+import { getDaysInMonth, pad, daysBetween, formatDateKey, getWeekDates, addDays } from '../utils/date';
 import { Entry } from '../types';
 
 interface GanttScreenProps {
@@ -11,47 +11,105 @@ interface GanttScreenProps {
   onEdit: (entry: Entry) => void;
 }
 
-const DAY_WIDTH = 32;
+type GanttRange = 'week' | 'month' | 'quarter';
+
 const ROW_HEIGHT = 36;
-const LABEL_WIDTH = 130;
+const LABEL_WIDTH = 110;
 
 export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const daysInMonth = getDaysInMonth(year, month);
-  const monthStart = `${year}-${pad(month + 1)}-01`;
-  const monthEnd = `${year}-${pad(month + 1)}-${pad(daysInMonth)}`;
+  const [range, setRange] = useState<GanttRange>('month');
   const todayStr = formatDateKey(new Date());
 
-  // Filter entries that overlap with this month
+  // 범위에 따른 시작일/종료일/일수 계산
+  const { rangeStart, rangeEnd, totalDays, dayWidth, dayLabels } = useMemo(() => {
+    let start: string, end: string, days: number, dw: number;
+    const labels: { label: string; isToday: boolean; isWeekend: boolean }[] = [];
+
+    if (range === 'week') {
+      const weekDates = getWeekDates(year, month, new Date().getDate());
+      start = formatDateKey(weekDates[0]);
+      end = formatDateKey(weekDates[6]);
+      days = 7;
+      dw = Math.floor((window.innerWidth - LABEL_WIDTH - 40) / 7);
+      dw = Math.max(dw, 36);
+      for (let i = 0; i < 7; i++) {
+        const d = weekDates[i];
+        const ds = formatDateKey(d);
+        labels.push({
+          label: `${d.getDate()}${DAYS_KR[d.getDay()]}`,
+          isToday: ds === todayStr,
+          isWeekend: d.getDay() === 0 || d.getDay() === 6,
+        });
+      }
+    } else if (range === 'quarter') {
+      const qStartMonth = Math.floor(month / 3) * 3;
+      start = `${year}-${pad(qStartMonth + 1)}-01`;
+      const qEndMonth = qStartMonth + 2;
+      const qEndDays = getDaysInMonth(year, qEndMonth);
+      end = `${year}-${pad(qEndMonth + 1)}-${pad(qEndDays)}`;
+      days = daysBetween(start, end) + 1;
+      dw = 10;
+      for (let i = 0; i < days; i++) {
+        const ds = addDays(start, i);
+        const d = new Date(year, qStartMonth, 1);
+        d.setDate(d.getDate() + i);
+        labels.push({
+          label: d.getDate() === 1 ? `${d.getMonth() + 1}월` : (d.getDate() % 5 === 0 ? `${d.getDate()}` : ''),
+          isToday: ds === todayStr,
+          isWeekend: d.getDay() === 0 || d.getDay() === 6,
+        });
+      }
+    } else {
+      // month
+      const dim = getDaysInMonth(year, month);
+      start = `${year}-${pad(month + 1)}-01`;
+      end = `${year}-${pad(month + 1)}-${pad(dim)}`;
+      days = dim;
+      dw = 32;
+      for (let i = 0; i < dim; i++) {
+        const ds = `${year}-${pad(month + 1)}-${pad(i + 1)}`;
+        const d = new Date(year, month, i + 1);
+        labels.push({
+          label: `${i + 1}`,
+          isToday: ds === todayStr,
+          isWeekend: d.getDay() === 0 || d.getDay() === 6,
+        });
+      }
+    }
+
+    return { rangeStart: start, rangeEnd: end, totalDays: days, dayWidth: dw, dayLabels: labels };
+  }, [range, year, month, todayStr]);
+
+  // Filter entries that overlap with range
   const ganttEntries = useMemo(() => {
     return entries
       .filter(e => {
         const start = e.startDate || e.date;
         const end = e.endDate || e.date;
         if (!start) return false;
-        return start <= monthEnd && end >= monthStart;
+        return start <= rangeEnd && end >= rangeStart;
       })
       .sort((a, b) => {
         const as = a.startDate || a.date;
         const bs = b.startDate || b.date;
         return as.localeCompare(bs);
       });
-  }, [entries, monthStart, monthEnd]);
+  }, [entries, rangeStart, rangeEnd]);
 
   const getBarPosition = (entry: Entry) => {
     const start = entry.startDate || entry.date;
     const end = entry.endDate || entry.date;
-    const startOffset = Math.max(0, daysBetween(monthStart, start));
-    const endOffset = Math.min(daysInMonth - 1, daysBetween(monthStart, end));
-    const left = startOffset * DAY_WIDTH;
-    const width = Math.max(DAY_WIDTH * 0.8, (endOffset - startOffset + 1) * DAY_WIDTH - 4);
+    const startOffset = Math.max(0, daysBetween(rangeStart, start));
+    const endOffset = Math.min(totalDays - 1, daysBetween(rangeStart, end));
+    const left = startOffset * dayWidth;
+    const width = Math.max(dayWidth * 0.8, (endOffset - startOffset + 1) * dayWidth - 4);
     return { left, width };
   };
 
   const getBarColor = (entry: Entry) => {
     const st = STATUS[entry.status];
-    if (!st) return '#2c2416';
-    return st.color;
+    return st ? st.color : '#2c2416';
   };
 
   const getBarOpacity = (entry: Entry) => {
@@ -62,11 +120,30 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
 
   return (
     <div>
+      {/* Range selector */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        {([
+          { key: 'week' as GanttRange, label: '주간' },
+          { key: 'month' as GanttRange, label: '월간' },
+          { key: 'quarter' as GanttRange, label: '분기' },
+        ]).map(t => (
+          <button key={t.key}
+            style={{
+              ...styles.chip,
+              ...(range === t.key ? styles.chipActive : {}),
+              flex: 1, textAlign: 'center',
+            }}
+            onClick={() => setRange(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* Legend */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         {Object.entries(STATUS).map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: v.color,
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: v.color,
               opacity: k === 'cancelled' ? 0.4 : k === 'done' ? 0.7 : 1 }} />
             <span style={{ color: '#6b5d4d' }}>{v.label}</span>
           </div>
@@ -75,20 +152,17 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
 
       {ganttEntries.length === 0 ? (
         <div style={styles.emptyState as React.CSSProperties}>
-          <p style={{ color: '#b8a99a', fontSize: 14 }}>이번 달 일정이 없습니다</p>
+          <p style={{ color: '#b8a99a', fontSize: 14 }}>해당 기간에 일정이 없습니다</p>
           <p style={{ color: '#ccc4b8', fontSize: 12, marginTop: 8 }}>
             항목 추가 시 종료일을 설정하면 간트차트에 표시됩니다
           </p>
         </div>
       ) : (
         <div style={{ ...styles.ganttContainer as React.CSSProperties, position: 'relative' }}>
-          {/* Scrollable area */}
           <div style={{ display: 'flex' }}>
             {/* Fixed label column */}
             <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: '2px solid #ddd5c9' }}>
-              {/* Day header spacer */}
-              <div style={{ height: 32, borderBottom: '1px solid #ddd5c9', boxSizing: 'border-box' }} />
-              {/* Labels */}
+              <div style={{ height: 28, borderBottom: '1px solid #ddd5c9', boxSizing: 'border-box' }} />
               {ganttEntries.map(entry => {
                 const pr = PRIORITY[entry.priority] || PRIORITY.none;
                 return (
@@ -97,9 +171,8 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     display: 'flex',
                     alignItems: 'center',
                     width: LABEL_WIDTH,
-                    padding: '0 8px',
-                    fontSize: 12,
-                    color: '#2c2416',
+                    padding: '0 6px',
+                    fontSize: 11,
                     borderBottom: '1px solid #ebe5dc',
                     boxSizing: 'border-box',
                     cursor: 'pointer',
@@ -107,7 +180,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     onClick={() => onEdit(entry)}
                   >
                     {pr.symbol && (
-                      <span style={{ color: entry.priority === 'urgent' ? '#c0583f' : '#c0883f', marginRight: 4, fontSize: 11 }}>
+                      <span style={{ color: entry.priority === 'urgent' ? '#c0583f' : '#c0883f', marginRight: 3, fontSize: 10 }}>
                         {pr.symbol}
                       </span>
                     )}
@@ -127,27 +200,25 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
               scrollbarWidth: 'none', msOverflowStyle: 'none',
               WebkitOverflowScrolling: 'touch',
             } as React.CSSProperties}>
-              <div style={{ width: daysInMonth * DAY_WIDTH, minWidth: '100%' }}>
+              <div style={{ width: totalDays * dayWidth, minWidth: '100%' }}>
                 {/* Day headers */}
-                <div style={styles.ganttDayHeader as React.CSSProperties}>
-                  {Array.from({ length: daysInMonth }, (_, i) => {
-                    const dayStr = `${year}-${pad(month + 1)}-${pad(i + 1)}`;
-                    const isToday = dayStr === todayStr;
-                    const d = new Date(year, month, i + 1);
-                    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-                    return (
-                      <div key={i} style={{
-                        ...styles.ganttDayCell,
-                        width: DAY_WIDTH,
-                        minWidth: DAY_WIDTH,
-                        background: isToday ? '#c0583f18' : isWeekend ? '#faf6f0' : 'transparent',
-                        fontWeight: isToday ? 700 : 400,
-                        color: isToday ? '#c0583f' : isWeekend ? '#c0583f88' : '#b8a99a',
-                      } as React.CSSProperties}>
-                        {i + 1}
-                      </div>
-                    );
-                  })}
+                <div style={{ display: 'flex', borderBottom: '1px solid #ddd5c9', height: 28, boxSizing: 'border-box' }}>
+                  {dayLabels.map((dl, i) => (
+                    <div key={i} style={{
+                      width: dayWidth,
+                      minWidth: dayWidth,
+                      textAlign: 'center',
+                      fontSize: range === 'quarter' ? 8 : 9,
+                      color: dl.isToday ? '#c0583f' : dl.isWeekend ? '#c0583f88' : '#b8a99a',
+                      background: dl.isToday ? '#c0583f18' : 'transparent',
+                      fontWeight: dl.isToday ? 700 : 400,
+                      borderRight: '1px solid #ebe5dc',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxSizing: 'border-box',
+                    }}>
+                      {dl.label}
+                    </div>
+                  ))}
                 </div>
 
                 {/* Bars */}
@@ -160,27 +231,21 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     <div key={entry.id} style={{
                       height: ROW_HEIGHT,
                       position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
                       borderBottom: '1px solid #ebe5dc',
                       boxSizing: 'border-box',
                     }}>
                       {/* Grid lines */}
-                      {Array.from({ length: daysInMonth }, (_, i) => {
-                        const dayStr = `${year}-${pad(month + 1)}-${pad(i + 1)}`;
-                        const isToday = dayStr === todayStr;
-                        return (
-                          <div key={i} style={{
-                            position: 'absolute',
-                            left: i * DAY_WIDTH,
-                            top: 0,
-                            bottom: 0,
-                            width: DAY_WIDTH,
-                            borderRight: '1px solid #ebe5dc',
-                            background: isToday ? '#c0583f08' : 'transparent',
-                          }} />
-                        );
-                      })}
+                      {dayLabels.map((dl, i) => (
+                        <div key={i} style={{
+                          position: 'absolute',
+                          left: i * dayWidth,
+                          top: 0,
+                          bottom: 0,
+                          width: dayWidth,
+                          borderRight: '1px solid #ebe5dc',
+                          background: dl.isToday ? '#c0583f08' : 'transparent',
+                        }} />
+                      ))}
                       {/* Bar */}
                       <div
                         style={{
@@ -194,11 +259,11 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                         title={`${entry.text} (${entry.startDate || entry.date} ~ ${entry.endDate || entry.date})`}
                       >
                         <span style={{
-                          fontSize: 10, color: 'white', padding: '0 4px',
+                          fontSize: 9, color: 'white', padding: '0 3px',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           lineHeight: '20px',
                         }}>
-                          {width > 60 ? entry.text : ''}
+                          {width > 50 ? entry.text : ''}
                         </span>
                       </div>
                     </div>
@@ -213,7 +278,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
       {/* Stats */}
       <div style={{ marginTop: 16, padding: '12px 14px', background: 'white', borderRadius: 12,
         boxShadow: '0 1px 3px rgba(44,36,22,0.06)' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#2c2416', marginBottom: 8 }}>이번 달 통계</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#2c2416', marginBottom: 8 }}>통계</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center' }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#2c2416' }}>{ganttEntries.length}</div>
