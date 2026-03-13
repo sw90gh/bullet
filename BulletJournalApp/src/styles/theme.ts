@@ -206,7 +206,7 @@ export const styles: Styles = {
 
   /* fab */
   fab: {
-    position: 'fixed', bottom: 24, right: 'calc(50% - 195px)',
+    position: 'fixed', bottom: 36, right: 'calc(50% - 180px)',
     width: 52, height: 52, borderRadius: '50%',
     background: COLORS.primary, color: COLORS.headerText, fontSize: 28,
     border: 'none', boxShadow: '0 4px 14px rgba(44,36,22,0.3)',

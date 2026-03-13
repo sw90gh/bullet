@@ -87,17 +87,21 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             {/* Fixed label column */}
             <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: '2px solid #ddd5c9' }}>
               {/* Day header spacer */}
-              <div style={{ height: 32, borderBottom: '1px solid #ddd5c9' }} />
+              <div style={{ height: 32, borderBottom: '1px solid #ddd5c9', boxSizing: 'border-box' }} />
               {/* Labels */}
               {ganttEntries.map(entry => {
                 const pr = PRIORITY[entry.priority] || PRIORITY.none;
                 return (
                   <div key={entry.id} style={{
-                    ...styles.ganttLabel,
                     height: ROW_HEIGHT,
                     display: 'flex',
                     alignItems: 'center',
                     width: LABEL_WIDTH,
+                    padding: '0 8px',
+                    fontSize: 12,
+                    color: '#2c2416',
+                    borderBottom: '1px solid #ebe5dc',
+                    boxSizing: 'border-box',
                     cursor: 'pointer',
                   } as React.CSSProperties}
                     onClick={() => onEdit(entry)}
@@ -150,9 +154,12 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
 
                   return (
                     <div key={entry.id} style={{
-                      ...styles.ganttRow as React.CSSProperties,
                       height: ROW_HEIGHT,
                       position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderBottom: '1px solid #ebe5dc',
+                      boxSizing: 'border-box',
                     }}>
                       {/* Grid lines */}
                       {Array.from({ length: daysInMonth }, (_, i) => {
