@@ -122,7 +122,11 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             </div>
 
             {/* Scrollable timeline */}
-            <div ref={scrollRef} style={{ overflowX: 'auto', flex: 1 }}>
+            <div ref={scrollRef} style={{
+              overflowX: 'auto', flex: 1,
+              scrollbarWidth: 'none', msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+            } as React.CSSProperties}>
               <div style={{ width: daysInMonth * DAY_WIDTH, minWidth: '100%' }}>
                 {/* Day headers */}
                 <div style={styles.ganttDayHeader as React.CSSProperties}>
