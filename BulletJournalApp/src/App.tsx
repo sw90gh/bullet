@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { styles } from './styles/theme';
 import { Header } from './components/Header';
 import { EntryModal } from './components/EntryModal';
@@ -23,6 +23,7 @@ export default function App() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [migrateTarget, setMigrateTarget] = useState<{ entry: Entry; type: 'migrated' | 'migrated_up' } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, mergeNotionEntries } = useEntries();
   const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal } = useGoals();
@@ -47,6 +48,17 @@ export default function App() {
     const goal = goals.find(g => g.id === id);
     if (goal) updateGoal(id, { done: !goal.done });
   }, [goals, updateGoal]);
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    entries.forEach(e => e.tags?.forEach(t => tagSet.add(t)));
+    return Array.from(tagSet).sort();
+  }, [entries]);
+
+  const filteredEntries = useMemo(() => {
+    if (!selectedTag) return entries;
+    return entries.filter(e => e.tags?.includes(selectedTag));
+  }, [entries, selectedTag]);
 
   const handleSyncNotion = async () => {
     const notionEntries = await syncFromNotion();
@@ -93,12 +105,41 @@ export default function App() {
         ))}
       </div>
 
+      {/* Tag Filter */}
+      {allTags.length > 0 && view !== 'annual' && (
+        <div style={{
+          display: 'flex', gap: 4, padding: '6px 16px 0', overflowX: 'auto',
+          scrollbarWidth: 'none', msOverflowStyle: 'none',
+        } as React.CSSProperties}>
+          <button
+            style={{
+              padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+              border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
+              fontFamily: '-apple-system, sans-serif',
+              background: selectedTag === null ? '#2c2416' : 'white',
+              color: selectedTag === null ? 'white' : '#6b5d4d',
+            }}
+            onClick={() => setSelectedTag(null)}>전체</button>
+          {allTags.map(tag => (
+            <button key={tag}
+              style={{
+                padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+                border: '1px solid #ddd5c9', whiteSpace: 'nowrap',
+                fontFamily: '-apple-system, sans-serif',
+                background: selectedTag === tag ? '#3a7ca5' : 'white',
+                color: selectedTag === tag ? 'white' : '#3a7ca5',
+              }}
+              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
+          ))}
+        </div>
+      )}
+
       {/* Content */}
       <main style={styles.main}>
         {view === 'daily' && (
           <DailyScreen
             date={curDate}
-            entries={entries}
+            entries={filteredEntries}
             cycleStatus={cycleStatus}
             onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
@@ -111,7 +152,7 @@ export default function App() {
         {view === 'weekly' && (
           <WeeklyScreen
             date={curDate}
-            entries={entries}
+            entries={filteredEntries}
             cycleStatus={cycleStatus}
             onAdd={(dateStr) => setModal({ mode: 'add', scope: 'daily', date: dateStr })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
@@ -124,7 +165,7 @@ export default function App() {
           <MonthlyScreen
             year={curY}
             month={curM}
-            entries={entries}
+            entries={filteredEntries}
             goals={goals}
             cycleStatus={cycleStatus}
             onAddEntry={() => setModal({ mode: 'add', scope: 'monthly', date: `${curY}-${pad(curM + 1)}` })}
@@ -141,7 +182,7 @@ export default function App() {
           <AnnualScreen
             year={curY}
             goals={goals}
-            entries={entries}
+            entries={filteredEntries}
             onAdd={() => setModal({ mode: 'add-goal', scope: 'goal', year: curY })}
             onEdit={(g) => setModal({ mode: 'edit-goal', goal: g })}
             onMonthTap={(m) => { setCurDate(new Date(curY, m, 1)); setView('monthly'); }}
@@ -153,7 +194,7 @@ export default function App() {
           <GanttScreen
             year={curY}
             month={curM}
-            entries={entries}
+            entries={filteredEntries}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
           />
         )}
