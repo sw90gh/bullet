@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -54,6 +54,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const dayEntries = entries
     .filter(e => e.date === dateStr)
     .sort((a, b) => {
+      // 완료/취소 항목은 하단으로
+      const doneStatuses = new Set(['done', 'cancelled', 'migrated', 'migrated_up']);
+      const aDone = doneStatuses.has(a.status) ? 1 : 0;
+      const bDone = doneStatuses.has(b.status) ? 1 : 0;
+      if (aDone !== bDone) return aDone - bDone;
       const po: Record<string, number> = { urgent: 0, important: 1, none: 2 };
       if (po[a.priority || 'none'] !== po[b.priority || 'none'])
         return po[a.priority || 'none'] - po[b.priority || 'none'];
@@ -63,6 +68,40 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
 
   const timedEntries = dayEntries.filter(e => e.time);
   const untimedEntries = dayEntries.filter(e => !e.time);
+
+  // Memoized overlap layout calculation
+  const timedLayout = useMemo(() => {
+    const sorted = [...timedEntries].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
+    const layout: { entry: Entry; col: number; totalCols: number }[] = [];
+    const active: { entry: Entry; endMin: number; col: number }[] = [];
+
+    sorted.forEach(entry => {
+      const startMin = timeToMinutes(entry.time!);
+      const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+      const overlapping = active.filter(a => a.endMin > startMin);
+      const usedCols = new Set(overlapping.map(a => a.col));
+      let col = 0;
+      while (usedCols.has(col)) col++;
+      active.push({ entry, endMin, col });
+      layout.push({ entry, col, totalCols: 0 });
+    });
+
+    layout.forEach(item => {
+      const startMin = timeToMinutes(item.entry.time!);
+      const endMin = item.entry.endTime ? timeToMinutes(item.entry.endTime) : startMin + 60;
+      let maxCol = item.col;
+      layout.forEach(other => {
+        const otherStart = timeToMinutes(other.entry.time!);
+        const otherEnd = other.entry.endTime ? timeToMinutes(other.entry.endTime) : otherStart + 60;
+        if (otherStart < endMin && otherEnd > startMin) {
+          maxCol = Math.max(maxCol, other.col);
+        }
+      });
+      item.totalCols = maxCol + 1;
+    });
+
+    return layout;
+  }, [timedEntries]);
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -288,6 +327,20 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     };
   }, [viewMode]); // re-attach when switching to timeline view
 
+  // Auto-scroll to current time when switching to timeline view
+  useEffect(() => {
+    if (viewMode !== 'timeline' || !isToday) return;
+    const timer = setTimeout(() => {
+      const scroller = timelineWrapperRef.current?.closest('[style*="overflow"]') as HTMLElement
+        || timelineWrapperRef.current?.parentElement?.parentElement;
+      if (scroller) {
+        const targetTop = Math.max(0, nowTop - 100);
+        scroller.scrollTop = targetTop;
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div>
       {isToday && <div style={styles.todayBadge}>TODAY</div>}
@@ -463,42 +516,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
               </div>
             )}
 
-            {/* 시간 지정 항목 블록 - 겹침 계산 */}
-            {(() => {
-              // Sort by start time for overlap calculation
-              const sorted = [...timedEntries].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
-              // Calculate overlap groups: each entry gets a column index and total columns
-              const layout: { entry: Entry; col: number; totalCols: number }[] = [];
-              const active: { entry: Entry; endMin: number; col: number }[] = [];
-
-              sorted.forEach(entry => {
-                const startMin = timeToMinutes(entry.time!);
-                const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-                // Remove entries that have ended
-                const overlapping = active.filter(a => a.endMin > startMin);
-                const usedCols = new Set(overlapping.map(a => a.col));
-                let col = 0;
-                while (usedCols.has(col)) col++;
-                active.push({ entry, endMin, col });
-                layout.push({ entry, col, totalCols: 0 });
-              });
-
-              // Calculate totalCols for each group
-              layout.forEach((item, i) => {
-                const startMin = timeToMinutes(item.entry.time!);
-                const endMin = item.entry.endTime ? timeToMinutes(item.entry.endTime) : startMin + 60;
-                let maxCol = item.col;
-                layout.forEach(other => {
-                  const otherStart = timeToMinutes(other.entry.time!);
-                  const otherEnd = other.entry.endTime ? timeToMinutes(other.entry.endTime) : otherStart + 60;
-                  if (otherStart < endMin && otherEnd > startMin) {
-                    maxCol = Math.max(maxCol, other.col);
-                  }
-                });
-                item.totalCols = maxCol + 1;
-              });
-
-              return layout.map(({ entry, col, totalCols }) => {
+            {/* 시간 지정 항목 블록 - 겹침 계산 (memoized) */}
+            {timedLayout.map(({ entry, col, totalCols }) => {
                 const startMin = timeToMinutes(entry.time!);
                 const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
                 const isDraggingThis = dragState?.entryId === entry.id;
@@ -568,8 +587,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                     </div>
                   </div>
                 );
-              });
-            })()}
+              })}
           </div>
         </div>
       )}

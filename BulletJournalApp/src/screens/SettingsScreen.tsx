@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { getStyles } from '../styles/theme';
-import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup, shareBackup } from '../utils/storage';
+import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup, shareBackup, getStorageUsage } from '../utils/storage';
 
 type DarkModePref = 'system' | 'light' | 'dark';
 
@@ -121,6 +121,32 @@ export function SettingsScreen({
           {/* Data Management */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>데이터 관리</div>
+            {(() => {
+              const { usedKB, pct } = getStorageUsage();
+              return (
+                <div style={{
+                  marginBottom: 8, padding: '8px 12px', borderRadius: 8,
+                  background: isDark ? '#333' : '#f5f0e8',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: isDark ? '#a89888' : '#6b5d4d', marginBottom: 4 }}>
+                    <span>저장소 사용량</span>
+                    <span style={{ color: pct > 80 ? '#c0583f' : undefined }}>{usedKB}KB / 5,120KB ({pct}%)</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: isDark ? '#555' : '#ddd5c9' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 2, width: `${Math.min(100, pct)}%`,
+                      background: pct > 80 ? '#c0583f' : pct > 50 ? '#c0883f' : '#3a7ca5',
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                  {pct > 80 && (
+                    <div style={{ fontSize: 10, color: '#c0583f', marginTop: 4 }}>
+                      ⚠ 저장 공간이 부족합니다. 백업 후 오래된 데이터를 정리해주세요.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <p style={{ fontSize: 11, color: isDark ? '#6b5d4d' : '#b8a99a', marginBottom: 8, lineHeight: 1.5 }}>
               데이터는 기기의 로컬 저장소에 보관됩니다.
               Safari 데이터를 삭제하면 모든 기록이 사라질 수 있으니 정기적으로 백업해주세요.

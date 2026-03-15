@@ -23,10 +23,37 @@ export function exportAllData(): string {
 
 export function importAllData(json: string): { entries: unknown[]; goals: unknown[] } {
   const data = JSON.parse(json);
-  if (data.entries) localStorage.setItem('bujo-entries', JSON.stringify(data.entries));
-  if (data.goals) localStorage.setItem('bujo-goals', JSON.stringify(data.goals));
-  if (data.notion) localStorage.setItem('bujo-notion', JSON.stringify(data.notion));
+  if (!data || typeof data !== 'object') throw new Error('잘못된 데이터 형식입니다.');
+  if (data.entries && !Array.isArray(data.entries)) throw new Error('entries가 배열이 아닙니다.');
+  if (data.goals && !Array.isArray(data.goals)) throw new Error('goals가 배열이 아닙니다.');
+  if (!data.entries && !data.goals) throw new Error('entries 또는 goals 데이터가 필요합니다.');
+  // 각 entry에 최소한의 필드 검증
+  if (data.entries) {
+    for (const e of data.entries) {
+      if (!e.id || !e.text || !e.date) throw new Error('항목에 필수 필드(id, text, date)가 없습니다.');
+    }
+    localStorage.setItem('bujo-entries', JSON.stringify(data.entries));
+  }
+  if (data.goals) {
+    for (const g of data.goals) {
+      if (!g.id || !g.text) throw new Error('목표에 필수 필드(id, text)가 없습니다.');
+    }
+    localStorage.setItem('bujo-goals', JSON.stringify(data.goals));
+  }
   return data;
+}
+
+export function getStorageUsage(): { usedKB: number; pct: number } {
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) {
+      total += key.length + (localStorage.getItem(key)?.length || 0);
+    }
+  }
+  const usedKB = Math.round(total * 2 / 1024); // UTF-16 = 2 bytes per char
+  const pct = Math.round((usedKB / 5120) * 100); // ~5MB limit
+  return { usedKB, pct };
 }
 
 const AUTO_BACKUP_KEY = 'bujo-auto-backup';

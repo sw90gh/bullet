@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
@@ -23,9 +23,22 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
   const isStrike = ('strike' in st && st.strike) || entry.status === 'done';
 
+  const entryRef = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; time: number } | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
+
+  // Close swipe when tapping outside this entry
+  useEffect(() => {
+    if (swipeDir === 'none') return;
+    const handler = (e: Event) => {
+      if (entryRef.current && !entryRef.current.contains(e.target as Node)) {
+        setSwipeDir('none');
+      }
+    };
+    document.addEventListener('touchstart', handler, true);
+    return () => document.removeEventListener('touchstart', handler, true);
+  }, [swipeDir]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     // Don't track swipe if touching action buttons
@@ -92,7 +105,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   }
 
   return (
-    <div style={styles.entryOuter as React.CSSProperties}
+    <div ref={entryRef} style={styles.entryOuter as React.CSSProperties}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
 
       {/* 좌측: 우선순위 버튼 (좌→우 스와이프) */}
