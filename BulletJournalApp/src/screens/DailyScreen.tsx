@@ -218,18 +218,21 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     const deltaY = touch.clientY - dragState.startY;
     if (Math.abs(deltaY) > 5) didDragMove.current = true;
 
-    // Auto-scroll when finger is near top/bottom edge of scrollable area
+    // Auto-scroll when finger is near top/bottom edge of viewport
     const scroller = getScrollParent();
     if (scroller) {
-      const rect = scroller.getBoundingClientRect();
       const edgeZone = 60;
       const maxSpeed = 8;
-      if (touch.clientY > rect.bottom - edgeZone) {
-        const ratio = Math.min(1, (touch.clientY - (rect.bottom - edgeZone)) / edgeZone);
+      const screenBottom = window.innerHeight;
+      const screenTop = 0;
+      if (touch.clientY > screenBottom - edgeZone) {
+        // Finger near bottom of screen → scroll down
+        const ratio = Math.min(1, (touch.clientY - (screenBottom - edgeZone)) / edgeZone);
         autoScrollSpeed.current = ratio * maxSpeed;
         startAutoScroll();
-      } else if (touch.clientY < rect.top + edgeZone) {
-        const ratio = Math.min(1, ((rect.top + edgeZone) - touch.clientY) / edgeZone);
+      } else if (touch.clientY < screenTop + edgeZone) {
+        // Finger near top of screen → scroll up
+        const ratio = Math.min(1, ((screenTop + edgeZone) - touch.clientY) / edgeZone);
         autoScrollSpeed.current = -ratio * maxSpeed;
         startAutoScroll();
       } else {
