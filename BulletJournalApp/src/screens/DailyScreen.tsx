@@ -84,6 +84,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   // === Drag state ===
   const timelineRef = useRef<HTMLDivElement>(null);
   const didDragMove = useRef(false);
+  const autoScrollRAF = useRef<number>(0);
+  const autoScrollSpeed = useRef(0);
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'place';
     entryId: string;
@@ -93,6 +95,41 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     currentTop: number;
     currentHeight: number;
   } | null>(null);
+
+  // Find the scrollable parent (<main>) once
+  const getScrollParent = useCallback((): HTMLElement | null => {
+    let el = timelineRef.current?.parentElement;
+    while (el) {
+      const style = getComputedStyle(el);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') return el;
+      el = el.parentElement;
+    }
+    return null;
+  }, []);
+
+  // Auto-scroll loop: runs via requestAnimationFrame while dragging near edges
+  const startAutoScroll = useCallback(() => {
+    const tick = () => {
+      const scroller = getScrollParent();
+      if (!scroller || autoScrollSpeed.current === 0) {
+        autoScrollRAF.current = 0;
+        return;
+      }
+      scroller.scrollTop += autoScrollSpeed.current;
+      autoScrollRAF.current = requestAnimationFrame(tick);
+    };
+    if (!autoScrollRAF.current) {
+      autoScrollRAF.current = requestAnimationFrame(tick);
+    }
+  }, [getScrollParent]);
+
+  const stopAutoScroll = useCallback(() => {
+    autoScrollSpeed.current = 0;
+    if (autoScrollRAF.current) {
+      cancelAnimationFrame(autoScrollRAF.current);
+      autoScrollRAF.current = 0;
+    }
+  }, []);
 
   const getTimelineY = useCallback((clientY: number) => {
     if (!timelineRef.current) return 0;
@@ -127,19 +164,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     e.stopPropagation();
     didDragMove.current = false;
     const touch = e.touches[0];
-    const y = getTimelineY(touch.clientY);
-    const minutes = yToMinutes(y);
-    const top = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
     setDragState({
       type: 'place',
       entryId: entry.id,
       startY: touch.clientY,
-      origMinutes: minutes,
-      origEndMinutes: minutes + 60,
-      currentTop: top,
+      origMinutes: START_HOUR * 60,
+      origEndMinutes: START_HOUR * 60 + 60,
+      currentTop: -999, // hidden until finger enters timeline
       currentHeight: HOUR_HEIGHT - 2,
     });
-  }, [onUpdateEntry, getTimelineY]);
+  }, [onUpdateEntry]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!dragState) return;
@@ -147,28 +181,56 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     const touch = e.touches[0];
     const deltaY = touch.clientY - dragState.startY;
     if (Math.abs(deltaY) > 5) didDragMove.current = true;
-    const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
 
-    if (dragState.type === 'move' || dragState.type === 'place') {
+    // Auto-scroll when finger is near top/bottom edge of scrollable area
+    const scroller = getScrollParent();
+    if (scroller) {
+      const rect = scroller.getBoundingClientRect();
+      const edgeZone = 60; // px from edge to start scrolling
+      const maxSpeed = 8;  // px per frame
+      if (touch.clientY > rect.bottom - edgeZone) {
+        // Near bottom edge → scroll down
+        const ratio = Math.min(1, (touch.clientY - (rect.bottom - edgeZone)) / edgeZone);
+        autoScrollSpeed.current = ratio * maxSpeed;
+        startAutoScroll();
+      } else if (touch.clientY < rect.top + edgeZone) {
+        // Near top edge → scroll up
+        const ratio = Math.min(1, ((rect.top + edgeZone) - touch.clientY) / edgeZone);
+        autoScrollSpeed.current = -ratio * maxSpeed;
+        startAutoScroll();
+      } else {
+        stopAutoScroll();
+      }
+    }
+
+    if (dragState.type === 'place') {
+      // For placing untimed entries: use absolute finger position on timeline
+      const y = getTimelineY(touch.clientY);
+      const minutes = yToMinutes(y);
+      const newTop = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      setDragState(prev => prev ? { ...prev, currentTop: newTop, origMinutes: minutes, origEndMinutes: minutes + 60 } : null);
+    } else if (dragState.type === 'move') {
+      const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
       const newStart = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - 15, dragState.origMinutes + deltaMinutes));
-      const duration = dragState.origEndMinutes - dragState.origMinutes;
       const newTop = ((newStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
       setDragState(prev => prev ? { ...prev, currentTop: newTop } : null);
     } else if (dragState.type === 'resize') {
+      const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
       const newEnd = Math.max(dragState.origMinutes + 15, Math.min((END_HOUR + 1) * 60, dragState.origEndMinutes + deltaMinutes));
       const newHeight = Math.max(24, ((newEnd - dragState.origMinutes) / 60) * HOUR_HEIGHT - 2);
       setDragState(prev => prev ? { ...prev, currentHeight: newHeight } : null);
     }
-  }, [dragState]);
+  }, [dragState, getTimelineY, getScrollParent, startAutoScroll, stopAutoScroll]);
 
   const handleTouchEnd = useCallback(() => {
+    stopAutoScroll();
     if (!dragState || !onUpdateEntry) {
       setDragState(null);
       return;
     }
 
-    // Only save if actually dragged (moved > 5px)
-    if (didDragMove.current) {
+    // Only save if actually dragged (moved > 5px) and ghost is in valid position
+    if (didDragMove.current && dragState.currentTop >= 0) {
       if (dragState.type === 'move' || dragState.type === 'place') {
         const newStartMin = snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60);
         const duration = dragState.origEndMinutes - dragState.origMinutes;
@@ -186,7 +248,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     }
 
     setDragState(null);
-  }, [dragState, onUpdateEntry]);
+  }, [dragState, onUpdateEntry, stopAutoScroll]);
 
   return (
     <div>
@@ -343,7 +405,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
             )}
 
             {/* 드래그 중 고스트 표시 */}
-            {dragState && (
+            {dragState && dragState.currentTop >= 0 && (
               <div style={{
                 position: 'absolute', left: 4, right: 4,
                 top: dragState.currentTop,
