@@ -17,12 +17,13 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - 12개 이상 컴포넌트가 `useTheme()` 사용. **절대 `import { styles } from '../styles/theme'` 직접 import 하지 말것** (항상 라이트 모드)
 - `document.body.style.background` 동적 변경 (App.tsx useDarkMode)
 
-### Notion Sync
-- Token을 **query parameter** (`?token=xxx`)로 전달 (헤더 방식은 Vercel에서 strip됨)
-- `BulletJournalApp/api/notion.js`가 실제 배포되는 파일 (CommonJS `module.exports`)
-- Database ID는 UUID 형식으로 자동 변환 (`useNotionSync.ts` connect 함수)
-- Token에서 whitespace trim + "Bearer " prefix 자동 제거
-- query에서 sort 제거 (DB 속성명 불일치 방지)
+### Backup System
+- 자동 백업: 1시간마다 localStorage에 자동 저장 (`autoBackup()`)
+- 백업 알림 배너: 마지막 백업 후 3일 경과 시 상단에 알림 표시
+- 공유 백업: iOS Web Share API (`navigator.share` + File) → 파일 앱/메모/카톡 등으로 JSON 백업
+- 설정 화면에서도 "공유로 백업" 버튼 제공
+- `markExported()`: 백업 완료 시 타임스탬프 기록
+- **Notion 동기화는 제거됨** (불필요하다고 판단)
 
 ### Sticky Header (iOS PWA)
 - `position: sticky` 대신 **flex layout** 사용
@@ -54,7 +55,7 @@ BulletJournalApp/
       useDarkModeContext.tsx ← DarkModeProvider + useTheme()
       useEntries.ts       ← entries CRUD
       useGoals.ts         ← goals CRUD
-      useNotionSync.ts    ← Notion 연동 (token cleaning, UUID 변환)
+      useNotionSync.ts    ← (미사용, Notion 연동 제거됨)
     screens/
       DailyScreen.tsx     ← 목록/시간표 뷰, 드래그앤드롭
       WeeklyScreen.tsx
@@ -63,7 +64,7 @@ BulletJournalApp/
       GanttScreen.tsx
       NotesScreen.tsx
       StatsScreen.tsx     ← 통계 (도넛차트, 주간완료율, 월별트렌드)
-      SettingsScreen.tsx  ← 설정, Notion연동, 백업/복원
+      SettingsScreen.tsx  ← 설정, 백업/복원, 공유 백업
     components/
       Header.tsx
       EntryRow.tsx        ← 스와이프 액션 (우선순위/수정/삭제)
@@ -75,8 +76,8 @@ BulletJournalApp/
     utils/
       constants.ts        ← COLORS, COLORS_DARK, STATUS, TYPES, PRIORITY
       date.ts
-      storage.ts          ← localStorage CRUD + autoBackup
-      notion.ts           ← Notion API 호출 (token via query param)
+      storage.ts          ← localStorage CRUD + autoBackup + 백업알림 + 공유백업
+      notion.ts           ← (미사용, Notion API 제거됨)
       recurring.ts        ← 반복 항목 생성
       quotes.ts           ← 500개 명언 (인간관계/성실/역경)
     styles/
@@ -95,7 +96,8 @@ vercel.json               ← 루트 Vercel 설정
 - 마감일 D-day 표시
 - 반복 항목 (매일/매주/매월)
 - 자동 백업 (1시간마다)
-- Notion 양방향 동기화
+- 백업 알림 배너 (3일 경과 시 자동 표시)
+- 공유 백업 (iOS Share API)
 - 다크모드 (시스템/라이트/다크)
 - 시간표 드래그앤드롭
 - 검색
@@ -105,7 +107,7 @@ vercel.json               ← 루트 Vercel 설정
 ## Common Pitfalls
 1. Vercel serverless는 `BulletJournalApp/api/`에 있어야 함 (루트 `api/` 아님)
 2. Vercel serverless는 CommonJS (`module.exports`) 사용 (ESM `export default` 안됨)
-3. Notion token은 헤더가 아닌 query parameter로 전달해야 함
+3. Notion 동기화는 제거됨 (관련 코드는 남아있으나 미사용)
 4. `position: sticky`는 iOS PWA standalone 모드에서 안됨 → flex layout 사용
 5. iOS에서 버튼 onClick이 부모 touch handler에 의해 씹힐 수 있음 → onTouchEnd + stopPropagation
 6. 다크모드 스타일은 반드시 `useTheme()` 훅 사용 (정적 import 금지)

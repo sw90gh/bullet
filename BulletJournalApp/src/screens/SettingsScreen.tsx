@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { getStyles } from '../styles/theme';
-import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup } from '../utils/storage';
+import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup, shareBackup } from '../utils/storage';
 
 type DarkModePref = 'system' | 'light' | 'dark';
 
@@ -148,6 +148,13 @@ export function SettingsScreen({
                 </div>
               ) : null;
             })()}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button style={{
+                ...styles.successBtn, background: '#c0883f',
+              }} onClick={() => shareBackup()}>
+                📤 공유로 백업
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <button style={styles.successBtn} onClick={handleExport}>
                 데이터 내보내기 (JSON)

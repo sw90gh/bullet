@@ -19,7 +19,7 @@ import { useEntries } from './hooks/useEntries';
 import { useGoals } from './hooks/useGoals';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
-import { autoBackup } from './utils/storage';
+import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime } from './utils/storage';
 import { ViewType, ModalState, Entry, Goal, EntryPriority } from './types';
 
 type DarkModePref = 'system' | 'light' | 'dark';
@@ -65,6 +65,7 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagBarExpanded, setTagBarExpanded] = useState(false);
+  const [backupDismissed, setBackupDismissed] = useState(false);
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry } = useEntries();
   const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal } = useGoals();
@@ -240,6 +241,37 @@ export default function App() {
         </div>
       )}
       </div>{/* end stickyTop */}
+
+      {/* Backup Reminder Banner */}
+      {!backupDismissed && shouldRemindBackup() && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 16px', gap: 8, flexShrink: 0,
+          background: isDark ? '#2a2520' : '#fff8ee',
+          borderBottom: `1px solid ${isDark ? '#3a3530' : '#e8ddd0'}`,
+        }}>
+          <span style={{ fontSize: 12, color: isDark ? '#c0a888' : '#6b5d4d', flex: 1 }}>
+            📦 백업을 권장합니다{(() => {
+              const last = getLastExportTime();
+              if (!last) return ' (아직 백업한 적 없음)';
+              const days = Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24));
+              return ` (${days}일 전 마지막 백업)`;
+            })()}
+          </span>
+          <button style={{
+            background: isDark ? '#c0883f' : '#c0883f', color: 'white', border: 'none',
+            fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 8,
+            cursor: 'pointer', fontFamily: '-apple-system, sans-serif', whiteSpace: 'nowrap',
+          }} onClick={async () => {
+            const ok = await shareBackup();
+            if (ok) setBackupDismissed(true);
+          }}>백업하기</button>
+          <button style={{
+            background: 'none', border: 'none', color: isDark ? '#6b5d4d' : '#b8a99a',
+            fontSize: 14, cursor: 'pointer', padding: '2px 4px',
+          }} onClick={() => setBackupDismissed(true)}>✕</button>
+        </div>
+      )}
 
       {/* Content */}
       <main style={styles.main}>

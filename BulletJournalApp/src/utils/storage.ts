@@ -18,8 +18,7 @@ export function saveData(key: string, value: unknown): void {
 export function exportAllData(): string {
   const entries = localStorage.getItem('bujo-entries') || '[]';
   const goals = localStorage.getItem('bujo-goals') || '[]';
-  const notion = localStorage.getItem('bujo-notion') || 'null';
-  return JSON.stringify({ entries: JSON.parse(entries), goals: JSON.parse(goals), notion: JSON.parse(notion) }, null, 2);
+  return JSON.stringify({ entries: JSON.parse(entries), goals: JSON.parse(goals) }, null, 2);
 }
 
 export function importAllData(json: string): { entries: unknown[]; goals: unknown[] } {
@@ -68,4 +67,73 @@ export function restoreAutoBackup(): boolean {
   } catch {
     return false;
   }
+}
+
+// === 백업 알림 ===
+const LAST_EXPORT_KEY = 'bujo-last-export';
+const BACKUP_REMIND_DAYS = 3;
+
+export function markExported(): void {
+  localStorage.setItem(LAST_EXPORT_KEY, String(Date.now()));
+}
+
+export function getLastExportTime(): number | null {
+  const t = localStorage.getItem(LAST_EXPORT_KEY);
+  return t ? parseInt(t) : null;
+}
+
+export function shouldRemindBackup(): boolean {
+  const last = getLastExportTime();
+  if (!last) return true; // 한 번도 백업한 적 없으면 알림
+  const daysSince = (Date.now() - last) / (1000 * 60 * 60 * 24);
+  return daysSince >= BACKUP_REMIND_DAYS;
+}
+
+export async function shareBackup(): Promise<boolean> {
+  const data = exportAllData();
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const fileName = `bullet-journal-${dateStr}.json`;
+
+  // Web Share API with file (iOS 15+)
+  if (navigator.share && navigator.canShare) {
+    try {
+      const file = new File([data], fileName, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Bullet Journal 백업',
+          files: [file],
+        });
+        markExported();
+        return true;
+      }
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return false;
+    }
+  }
+
+  // Fallback: text share
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Bullet Journal 백업',
+        text: data,
+      });
+      markExported();
+      return true;
+    } catch {
+      // user cancelled
+      return false;
+    }
+  }
+
+  // Final fallback: download
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  markExported();
+  return true;
 }
