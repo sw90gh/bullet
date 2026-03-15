@@ -86,6 +86,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const didDragMove = useRef(false);
   const autoScrollRAF = useRef<number>(0);
   const autoScrollSpeed = useRef(0);
+  const lastTouchY = useRef(0);
+  const dragStateRef = useRef<typeof dragState>(null);
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'place';
     entryId: string;
@@ -95,6 +97,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     currentTop: number;
     currentHeight: number;
   } | null>(null);
+
+  // Keep ref in sync with state so rAF loop can read latest values
+  dragStateRef.current = dragState;
 
   // Find the scrollable parent (<main>) once
   const getScrollParent = useCallback((): HTMLElement | null => {
@@ -107,7 +112,35 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     return null;
   }, []);
 
-  // Auto-scroll loop: runs via requestAnimationFrame while dragging near edges
+  // Calculate ghost position from finger's clientY (works for all drag types)
+  const updateGhostFromClientY = useCallback((clientY: number) => {
+    const ds = dragStateRef.current;
+    if (!ds) return;
+
+    if (ds.type === 'place') {
+      if (!timelineRef.current) return;
+      const rect = timelineRef.current.getBoundingClientRect();
+      const y = clientY - rect.top;
+      const minutes = yToMinutes(y);
+      const newTop = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      setDragState(prev => prev ? { ...prev, currentTop: newTop, origMinutes: minutes, origEndMinutes: minutes + 60 } : null);
+    } else if (ds.type === 'move') {
+      if (!timelineRef.current) return;
+      const rect = timelineRef.current.getBoundingClientRect();
+      const y = clientY - rect.top;
+      const minutes = yToMinutes(y);
+      const newTop = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      setDragState(prev => prev ? { ...prev, currentTop: newTop } : null);
+    } else if (ds.type === 'resize') {
+      const deltaY = clientY - ds.startY;
+      const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
+      const newEnd = Math.max(ds.origMinutes + 15, Math.min((END_HOUR + 1) * 60, ds.origEndMinutes + deltaMinutes));
+      const newHeight = Math.max(24, ((newEnd - ds.origMinutes) / 60) * HOUR_HEIGHT - 2);
+      setDragState(prev => prev ? { ...prev, currentHeight: newHeight } : null);
+    }
+  }, []);
+
+  // Auto-scroll loop: scrolls AND updates ghost position each frame
   const startAutoScroll = useCallback(() => {
     const tick = () => {
       const scroller = getScrollParent();
@@ -116,12 +149,14 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
         return;
       }
       scroller.scrollTop += autoScrollSpeed.current;
+      // Update ghost position since scroll moved the timeline under the finger
+      updateGhostFromClientY(lastTouchY.current);
       autoScrollRAF.current = requestAnimationFrame(tick);
     };
     if (!autoScrollRAF.current) {
       autoScrollRAF.current = requestAnimationFrame(tick);
     }
-  }, [getScrollParent]);
+  }, [getScrollParent, updateGhostFromClientY]);
 
   const stopAutoScroll = useCallback(() => {
     autoScrollSpeed.current = 0;
@@ -179,6 +214,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     if (!dragState) return;
     e.preventDefault();
     const touch = e.touches[0];
+    lastTouchY.current = touch.clientY;
     const deltaY = touch.clientY - dragState.startY;
     if (Math.abs(deltaY) > 5) didDragMove.current = true;
 
@@ -186,15 +222,13 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     const scroller = getScrollParent();
     if (scroller) {
       const rect = scroller.getBoundingClientRect();
-      const edgeZone = 60; // px from edge to start scrolling
-      const maxSpeed = 8;  // px per frame
+      const edgeZone = 60;
+      const maxSpeed = 8;
       if (touch.clientY > rect.bottom - edgeZone) {
-        // Near bottom edge → scroll down
         const ratio = Math.min(1, (touch.clientY - (rect.bottom - edgeZone)) / edgeZone);
         autoScrollSpeed.current = ratio * maxSpeed;
         startAutoScroll();
       } else if (touch.clientY < rect.top + edgeZone) {
-        // Near top edge → scroll up
         const ratio = Math.min(1, ((rect.top + edgeZone) - touch.clientY) / edgeZone);
         autoScrollSpeed.current = -ratio * maxSpeed;
         startAutoScroll();
@@ -203,24 +237,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       }
     }
 
-    if (dragState.type === 'place') {
-      // For placing untimed entries: use absolute finger position on timeline
-      const y = getTimelineY(touch.clientY);
-      const minutes = yToMinutes(y);
-      const newTop = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-      setDragState(prev => prev ? { ...prev, currentTop: newTop, origMinutes: minutes, origEndMinutes: minutes + 60 } : null);
-    } else if (dragState.type === 'move') {
-      const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
-      const newStart = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - 15, dragState.origMinutes + deltaMinutes));
-      const newTop = ((newStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-      setDragState(prev => prev ? { ...prev, currentTop: newTop } : null);
-    } else if (dragState.type === 'resize') {
-      const deltaMinutes = snapMinutes((deltaY / HOUR_HEIGHT) * 60);
-      const newEnd = Math.max(dragState.origMinutes + 15, Math.min((END_HOUR + 1) * 60, dragState.origEndMinutes + deltaMinutes));
-      const newHeight = Math.max(24, ((newEnd - dragState.origMinutes) / 60) * HOUR_HEIGHT - 2);
-      setDragState(prev => prev ? { ...prev, currentHeight: newHeight } : null);
-    }
-  }, [dragState, getTimelineY, getScrollParent, startAutoScroll, stopAutoScroll]);
+    // Update ghost position based on finger location
+    updateGhostFromClientY(touch.clientY);
+  }, [dragState, getScrollParent, startAutoScroll, stopAutoScroll, updateGhostFromClientY]);
 
   const handleTouchEnd = useCallback(() => {
     stopAutoScroll();
