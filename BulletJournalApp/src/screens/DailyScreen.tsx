@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -82,6 +82,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   };
 
   // === Drag state ===
+  const timelineWrapperRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const didDragMove = useRef(false);
   const autoScrollRAF = useRef<number>(0);
@@ -210,12 +211,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     });
   }, [onUpdateEntry]);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!dragState) return;
-    e.preventDefault();
+  // Use refs for handlers so the native listener always sees latest state
+  const handleTouchMoveRef = useRef<(e: TouchEvent) => void>(() => {});
+  const handleTouchEndRef = useRef<() => void>(() => {});
+
+  handleTouchMoveRef.current = (e: TouchEvent) => {
+    if (!dragStateRef.current) return;
+    e.preventDefault(); // works because registered as { passive: false }
     const touch = e.touches[0];
     lastTouchY.current = touch.clientY;
-    const deltaY = touch.clientY - dragState.startY;
+    const deltaY = touch.clientY - dragStateRef.current.startY;
     if (Math.abs(deltaY) > 5) didDragMove.current = true;
 
     // Auto-scroll when finger is near top/bottom edge of viewport
@@ -226,12 +231,10 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       const screenBottom = window.innerHeight;
       const screenTop = 0;
       if (touch.clientY > screenBottom - edgeZone) {
-        // Finger near bottom of screen → scroll down
         const ratio = Math.min(1, (touch.clientY - (screenBottom - edgeZone)) / edgeZone);
         autoScrollSpeed.current = ratio * maxSpeed;
         startAutoScroll();
       } else if (touch.clientY < screenTop + edgeZone) {
-        // Finger near top of screen → scroll up
         const ratio = Math.min(1, ((screenTop + edgeZone) - touch.clientY) / edgeZone);
         autoScrollSpeed.current = -ratio * maxSpeed;
         startAutoScroll();
@@ -240,37 +243,50 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       }
     }
 
-    // Update ghost position based on finger location
     updateGhostFromClientY(touch.clientY);
-  }, [dragState, getScrollParent, startAutoScroll, stopAutoScroll, updateGhostFromClientY]);
+  };
 
-  const handleTouchEnd = useCallback(() => {
+  handleTouchEndRef.current = () => {
     stopAutoScroll();
-    if (!dragState || !onUpdateEntry) {
+    const ds = dragStateRef.current;
+    if (!ds || !onUpdateEntry) {
       setDragState(null);
       return;
     }
 
-    // Only save if actually dragged (moved > 5px) and ghost is in valid position
-    if (didDragMove.current && dragState.currentTop >= 0) {
-      if (dragState.type === 'move' || dragState.type === 'place') {
-        const newStartMin = snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60);
-        const duration = dragState.origEndMinutes - dragState.origMinutes;
+    if (didDragMove.current && ds.currentTop >= 0) {
+      if (ds.type === 'move' || ds.type === 'place') {
+        const newStartMin = snapMinutes(START_HOUR * 60 + (ds.currentTop / HOUR_HEIGHT) * 60);
+        const duration = ds.origEndMinutes - ds.origMinutes;
         const newEndMin = newStartMin + duration;
-        onUpdateEntry(dragState.entryId, {
+        onUpdateEntry(ds.entryId, {
           time: minutesToTime(newStartMin),
           endTime: minutesToTime(newEndMin),
         });
-      } else if (dragState.type === 'resize') {
-        const newEndMin = snapMinutes(dragState.origMinutes + ((dragState.currentHeight + 2) / HOUR_HEIGHT) * 60);
-        onUpdateEntry(dragState.entryId, {
-          endTime: minutesToTime(Math.max(dragState.origMinutes + 15, newEndMin)),
+      } else if (ds.type === 'resize') {
+        const newEndMin = snapMinutes(ds.origMinutes + ((ds.currentHeight + 2) / HOUR_HEIGHT) * 60);
+        onUpdateEntry(ds.entryId, {
+          endTime: minutesToTime(Math.max(ds.origMinutes + 15, newEndMin)),
         });
       }
     }
 
     setDragState(null);
-  }, [dragState, onUpdateEntry, stopAutoScroll]);
+  };
+
+  // Register non-passive touch listeners on the timeline wrapper
+  useEffect(() => {
+    const el = timelineWrapperRef.current;
+    if (!el) return;
+    const onMove = (e: TouchEvent) => handleTouchMoveRef.current(e);
+    const onEnd = () => handleTouchEndRef.current();
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    return () => {
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, [viewMode]); // re-attach when switching to timeline view
 
   return (
     <div>
@@ -351,13 +367,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
         )
       ) : (
         /* 타임라인 모드 */
-        <div style={{
+        <div ref={timelineWrapperRef} style={{
           background: C.bgWhite, borderRadius: 14, overflow: 'hidden',
           boxShadow: `0 1px 3px ${C.cardShadow}`,
-        }}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        >
+          touchAction: dragState ? 'none' : 'auto',
+        }}>
           {/* 시간 미지정 항목 - 드래그 가능 */}
           {untimedEntries.length > 0 && (
             <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
@@ -374,6 +388,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                     background: isDragging ? `${C.blue}15` : 'transparent',
                     border: `1px dashed ${isDragging ? C.blue : 'transparent'}`,
                     marginBottom: 2, transition: 'background 0.15s',
+                    touchAction: 'none',
                   }}
                   onTouchStart={e => handleUntimedTouchStart(e, entry)}
                   onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
