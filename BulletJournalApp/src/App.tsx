@@ -200,9 +200,9 @@ export default function App() {
           padding: '6px 16px 0',
         }}>
           <div style={{
-            display: 'flex', gap: 4, flexWrap: tagBarExpanded ? 'wrap' : 'nowrap',
-            overflow: tagBarExpanded ? 'visible' : 'hidden',
-            maxHeight: tagBarExpanded ? 'none' : 28,
+            display: 'flex', gap: 4, flexWrap: 'wrap',
+            overflow: 'hidden',
+            maxHeight: tagBarExpanded ? 'none' : 60,
           }}>
             <button
               style={{
@@ -226,18 +226,18 @@ export default function App() {
                 }}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
             ))}
-            {allTags.length > 4 && (
-              <button
-                style={{
-                  padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
-                  border: 'none', background: 'transparent', color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
-                  fontFamily: '-apple-system, sans-serif', flexShrink: 0,
-                }}
-                onClick={() => setTagBarExpanded(!tagBarExpanded)}>
-                {tagBarExpanded ? '접기 ▲' : `+${allTags.length - 4} ▼`}
-              </button>
-            )}
           </div>
+          {allTags.length > 6 && (
+            <button
+              style={{
+                padding: '2px 0', fontSize: 10, cursor: 'pointer', width: '100%',
+                border: 'none', background: 'transparent', color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
+                fontFamily: '-apple-system, sans-serif', textAlign: 'center',
+              }}
+              onClick={() => setTagBarExpanded(!tagBarExpanded)}>
+              {tagBarExpanded ? '접기 ▲' : '더보기 ▼'}
+            </button>
+          )}
         </div>
       )}
       </div>{/* end stickyTop */}
