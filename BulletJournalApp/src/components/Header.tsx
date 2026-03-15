@@ -11,13 +11,11 @@ interface HeaderProps {
   nav: (dir: number) => void;
   goToday: () => void;
   onSettings: () => void;
-  notionConnected: boolean;
-  syncing: boolean;
   urgentCount?: number;
   onSearch?: () => void;
 }
 
-export function Header({ curDate, view, nav, goToday, onSettings, notionConnected, syncing, urgentCount = 0, onSearch }: HeaderProps) {
+export function Header({ curDate, view, nav, goToday, onSettings, urgentCount = 0, onSearch }: HeaderProps) {
   const { styles } = useTheme();
   const y = curDate.getFullYear();
   const m = curDate.getMonth();
@@ -44,11 +42,6 @@ export function Header({ curDate, view, nav, goToday, onSettings, notionConnecte
         <div style={styles.headerTop}>
           <h1 style={{ ...styles.logo, fontSize: 13, letterSpacing: 1, whiteSpace: 'nowrap', flexShrink: 0 }}>BulletJournal</h1>
           <div style={{ ...styles.headerActions as React.CSSProperties, flexShrink: 0 }}>
-            {notionConnected && (
-              <span style={{ fontSize: 10, color: syncing ? '#c0883f' : '#4a8c3f', marginRight: 4 }}>
-                {syncing ? '동기화 중...' : '● Notion'}
-              </span>
-            )}
             <button style={{
               ...styles.todayBtn,
               fontSize: 11, padding: '4px 8px',

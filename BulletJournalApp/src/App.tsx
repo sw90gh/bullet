@@ -17,7 +17,6 @@ import { StatsScreen } from './screens/StatsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useEntries } from './hooks/useEntries';
 import { useGoals } from './hooks/useGoals';
-import { useNotionSync } from './hooks/useNotionSync';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
 import { autoBackup } from './utils/storage';
@@ -67,9 +66,8 @@ export default function App() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagBarExpanded, setTagBarExpanded] = useState(false);
 
-  const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, mergeNotionEntries } = useEntries();
+  const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry } = useEntries();
   const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal } = useGoals();
-  const { config, syncing, lastError, connect, disconnect, syncFromNotion, isConnected } = useNotionSync();
 
   const curY = curDate.getFullYear();
   const curM = curDate.getMonth();
@@ -151,13 +149,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [entriesLoaded, goalsLoaded, entries, goals]);
 
-  const handleSyncNotion = async () => {
-    const notionEntries = await syncFromNotion();
-    if (notionEntries.length > 0) {
-      mergeNotionEntries(notionEntries);
-    }
-  };
-
   if (!entriesLoaded || !goalsLoaded) {
     return (
       <DarkModeProvider isDark={isDark}>
@@ -179,8 +170,6 @@ export default function App() {
         nav={nav}
         goToday={goToday}
         onSettings={() => setShowSettings(true)}
-        notionConnected={isConnected}
-        syncing={syncing}
         urgentCount={urgentCount}
         onSearch={() => setShowSearch(true)}
       />
@@ -417,12 +406,6 @@ export default function App() {
       {showSettings && (
         <SettingsScreen
           onClose={() => setShowSettings(false)}
-          notionConfig={config}
-          onNotionConnect={connect}
-          onNotionDisconnect={disconnect}
-          onNotionSync={handleSyncNotion}
-          syncing={syncing}
-          lastError={lastError}
           tagList={tagList}
           onDeleteTag={deleteTag}
           isDark={isDark}

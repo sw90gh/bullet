@@ -86,7 +86,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{entry.text}</span>
         {entry.time && <span style={{ fontSize: 11, color: '#b8a99a', marginLeft: 4 }}>{entry.time}</span>}
-        {entry.notionPageId && <span style={styles.notionBadge}>N</span>}
+
       </div>
     );
   }
@@ -171,7 +171,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             color: isStrike ? '#b8a99a' : '#2c2416',
           }}>{entry.text}</span>
           {entry.time && <span style={styles.timeTag}>{entry.time}</span>}
-          {entry.notionPageId && <span style={styles.notionBadge}>N</span>}
+  
           {entry.tags && entry.tags.length > 0 && (
             <div style={{ marginTop: 2 }}>
               {entry.tags.map((tag, i) => (

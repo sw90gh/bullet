@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { getStyles } from '../styles/theme';
 import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup } from '../utils/storage';
-import { NotionConfig } from '../types';
 
 type DarkModePref = 'system' | 'light' | 'dark';
 
@@ -12,12 +11,6 @@ interface TagInfo {
 
 interface SettingsScreenProps {
   onClose: () => void;
-  notionConfig: NotionConfig | null;
-  onNotionConnect: (token: string, dbId: string) => void;
-  onNotionDisconnect: () => void;
-  onNotionSync: () => void;
-  syncing: boolean;
-  lastError: string | null;
   tagList?: TagInfo[];
   onDeleteTag?: (tag: string) => void;
   isDark?: boolean;
@@ -26,12 +19,9 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({
-  onClose, notionConfig, onNotionConnect, onNotionDisconnect, onNotionSync, syncing, lastError,
-  tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
+  onClose, tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
 }: SettingsScreenProps) {
   const styles = getStyles(isDark);
-  const [token, setToken] = useState('');
-  const [dbId, setDbId] = useState('');
   const [importText, setImportText] = useState('');
   const [showImport, setShowImport] = useState(false);
 
@@ -128,64 +118,13 @@ export function SettingsScreen({
             </div>
           )}
 
-          {/* Notion Integration */}
-          <div style={styles.settingsSection}>
-            <div style={styles.settingsLabel}>Notion 캘린더 연동</div>
-            {notionConfig?.connected ? (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 12, color: '#4a8c3f', fontWeight: 600 }}>● 연결됨</span>
-                  <span style={{ fontSize: 11, color: '#b8a99a' }}>
-                    {notionConfig.lastSync
-                      ? `마지막 동기화: ${new Date(notionConfig.lastSync).toLocaleString('ko-KR')}`
-                      : '아직 동기화하지 않음'}
-                  </span>
-                </div>
-                {lastError && (
-                  <p style={{ fontSize: 12, color: '#c0583f', marginBottom: 8 }}>{lastError}</p>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={styles.successBtn} onClick={onNotionSync} disabled={syncing}>
-                    {syncing ? '동기화 중...' : '지금 동기화'}
-                  </button>
-                  <button style={styles.dangerBtn} onClick={onNotionDisconnect}>연결 해제</button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p style={{ fontSize: 12, color: isDark ? '#a89888' : '#6b5d4d', marginBottom: 12, lineHeight: 1.6 }}>
-                  Notion Integration Token과 Database ID를 입력하여 연동합니다.
-                  <br />
-                  Notion에서 Integration을 생성한 후, 대상 데이터베이스에 연결해주세요.
-                </p>
-                <label style={styles.fieldLabel}>Integration Token</label>
-                <input
-                  style={{ ...styles.input, marginBottom: 8, fontSize: 13 }}
-                  placeholder="secret_..."
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  type="password"
-                />
-                <label style={styles.fieldLabel}>Database ID</label>
-                <input
-                  style={{ ...styles.input, marginBottom: 12, fontSize: 13 }}
-                  placeholder="32자리 ID"
-                  value={dbId}
-                  onChange={e => setDbId(e.target.value)}
-                />
-                <button
-                  style={{ ...styles.saveBtn, opacity: token && dbId ? 1 : 0.5 }}
-                  onClick={() => { if (token && dbId) onNotionConnect(token, dbId); }}
-                >
-                  연결하기
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* Data Management */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>데이터 관리</div>
+            <p style={{ fontSize: 11, color: isDark ? '#6b5d4d' : '#b8a99a', marginBottom: 8, lineHeight: 1.5 }}>
+              데이터는 기기의 로컬 저장소에 보관됩니다.
+              Safari 데이터를 삭제하면 모든 기록이 사라질 수 있으니 정기적으로 백업해주세요.
+            </p>
             {(() => {
               const backup = getAutoBackup();
               return backup ? (
