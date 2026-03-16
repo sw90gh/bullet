@@ -47,6 +47,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
       const recurring: RecurringConfig | undefined = recurringType !== 'none'
         ? { type: recurringType as RecurringConfig['type'], interval: recurringInterval, endDate: recurringEndDate || undefined }
         : undefined;
+      const isMultiDay = endDate && endDate !== date;
       onSaveEntry({
         text: text.trim(),
         type: type as Entry['type'],
@@ -54,8 +55,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
         priority: priority as Entry['priority'],
         date,
         endDate: endDate || undefined,
-        time: time || undefined,
-        endTime: endTime || undefined,
+        time: isMultiDay ? undefined : (time || undefined),
+        endTime: isMultiDay ? undefined : (endTime || undefined),
         tags: parsedTags.length > 0 ? parsedTags : undefined,
         memo: memo.trim() || undefined,
         recurring,
@@ -198,29 +199,88 @@ export function EntryModal({ modal, onClose, onSaveEntry, onSaveGoal, allTags = 
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <label style={labelSmall}>시작일</label>
-                  <input type="date" style={inputSmall} value={date}
-                    onChange={e => setDate(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input type="date" style={inputSmall} value={date}
+                      onChange={e => {
+                        const newDate = e.target.value;
+                        setDate(newDate);
+                        if (endDate && endDate !== newDate) {
+                          setTime('');
+                          setEndTime('');
+                        }
+                      }} />
+                  </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <label style={labelSmall}>종료일</label>
-                  <input type="date" style={inputSmall} value={endDate}
-                    onChange={e => setEndDate(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input type="date" style={inputSmall} value={endDate}
+                      onChange={e => {
+                        const newEnd = e.target.value;
+                        setEndDate(newEnd);
+                        if (newEnd && newEnd !== date) {
+                          setTime('');
+                          setEndTime('');
+                        }
+                      }} />
+                    {endDate && (
+                      <button
+                        style={{
+                          position: 'absolute', right: 28, top: '50%', transform: 'translateY(-50%)',
+                          background: 'none', border: 'none', padding: '2px 4px',
+                          fontSize: 14, color: C.textMuted, cursor: 'pointer', lineHeight: 1,
+                        }}
+                        onClick={() => setEndDate('')}
+                      >✕</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* 시간 + 태그 + 메모 한 줄씩 */}
+              {/* 시간 (다일간 항목이면 숨김) */}
+              {!(endDate && endDate !== date) && (
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <label style={labelSmall}>시작 시간</label>
-                  <input type="time" style={inputSmall} value={time}
-                    onChange={e => setTime(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input type="time" style={inputSmall} value={time}
+                      onChange={e => setTime(e.target.value)} />
+                    {time && (
+                      <button
+                        style={{
+                          position: 'absolute', right: 28, top: '50%', transform: 'translateY(-50%)',
+                          background: 'none', border: 'none', padding: '2px 4px',
+                          fontSize: 14, color: C.textMuted, cursor: 'pointer', lineHeight: 1,
+                        }}
+                        onClick={() => setTime('')}
+                      >✕</button>
+                    )}
+                  </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <label style={labelSmall}>종료 시간</label>
-                  <input type="time" style={inputSmall} value={endTime}
-                    onChange={e => setEndTime(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input type="time" style={inputSmall} value={endTime}
+                      onChange={e => setEndTime(e.target.value)} />
+                    {endTime && (
+                      <button
+                        style={{
+                          position: 'absolute', right: 28, top: '50%', transform: 'translateY(-50%)',
+                          background: 'none', border: 'none', padding: '2px 4px',
+                          fontSize: 14, color: C.textMuted, cursor: 'pointer', lineHeight: 1,
+                        }}
+                        onClick={() => setEndTime('')}
+                      >✕</button>
+                    )}
+                  </div>
                 </div>
               </div>
+              )}
+              {endDate && endDate !== date && (
+                <div style={{ marginTop: 4, padding: '6px 10px', borderRadius: 8, background: `${C.blue}10`, fontSize: 11, color: C.blue }}>
+                  다일간 항목은 시간 설정이 적용되지 않습니다.
+                </div>
+              )}
 
               <div style={{ marginTop: 4 }}>
                 <label style={labelSmall}>태그</label>

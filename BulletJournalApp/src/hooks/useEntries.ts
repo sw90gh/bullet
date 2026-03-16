@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Entry, EntryStatus } from '../types';
 import { uid } from '../utils/date';
-import { loadData, saveData } from '../utils/storage';
+import { loadData, saveData, trackDeletedEntry } from '../utils/storage';
 import { STATUS_CYCLE } from '../utils/constants';
 
 const STORAGE_KEY = 'bujo-entries';
@@ -13,7 +13,10 @@ export function useEntries() {
   useEffect(() => {
     (async () => {
       const data = await loadData<Entry[]>(STORAGE_KEY, []);
-      setEntries(data);
+      // updatedAt이 없는 기존 항목에 자동 부여
+      const now = Date.now();
+      const patched = data.map(e => e.updatedAt ? e : { ...e, updatedAt: now });
+      setEntries(patched);
       setLoaded(true);
     })();
   }, []);
@@ -31,6 +34,7 @@ export function useEntries() {
   }, []);
 
   const deleteEntry = useCallback((id: string) => {
+    trackDeletedEntry(id);
     setEntries(prev => prev.filter(e => e.id !== id));
   }, []);
 

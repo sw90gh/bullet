@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Goal } from '../types';
 import { uid } from '../utils/date';
-import { loadData, saveData } from '../utils/storage';
+import { loadData, saveData, trackDeletedGoal } from '../utils/storage';
 
 const STORAGE_KEY = 'bujo-goals';
 
@@ -12,7 +12,9 @@ export function useGoals() {
   useEffect(() => {
     (async () => {
       const data = await loadData<Goal[]>(STORAGE_KEY, []);
-      setGoals(data);
+      const now = Date.now();
+      const patched = data.map(g => g.updatedAt ? g : { ...g, updatedAt: now });
+      setGoals(patched);
       setLoaded(true);
     })();
   }, []);
@@ -30,6 +32,7 @@ export function useGoals() {
   }, []);
 
   const deleteGoal = useCallback((id: string) => {
+    trackDeletedGoal(id);
     setGoals(prev => prev.filter(g => g.id !== id));
   }, []);
 

@@ -96,6 +96,46 @@ export function restoreAutoBackup(): boolean {
   }
 }
 
+// === 삭제 추적 (오프라인 삭제 동기화용) ===
+const DELETED_ENTRIES_KEY = 'bujo-deleted-entries';
+const DELETED_GOALS_KEY = 'bujo-deleted-goals';
+
+export function trackDeletedEntry(id: string): void {
+  const ids = getDeletedEntryIds();
+  if (!ids.includes(id)) {
+    ids.push(id);
+    localStorage.setItem(DELETED_ENTRIES_KEY, JSON.stringify(ids));
+  }
+}
+
+export function trackDeletedGoal(id: string): void {
+  const ids = getDeletedGoalIds();
+  if (!ids.includes(id)) {
+    ids.push(id);
+    localStorage.setItem(DELETED_GOALS_KEY, JSON.stringify(ids));
+  }
+}
+
+export function getDeletedEntryIds(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(DELETED_ENTRIES_KEY) || '[]');
+  } catch { return []; }
+}
+
+export function getDeletedGoalIds(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(DELETED_GOALS_KEY) || '[]');
+  } catch { return []; }
+}
+
+export function clearDeletedEntryIds(): void {
+  localStorage.removeItem(DELETED_ENTRIES_KEY);
+}
+
+export function clearDeletedGoalIds(): void {
+  localStorage.removeItem(DELETED_GOALS_KEY);
+}
+
 // === 백업 알림 ===
 const LAST_EXPORT_KEY = 'bujo-last-export';
 const BACKUP_REMIND_DAYS = 3;

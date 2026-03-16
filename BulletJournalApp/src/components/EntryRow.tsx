@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
@@ -24,11 +24,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const isStrike = ('strike' in st && st.strike) || entry.status === 'done';
 
   const entryRef = useRef<HTMLDivElement>(null);
-  const touchStart = useRef<{ x: number; time: number } | null>(null);
+  const pointerStart = useRef<{ x: number; y: number; time: number } | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
+  const isDragging = useRef(false);
 
-  // Close swipe when tapping outside this entry
+  // Close swipe when clicking/tapping outside this entry
   useEffect(() => {
     if (swipeDir === 'none') return;
     const handler = (e: Event) => {
@@ -37,39 +38,84 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       }
     };
     document.addEventListener('touchstart', handler, true);
-    return () => document.removeEventListener('touchstart', handler, true);
+    document.addEventListener('mousedown', handler, true);
+    return () => {
+      document.removeEventListener('touchstart', handler, true);
+      document.removeEventListener('mousedown', handler, true);
+    };
   }, [swipeDir]);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    // Don't track swipe if touching action buttons
-    const target = e.target as HTMLElement;
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  // Unified pointer start (touch + mouse)
+  const handlePointerStart = useCallback((clientX: number, clientY: number, target: HTMLElement) => {
     if (target.tagName === 'BUTTON') return;
-    touchStart.current = { x: e.touches[0].clientX, time: Date.now() };
+    pointerStart.current = { x: clientX, y: clientY, time: Date.now() };
+    isDragging.current = false;
     didLongPress.current = false;
+    clearLongPress();
     longPressTimer.current = setTimeout(() => {
       didLongPress.current = true;
       onEdit();
     }, 500);
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStart.current && Math.abs(e.touches[0].clientX - touchStart.current.x) > 10) {
-      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }, [onEdit, clearLongPress]);
+
+  const handlePointerMove = useCallback((clientX: number, clientY: number) => {
+    if (!pointerStart.current) return;
+    const dx = Math.abs(clientX - pointerStart.current.x);
+    const dy = Math.abs(clientY - pointerStart.current.y);
+    if (dx > 10 || dy > 10) {
+      clearLongPress();
+      isDragging.current = true;
     }
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    if (!touchStart.current || didLongPress.current) {
-      touchStart.current = null;
+  }, [clearLongPress]);
+
+  const handlePointerEnd = useCallback((clientX: number) => {
+    clearLongPress();
+    if (!pointerStart.current || didLongPress.current) {
+      pointerStart.current = null;
       return;
     }
-    const diff = e.changedTouches[0].clientX - touchStart.current.x;
+    const diff = clientX - pointerStart.current.x;
     if (diff < -60) setSwipeDir('left');
     else if (diff > 60) setSwipeDir(swipeDir === 'none' ? 'right' : 'none');
-    else if (Math.abs(diff) < 10) {
-      // tap - only if not swiped
+    else if (Math.abs(diff) < 10 && !isDragging.current) {
       if (swipeDir !== 'none') setSwipeDir('none');
     }
-    touchStart.current = null;
+    pointerStart.current = null;
+  }, [swipeDir, clearLongPress]);
+
+  // Touch handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    handlePointerStart(e.touches[0].clientX, e.touches[0].clientY, e.target as HTMLElement);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    handlePointerEnd(e.changedTouches[0].clientX);
+  };
+
+  // Mouse handlers
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // left click only
+    handlePointerStart(e.clientX, e.clientY, e.target as HTMLElement);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      handlePointerMove(ev.clientX, ev.clientY);
+    };
+    const onMouseUp = (ev: MouseEvent) => {
+      handlePointerEnd(ev.clientX);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   const priorityBtnStyle = (key: string, active: boolean): React.CSSProperties => ({
@@ -106,7 +152,9 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
 
   return (
     <div ref={entryRef} style={styles.entryOuter as React.CSSProperties}
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown}
+      onContextMenu={(e) => { e.preventDefault(); onEdit(); }}>
 
       {/* 좌측: 우선순위 버튼 (좌→우 스와이프) */}
       {onChangePriority && (
@@ -160,8 +208,9 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         ...styles.entryRow as React.CSSProperties,
         transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(160px)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
+        userSelect: 'none',
       }}
-        onClick={() => swipeDir === 'none' && cycleStatus(entry.id)}
+        onClick={() => swipeDir === 'none' && !isDragging.current && cycleStatus(entry.id)}
       >
         {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? '#c0583f' : '#c0883f' }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (
@@ -184,7 +233,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             color: isStrike ? '#b8a99a' : '#2c2416',
           }}>{entry.text}</span>
           {entry.time && <span style={styles.timeTag}>{entry.time}</span>}
-  
+
           {entry.tags && entry.tags.length > 0 && (
             <div style={{ marginTop: 2 }}>
               {entry.tags.map((tag, i) => (

@@ -177,6 +177,7 @@ export default function App() {
         onSettings={() => setShowSettings(true)}
         urgentCount={urgentCount}
         onSearch={() => setShowSearch(true)}
+        syncStatus={user ? syncStatus : undefined}
       />
 
       {/* View Tabs */}
