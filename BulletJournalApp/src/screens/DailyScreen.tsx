@@ -349,13 +349,24 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     setDragState(null);
   };
 
-  // Register non-passive touch listeners + mouse listeners on the timeline wrapper
+  // Register non-passive touch listeners on the timeline wrapper
   useEffect(() => {
     const el = timelineWrapperRef.current;
     if (!el) return;
     const onTouchMoveNative = (e: TouchEvent) => handleTouchMoveRef.current(e);
     const onTouchEndNative = () => handleTouchEndRef.current();
-    const onMouseMoveNative = (e: MouseEvent) => {
+    el.addEventListener('touchmove', onTouchMoveNative, { passive: false });
+    el.addEventListener('touchend', onTouchEndNative);
+    return () => {
+      el.removeEventListener('touchmove', onTouchMoveNative);
+      el.removeEventListener('touchend', onTouchEndNative);
+    };
+  }, [viewMode]);
+
+  // Register mouse listeners when drag starts, remove when drag ends
+  useEffect(() => {
+    if (!dragState) return;
+    const onMouseMove = (e: MouseEvent) => {
       if (!dragStateRef.current) return;
       e.preventDefault();
       lastTouchY.current = e.clientY;
@@ -363,29 +374,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
       if (Math.abs(deltaY) > 5) didDragMove.current = true;
       updateGhostFromClientY(e.clientY);
     };
-    const onMouseUpNative = () => {
+    const onMouseUp = () => {
       handleTouchEndRef.current();
-      document.removeEventListener('mousemove', onMouseMoveNative);
-      document.removeEventListener('mouseup', onMouseUpNative);
     };
-    // Capture mousedown on the wrapper to start listening globally
-    const onMouseDownCapture = () => {
-      if (dragStateRef.current) {
-        document.addEventListener('mousemove', onMouseMoveNative);
-        document.addEventListener('mouseup', onMouseUpNative);
-      }
-    };
-    el.addEventListener('touchmove', onTouchMoveNative, { passive: false });
-    el.addEventListener('touchend', onTouchEndNative);
-    el.addEventListener('mousedown', onMouseDownCapture, true);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
     return () => {
-      el.removeEventListener('touchmove', onTouchMoveNative);
-      el.removeEventListener('touchend', onTouchEndNative);
-      el.removeEventListener('mousedown', onMouseDownCapture, true);
-      document.removeEventListener('mousemove', onMouseMoveNative);
-      document.removeEventListener('mouseup', onMouseUpNative);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
     };
-  }, [viewMode, updateGhostFromClientY]); // re-attach when switching to timeline view
+  }, [dragState, updateGhostFromClientY]);
 
   // Auto-scroll to current time when switching to timeline view
   useEffect(() => {
