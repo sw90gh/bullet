@@ -244,7 +244,7 @@ export function getStyles(isDark: boolean): Styles {
       background: 'none', border: 'none', fontSize: 18, color: C.textMuted,
       cursor: 'pointer', padding: 4,
     },
-    modalBody: { padding: '16px 0', overflow: 'hidden' },
+    modalBody: { padding: '16px 0', overflowY: 'auto' as const, maxHeight: 'calc(90vh - 60px)' },
     fieldLabel: {
       display: 'block', fontSize: 12, fontWeight: 600, color: C.textSecondary,
       marginTop: 14, marginBottom: 6,

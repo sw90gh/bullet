@@ -18,16 +18,18 @@ export function useAuth() {
   }, []);
 
   const login = useCallback(async () => {
-    try {
-      // Try popup first (works on desktop and in-browser mobile)
-      await signInWithPopup(auth, googleProvider);
-    } catch (e: unknown) {
-      const error = e as { code?: string };
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-        // Fallback to redirect (for iOS PWA standalone mode)
+    // iOS Safari/PWA에서는 popup이 안 되므로 항상 redirect 사용
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || (navigator as unknown as { standalone?: boolean }).standalone === true;
+
+    if (isIOS || isStandalone) {
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      try {
+        await signInWithPopup(auth, googleProvider);
+      } catch {
         await signInWithRedirect(auth, googleProvider);
-      } else {
-        throw e;
       }
     }
   }, []);
