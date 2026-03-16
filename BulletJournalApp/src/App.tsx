@@ -17,6 +17,8 @@ import { StatsScreen } from './screens/StatsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useEntries } from './hooks/useEntries';
 import { useGoals } from './hooks/useGoals';
+import { useAuth } from './hooks/useAuth';
+import { useFirestoreSync } from './hooks/useFirestoreSync';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
 import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime } from './utils/storage';
@@ -67,8 +69,10 @@ export default function App() {
   const [tagBarExpanded, setTagBarExpanded] = useState(false);
   const [backupDismissed, setBackupDismissed] = useState(false);
 
-  const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry } = useEntries();
-  const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal } = useGoals();
+  const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, setEntries } = useEntries();
+  const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal, setGoals } = useGoals();
+  const { user, loading: authLoading, login, logout } = useAuth();
+  const { syncStatus } = useFirestoreSync(user, entries, setEntries, goals, setGoals, entriesLoaded && goalsLoaded);
 
   const curY = curDate.getFullYear();
   const curM = curDate.getMonth();
@@ -443,6 +447,11 @@ export default function App() {
           isDark={isDark}
           darkModePref={pref}
           onDarkModeChange={setPref}
+          user={user}
+          authLoading={authLoading}
+          onLogin={login}
+          onLogout={logout}
+          syncStatus={syncStatus}
         />
       )}
     </div>

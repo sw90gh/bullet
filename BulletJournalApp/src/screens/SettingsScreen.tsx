@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { User } from 'firebase/auth';
 import { getStyles } from '../styles/theme';
 import { exportAllData, importAllData, getAutoBackup, restoreAutoBackup, shareBackup, getStorageUsage } from '../utils/storage';
+import { SyncStatus } from '../hooks/useFirestoreSync';
 
 type DarkModePref = 'system' | 'light' | 'dark';
 
@@ -16,10 +18,16 @@ interface SettingsScreenProps {
   isDark?: boolean;
   darkModePref?: DarkModePref;
   onDarkModeChange?: (pref: DarkModePref) => void;
+  user?: User | null;
+  authLoading?: boolean;
+  onLogin?: () => void;
+  onLogout?: () => void;
+  syncStatus?: SyncStatus;
 }
 
 export function SettingsScreen({
   onClose, tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
+  user, authLoading, onLogin, onLogout, syncStatus = 'idle',
 }: SettingsScreenProps) {
   const styles = getStyles(isDark);
   const [importText, setImportText] = useState('');
@@ -56,6 +64,61 @@ export function SettingsScreen({
         </div>
 
         <div style={styles.modalBody}>
+          {/* Cloud Sync */}
+          <div style={styles.settingsSection}>
+            <div style={styles.settingsLabel}>클라우드 동기화</div>
+            {user ? (
+              <div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  borderRadius: 8, background: isDark ? '#333' : '#f5f0e8', marginBottom: 8,
+                }}>
+                  {user.photoURL && (
+                    <img src={user.photoURL} alt="" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#e8e0d4' : '#2c2416' }}>
+                      {user.displayName || user.email}
+                    </div>
+                    <div style={{ fontSize: 10, color: isDark ? '#6b5d4d' : '#b8a99a' }}>
+                      {syncStatus === 'syncing' ? '동기화 중...' :
+                       syncStatus === 'synced' ? '동기화 완료' :
+                       syncStatus === 'error' ? '동기화 오류' : '대기 중'}
+                    </div>
+                  </div>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: syncStatus === 'synced' ? '#4caf50' :
+                               syncStatus === 'syncing' ? '#c0883f' :
+                               syncStatus === 'error' ? '#c0583f' : '#b8a99a',
+                  }} />
+                </div>
+                <button style={{
+                  width: '100%', padding: '8px 0', borderRadius: 10, fontSize: 12,
+                  border: `1px solid ${isDark ? '#3a3530' : '#ddd5c9'}`,
+                  background: 'transparent', color: isDark ? '#a89888' : '#6b5d4d',
+                  cursor: 'pointer', fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+                }} onClick={onLogout}>로그아웃</button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 11, color: isDark ? '#6b5d4d' : '#b8a99a', marginBottom: 8, lineHeight: 1.5 }}>
+                  Google 로그인으로 여러 기기에서 데이터를 동기화할 수 있습니다.
+                </p>
+                <button style={{
+                  width: '100%', padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  border: 'none', cursor: 'pointer',
+                  fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+                  background: isDark ? '#e8e0d4' : '#2c2416',
+                  color: isDark ? '#1a1a1a' : 'white',
+                  opacity: authLoading ? 0.5 : 1,
+                }} onClick={onLogin} disabled={authLoading}>
+                  {authLoading ? '로딩 중...' : 'Google로 로그인'}
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Dark Mode */}
           <div style={styles.settingsSection}>
             <div style={styles.settingsLabel}>화면 모드</div>

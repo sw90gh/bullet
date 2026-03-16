@@ -22,16 +22,16 @@ export function useGoals() {
   }, [goals, loaded]);
 
   const addGoal = useCallback((goal: Omit<Goal, 'id'>) => {
-    setGoals(prev => [...prev, { ...goal, id: uid() }]);
+    setGoals(prev => [...prev, { ...goal, id: uid(), updatedAt: Date.now() }]);
   }, []);
 
   const updateGoal = useCallback((id: string, updates: Partial<Goal>) => {
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates, updatedAt: Date.now() } : g));
   }, []);
 
   const deleteGoal = useCallback((id: string) => {
     setGoals(prev => prev.filter(g => g.id !== id));
   }, []);
 
-  return { goals, loaded, addGoal, updateGoal, deleteGoal };
+  return { goals, loaded, addGoal, updateGoal, deleteGoal, setGoals };
 }

@@ -19,6 +19,7 @@ export interface Entry {
   notionPageId?: string;
   notionLastSync?: number;
   recurring?: RecurringConfig;
+  updatedAt?: number;
 }
 
 export interface RecurringConfig {
@@ -33,6 +34,7 @@ export interface Goal {
   year: number;
   month?: number | null;
   done: boolean;
+  updatedAt?: number;
 }
 
 export interface NotionConfig {
