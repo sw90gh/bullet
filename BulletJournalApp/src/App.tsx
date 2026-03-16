@@ -71,7 +71,7 @@ export default function App() {
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, setEntries } = useEntries();
   const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal, setGoals } = useGoals();
-  const { user, loading: authLoading, login, logout } = useAuth();
+  const { user, loading: authLoading, login, logout, error: authError } = useAuth();
   const { syncStatus } = useFirestoreSync(user, entries, setEntries, goals, setGoals, entriesLoaded && goalsLoaded);
 
   const curY = curDate.getFullYear();
@@ -452,6 +452,7 @@ export default function App() {
           onLogin={login}
           onLogout={logout}
           syncStatus={syncStatus}
+          authError={authError}
         />
       )}
     </div>

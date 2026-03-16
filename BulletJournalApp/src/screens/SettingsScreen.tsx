@@ -23,11 +23,12 @@ interface SettingsScreenProps {
   onLogin?: () => void;
   onLogout?: () => void;
   syncStatus?: SyncStatus;
+  authError?: string | null;
 }
 
 export function SettingsScreen({
   onClose, tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
-  user, authLoading, onLogin, onLogout, syncStatus = 'idle',
+  user, authLoading, onLogin, onLogout, syncStatus = 'idle', authError,
 }: SettingsScreenProps) {
   const styles = getStyles(isDark);
   const [importText, setImportText] = useState('');
@@ -115,6 +116,11 @@ export function SettingsScreen({
                 }} onClick={onLogin} disabled={authLoading}>
                   {authLoading ? '로딩 중...' : 'Google로 로그인'}
                 </button>
+                {authError && (
+                  <p style={{ fontSize: 10, color: '#c0583f', marginTop: 6, wordBreak: 'break-all' }}>
+                    오류: {authError}
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -233,6 +233,42 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     });
   }, [onUpdateEntry]);
 
+  // Mouse: move a timed entry (PC)
+  const handleEntryMouseDown = useCallback((e: React.MouseEvent, entry: Entry, mode: 'move' | 'resize') => {
+    if (!onUpdateEntry) return;
+    e.stopPropagation();
+    didDragMove.current = false;
+    const startMin = timeToMinutes(entry.time!);
+    const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+    const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+    const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+    setDragState({
+      type: mode,
+      entryId: entry.id,
+      startY: e.clientY,
+      origMinutes: startMin,
+      origEndMinutes: endMin,
+      currentTop: top,
+      currentHeight: height,
+    });
+  }, [onUpdateEntry]);
+
+  // Mouse: place an untimed entry (PC)
+  const handleUntimedMouseDown = useCallback((e: React.MouseEvent, entry: Entry) => {
+    if (!onUpdateEntry) return;
+    e.stopPropagation();
+    didDragMove.current = false;
+    setDragState({
+      type: 'place',
+      entryId: entry.id,
+      startY: e.clientY,
+      origMinutes: START_HOUR * 60,
+      origEndMinutes: START_HOUR * 60 + 60,
+      currentTop: -999,
+      currentHeight: HOUR_HEIGHT - 2,
+    });
+  }, [onUpdateEntry]);
+
   // Drag: place an untimed entry onto timeline
   const handleUntimedTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     if (!onUpdateEntry) return;
@@ -313,19 +349,43 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     setDragState(null);
   };
 
-  // Register non-passive touch listeners on the timeline wrapper
+  // Register non-passive touch listeners + mouse listeners on the timeline wrapper
   useEffect(() => {
     const el = timelineWrapperRef.current;
     if (!el) return;
-    const onMove = (e: TouchEvent) => handleTouchMoveRef.current(e);
-    const onEnd = () => handleTouchEndRef.current();
-    el.addEventListener('touchmove', onMove, { passive: false });
-    el.addEventListener('touchend', onEnd);
-    return () => {
-      el.removeEventListener('touchmove', onMove);
-      el.removeEventListener('touchend', onEnd);
+    const onTouchMoveNative = (e: TouchEvent) => handleTouchMoveRef.current(e);
+    const onTouchEndNative = () => handleTouchEndRef.current();
+    const onMouseMoveNative = (e: MouseEvent) => {
+      if (!dragStateRef.current) return;
+      e.preventDefault();
+      lastTouchY.current = e.clientY;
+      const deltaY = e.clientY - dragStateRef.current.startY;
+      if (Math.abs(deltaY) > 5) didDragMove.current = true;
+      updateGhostFromClientY(e.clientY);
     };
-  }, [viewMode]); // re-attach when switching to timeline view
+    const onMouseUpNative = () => {
+      handleTouchEndRef.current();
+      document.removeEventListener('mousemove', onMouseMoveNative);
+      document.removeEventListener('mouseup', onMouseUpNative);
+    };
+    // Capture mousedown on the wrapper to start listening globally
+    const onMouseDownCapture = () => {
+      if (dragStateRef.current) {
+        document.addEventListener('mousemove', onMouseMoveNative);
+        document.addEventListener('mouseup', onMouseUpNative);
+      }
+    };
+    el.addEventListener('touchmove', onTouchMoveNative, { passive: false });
+    el.addEventListener('touchend', onTouchEndNative);
+    el.addEventListener('mousedown', onMouseDownCapture, true);
+    return () => {
+      el.removeEventListener('touchmove', onTouchMoveNative);
+      el.removeEventListener('touchend', onTouchEndNative);
+      el.removeEventListener('mousedown', onMouseDownCapture, true);
+      document.removeEventListener('mousemove', onMouseMoveNative);
+      document.removeEventListener('mouseup', onMouseUpNative);
+    };
+  }, [viewMode, updateGhostFromClientY]); // re-attach when switching to timeline view
 
   // Auto-scroll to current time when switching to timeline view
   useEffect(() => {
@@ -444,6 +504,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                     touchAction: 'none',
                   }}
                   onTouchStart={e => handleUntimedTouchStart(e, entry)}
+                  onMouseDown={e => handleUntimedMouseDown(e, entry)}
                   onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
                     <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
@@ -555,6 +616,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                       touchAction: 'none',
                     }}
                     onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
+                    onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
                     onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
                     <div style={{
@@ -578,6 +640,10 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                       onTouchStart={e => {
                         e.stopPropagation();
                         handleEntryTouchStart(e, entry, 'resize');
+                      }}
+                      onMouseDown={e => {
+                        e.stopPropagation();
+                        handleEntryMouseDown(e, entry, 'resize');
                       }}
                     >
                       <div style={{
