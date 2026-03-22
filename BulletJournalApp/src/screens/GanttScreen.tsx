@@ -17,7 +17,7 @@ const ROW_HEIGHT = 36;
 const LABEL_WIDTH = 110;
 
 export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) {
-  const { styles } = useTheme();
+  const { styles, C } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<GanttRange>('month');
   const todayStr = formatDateKey(new Date());
@@ -110,7 +110,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
 
   const getBarColor = (entry: Entry) => {
     const st = STATUS[entry.status];
-    return st ? st.color : '#2c2416';
+    return st ? st.color : C.textPrimary;
   };
 
   const [hideInactive, setHideInactive] = useState(false);
@@ -153,15 +153,15 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: v.color,
               opacity: k === 'cancelled' || k === 'migrated' || k === 'migrated_up' ? 0.3 : k === 'done' ? 0.7 : 1 }} />
-            <span style={{ color: '#6b5d4d' }}>{v.label}</span>
+            <span style={{ color: C.textSecondary }}>{v.label}</span>
           </div>
         ))}
         <button
           style={{
             marginLeft: 'auto', fontSize: 10, padding: '3px 8px', borderRadius: 6,
-            border: '1px solid #ddd5c9', cursor: 'pointer',
-            background: hideInactive ? '#2c2416' : 'white',
-            color: hideInactive ? 'white' : '#6b5d4d',
+            border: `1px solid ${C.border}`, cursor: 'pointer',
+            background: hideInactive ? C.primary : C.bgWhite,
+            color: hideInactive ? C.headerText : C.textSecondary,
             fontFamily: '-apple-system, sans-serif',
           }}
           onClick={() => setHideInactive(!hideInactive)}
@@ -172,8 +172,8 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
 
       {displayEntries.length === 0 ? (
         <div style={styles.emptyState as React.CSSProperties}>
-          <p style={{ color: '#b8a99a', fontSize: 14 }}>해당 기간에 일정이 없습니다</p>
-          <p style={{ color: '#ccc4b8', fontSize: 12, marginTop: 8 }}>
+          <p style={{ color: C.textMuted, fontSize: 14 }}>해당 기간에 일정이 없습니다</p>
+          <p style={{ color: C.textLight, fontSize: 12, marginTop: 8 }}>
             항목 추가 시 종료일을 설정하면 간트차트에 표시됩니다
           </p>
         </div>
@@ -181,8 +181,8 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
         <div style={{ ...styles.ganttContainer as React.CSSProperties, position: 'relative' }}>
           <div style={{ display: 'flex' }}>
             {/* Fixed label column */}
-            <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: '2px solid #ddd5c9' }}>
-              <div style={{ height: 28, borderBottom: '1px solid #ddd5c9', boxSizing: 'border-box' }} />
+            <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: `2px solid ${C.border}` }}>
+              <div style={{ height: 28, borderBottom: `1px solid ${C.border}`, boxSizing: 'border-box' }} />
               {displayEntries.map(entry => {
                 const pr = PRIORITY[entry.priority] || PRIORITY.none;
                 const isInactive = entry.status === 'done' || entry.status === 'cancelled' || entry.status === 'migrated' || entry.status === 'migrated_up';
@@ -194,7 +194,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     width: LABEL_WIDTH,
                     padding: '0 6px',
                     fontSize: 11,
-                    borderBottom: '1px solid #ebe5dc',
+                    borderBottom: `1px solid ${C.borderLight}`,
                     boxSizing: 'border-box',
                     cursor: 'pointer',
                     opacity: entry.status === 'migrated' || entry.status === 'migrated_up' ? 0.4 : 1,
@@ -209,7 +209,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     <span style={{
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       textDecoration: isInactive ? 'line-through' : 'none',
-                      color: isInactive ? '#b8a99a' : '#2c2416',
+                      color: isInactive ? C.textMuted : C.textPrimary,
                     }}>{entry.text}</span>
                   </div>
                 );
@@ -224,17 +224,17 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             } as React.CSSProperties}>
               <div style={{ width: totalDays * dayWidth, minWidth: '100%' }}>
                 {/* Day headers */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #ddd5c9', height: 28, boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, height: 28, boxSizing: 'border-box' }}>
                   {dayLabels.map((dl, i) => (
                     <div key={i} style={{
                       width: dayWidth,
                       minWidth: dayWidth,
                       textAlign: 'center',
                       fontSize: range === 'quarter' ? 8 : 9,
-                      color: dl.isToday ? '#c0583f' : dl.isWeekend ? '#c0583f88' : '#b8a99a',
+                      color: dl.isToday ? '#c0583f' : dl.isWeekend ? '#c0583f88' : C.textMuted,
                       background: dl.isToday ? '#c0583f18' : 'transparent',
                       fontWeight: dl.isToday ? 700 : 400,
-                      borderRight: '1px solid #ebe5dc',
+                      borderRight: `1px solid ${C.borderLight}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       boxSizing: 'border-box',
                     }}>
@@ -253,7 +253,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                     <div key={entry.id} style={{
                       height: ROW_HEIGHT,
                       position: 'relative',
-                      borderBottom: '1px solid #ebe5dc',
+                      borderBottom: `1px solid ${C.borderLight}`,
                       boxSizing: 'border-box',
                     }}>
                       {/* Grid lines */}
@@ -264,7 +264,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                           top: 0,
                           bottom: 0,
                           width: dayWidth,
-                          borderRight: '1px solid #ebe5dc',
+                          borderRight: `1px solid ${C.borderLight}`,
                           background: dl.isToday ? '#c0583f08' : 'transparent',
                         }} />
                       ))}
@@ -298,25 +298,25 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
       )}
 
       {/* Stats */}
-      <div style={{ marginTop: 16, padding: '12px 14px', background: 'white', borderRadius: 12,
-        boxShadow: '0 1px 3px rgba(44,36,22,0.06)' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#2c2416', marginBottom: 8 }}>통계</div>
+      <div style={{ marginTop: 16, padding: '12px 14px', background: C.bgWhite, borderRadius: 12,
+        boxShadow: `0 1px 3px ${C.cardShadow}` }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>통계</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center' }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#2c2416' }}>{ganttEntries.length}</div>
-            <div style={{ fontSize: 11, color: '#6b5d4d' }}>전체</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary }}>{ganttEntries.length}</div>
+            <div style={{ fontSize: 11, color: C.textSecondary }}>전체</div>
           </div>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#4a8c3f' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.green }}>
               {ganttEntries.filter(e => e.status === 'done').length}
             </div>
-            <div style={{ fontSize: 11, color: '#6b5d4d' }}>완료</div>
+            <div style={{ fontSize: 11, color: C.textSecondary }}>완료</div>
           </div>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#c0883f' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.amber }}>
               {ganttEntries.filter(e => e.status === 'progress').length}
             </div>
-            <div style={{ fontSize: 11, color: '#6b5d4d' }}>진행 중</div>
+            <div style={{ fontSize: 11, color: C.textSecondary }}>진행 중</div>
           </div>
         </div>
       </div>
