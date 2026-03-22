@@ -10,19 +10,28 @@ function goalsCol(uid: string) {
   return collection(db, 'users', uid, 'goals');
 }
 
+// Remove undefined values (Firestore doesn't accept them)
+function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) result[key] = value;
+  }
+  return result as T;
+}
+
 // === Single doc operations ===
 export function syncEntryToFirestore(uid: string, entry: Entry): Promise<void> {
-  return setDoc(doc(db, 'users', uid, 'entries', entry.id), {
+  return setDoc(doc(db, 'users', uid, 'entries', entry.id), stripUndefined({
     ...entry,
     updatedAt: entry.updatedAt || Date.now(),
-  });
+  }));
 }
 
 export function syncGoalToFirestore(uid: string, goal: Goal): Promise<void> {
-  return setDoc(doc(db, 'users', uid, 'goals', goal.id), {
+  return setDoc(doc(db, 'users', uid, 'goals', goal.id), stripUndefined({
     ...goal,
     updatedAt: goal.updatedAt || Date.now(),
-  });
+  }));
 }
 
 export function deleteEntryFromFirestore(uid: string, entryId: string): Promise<void> {
@@ -63,19 +72,27 @@ export async function batchUploadGoals(uid: string, goals: Goal[]): Promise<void
 export function subscribeToEntries(
   uid: string,
   callback: (entries: Entry[]) => void,
+  onError?: (error: Error) => void,
 ): () => void {
   return onSnapshot(entriesCol(uid), (snapshot: QuerySnapshot<DocumentData>) => {
     const entries = snapshot.docs.map(d => d.data() as Entry);
     callback(entries);
+  }, (error) => {
+    console.error('Entries subscription error:', error);
+    onError?.(error);
   });
 }
 
 export function subscribeToGoals(
   uid: string,
   callback: (goals: Goal[]) => void,
+  onError?: (error: Error) => void,
 ): () => void {
   return onSnapshot(goalsCol(uid), (snapshot: QuerySnapshot<DocumentData>) => {
     const goals = snapshot.docs.map(d => d.data() as Goal);
     callback(goals);
+  }, (error) => {
+    console.error('Goals subscription error:', error);
+    onError?.(error);
   });
 }

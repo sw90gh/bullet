@@ -27,6 +27,7 @@ export function useFirestoreSync(
   loaded: boolean,
 ) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const prevEntriesRef = useRef<Entry[]>([]);
   const prevGoalsRef = useRef<Goal[]>([]);
   const isRemoteUpdate = useRef(false);
@@ -34,10 +35,12 @@ export function useFirestoreSync(
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Auto-fade: synced → idle after 3s
-  const setSyncWithFade = (status: SyncStatus) => {
+  const setSyncWithFade = (status: SyncStatus, error?: string) => {
     if (fadeTimer.current) clearTimeout(fadeTimer.current);
     setSyncStatus(status);
+    if (error) setSyncError(error);
     if (status === 'synced') {
+      setSyncError(null);
       fadeTimer.current = setTimeout(() => setSyncStatus('idle'), 3000);
     }
   };
@@ -124,6 +127,11 @@ export function useFirestoreSync(
       setSyncWithFade('synced');
     };
 
+    const handleSyncError = (error: Error) => {
+      console.error('[Sync] error:', error);
+      setSyncWithFade('error', error.message);
+    };
+
     const unsubEntries = subscribeToEntries(uid, (remoteEntries) => {
       isRemoteUpdate.current = true;
       const isFirst = firstEntrySnapshot;
@@ -160,7 +168,7 @@ export function useFirestoreSync(
         setSyncWithFade('synced');
       }
       setTimeout(() => { isRemoteUpdate.current = false; }, 100);
-    });
+    }, handleSyncError);
 
     const unsubGoals = subscribeToGoals(uid, (remoteGoals) => {
       isRemoteUpdate.current = true;
@@ -195,7 +203,7 @@ export function useFirestoreSync(
         doInitialMerge();
       }
       setTimeout(() => { isRemoteUpdate.current = false; }, 100);
-    });
+    }, handleSyncError);
 
     return () => {
       unsubEntries();
@@ -214,23 +222,31 @@ export function useFirestoreSync(
       const currMap = new Map(entries.map(e => [e.id, e]));
       let changed = false;
 
+      const promises: Promise<void>[] = [];
       for (const entry of entries) {
         const prev = prevMap.get(entry.id);
         if (!prev || entry.updatedAt !== prev.updatedAt) {
-          syncEntryToFirestore(uid, entry).catch(console.error);
+          promises.push(syncEntryToFirestore(uid, entry));
           changed = true;
         }
       }
 
       for (const prev of prevEntries) {
         if (!currMap.has(prev.id)) {
-          deleteEntryFromFirestore(uid, prev.id).catch(console.error);
+          promises.push(deleteEntryFromFirestore(uid, prev.id));
           changed = true;
         }
       }
 
       prevEntriesRef.current = entries;
-      if (changed) setSyncWithFade('synced');
+      if (changed) {
+        Promise.all(promises)
+          .then(() => setSyncWithFade('synced'))
+          .catch((err) => {
+            console.error('Entry sync push error:', err);
+            setSyncWithFade('error', err.message);
+          });
+      }
     }, 500);
 
     return () => clearTimeout(timer);
@@ -246,27 +262,35 @@ export function useFirestoreSync(
       const currMap = new Map(goals.map(g => [g.id, g]));
       let changed = false;
 
+      const promises: Promise<void>[] = [];
       for (const goal of goals) {
         const prev = prevMap.get(goal.id);
         if (!prev || goal.updatedAt !== prev.updatedAt) {
-          syncGoalToFirestore(uid, goal).catch(console.error);
+          promises.push(syncGoalToFirestore(uid, goal));
           changed = true;
         }
       }
 
       for (const prev of prevGoals) {
         if (!currMap.has(prev.id)) {
-          deleteGoalFromFirestore(uid, prev.id).catch(console.error);
+          promises.push(deleteGoalFromFirestore(uid, prev.id));
           changed = true;
         }
       }
 
       prevGoalsRef.current = goals;
-      if (changed) setSyncWithFade('synced');
+      if (changed) {
+        Promise.all(promises)
+          .then(() => setSyncWithFade('synced'))
+          .catch((err) => {
+            console.error('Goal sync push error:', err);
+            setSyncWithFade('error', err.message);
+          });
+      }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [goals, user, loaded]);
 
-  return { syncStatus };
+  return { syncStatus, syncError };
 }

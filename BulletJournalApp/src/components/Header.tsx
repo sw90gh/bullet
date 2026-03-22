@@ -15,9 +15,10 @@ interface HeaderProps {
   urgentCount?: number;
   onSearch?: () => void;
   syncStatus?: SyncStatus;
+  syncError?: string | null;
 }
 
-export function Header({ curDate, view, nav, goToday, onSettings, urgentCount = 0, onSearch, syncStatus }: HeaderProps) {
+export function Header({ curDate, view, nav, goToday, onSettings, urgentCount = 0, onSearch, syncStatus, syncError }: HeaderProps) {
   const { styles } = useTheme();
   const y = curDate.getFullYear();
   const m = curDate.getMonth();
@@ -45,17 +46,22 @@ export function Header({ curDate, view, nav, goToday, onSettings, urgentCount = 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <h1 style={{ ...styles.logo, fontSize: 13, letterSpacing: 1, whiteSpace: 'nowrap' }}>BulletJournal</h1>
             {syncStatus && syncStatus !== 'idle' && (
-              <span style={{
-                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                background: syncStatus === 'synced' ? '#4caf50' :
-                             syncStatus === 'syncing' ? '#c0883f' : '#c0583f',
-                animation: syncStatus === 'syncing' ? 'pulse 1.2s infinite' : undefined,
-                boxShadow: syncStatus === 'synced' ? '0 0 4px #4caf5080' :
-                            syncStatus === 'syncing' ? '0 0 4px #c0883f80' : '0 0 4px #c0583f80',
-              }} title={
-                syncStatus === 'synced' ? '동기화 완료' :
-                syncStatus === 'syncing' ? '동기화 중...' : '동기화 오류'
-              } />
+              <span
+                style={{
+                  width: 7, height: 7, borderRadius: '50%', flexShrink: 0, cursor: syncStatus === 'error' ? 'pointer' : undefined,
+                  background: syncStatus === 'synced' ? '#4caf50' :
+                               syncStatus === 'syncing' ? '#c0883f' : '#c0583f',
+                  animation: syncStatus === 'syncing' ? 'pulse 1.2s infinite' : undefined,
+                  boxShadow: syncStatus === 'synced' ? '0 0 4px #4caf5080' :
+                              syncStatus === 'syncing' ? '0 0 4px #c0883f80' : '0 0 4px #c0583f80',
+                }}
+                title={
+                  syncStatus === 'synced' ? '동기화 완료' :
+                  syncStatus === 'syncing' ? '동기화 중...' :
+                  `동기화 오류: ${syncError || '알 수 없는 오류'}`
+                }
+                onClick={syncStatus === 'error' ? () => alert(`동기화 오류:\n${syncError || '알 수 없는 오류'}`) : undefined}
+              />
             )}
           </div>
           <div style={{ ...styles.headerActions as React.CSSProperties, flexShrink: 0 }}>

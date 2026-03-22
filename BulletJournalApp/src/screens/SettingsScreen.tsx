@@ -23,12 +23,13 @@ interface SettingsScreenProps {
   onLogin?: () => void;
   onLogout?: () => void;
   syncStatus?: SyncStatus;
+  syncError?: string | null;
   authError?: string | null;
 }
 
 export function SettingsScreen({
   onClose, tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
-  user, authLoading, onLogin, onLogout, syncStatus = 'idle', authError,
+  user, authLoading, onLogin, onLogout, syncStatus = 'idle', syncError, authError,
 }: SettingsScreenProps) {
   const styles = getStyles(isDark);
   const [importText, setImportText] = useState('');
@@ -94,6 +95,11 @@ export function SettingsScreen({
                                syncStatus === 'error' ? '#c0583f' : '#b8a99a',
                   }} />
                 </div>
+                {syncStatus === 'error' && syncError && (
+                  <p style={{ fontSize: 10, color: '#c0583f', marginBottom: 6, wordBreak: 'break-all', lineHeight: 1.4 }}>
+                    동기화 오류: {syncError}
+                  </p>
+                )}
                 <button style={{
                   width: '100%', padding: '8px 0', borderRadius: 10, fontSize: 12,
                   border: `1px solid ${isDark ? '#3a3530' : '#ddd5c9'}`,

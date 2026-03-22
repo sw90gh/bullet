@@ -17,7 +17,7 @@ interface EntryRowProps {
 type SwipeDir = 'none' | 'left' | 'right';
 
 export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact }: EntryRowProps) {
-  const { styles } = useTheme();
+  const { styles, C } = useTheme();
   const [swipeDir, setSwipeDir] = useState<SwipeDir>('none');
   const st = STATUS[entry.status] || STATUS.todo;
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
@@ -230,7 +230,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           <span style={{
             ...styles.entryText,
             textDecoration: isStrike ? 'line-through' : 'none',
-            color: isStrike ? '#b8a99a' : '#2c2416',
+            color: isStrike ? C.textMuted : C.textPrimary,
           }}>{entry.text}</span>
           {entry.time && <span style={styles.timeTag}>{entry.time}</span>}
 
