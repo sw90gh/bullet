@@ -105,7 +105,7 @@ BulletJournalApp/
       WeeklyScreen.tsx
       MonthlyScreen.tsx
       AnnualScreen.tsx
-      GanttScreen.tsx
+      GanttScreen.tsx     <- 간트차트 (주간/월간/분기, 다크모드 테마 연동)
       NotesScreen.tsx
       StatsScreen.tsx     <- 통계 (도넛차트, 주간완료율, 월별트렌드)
       SettingsScreen.tsx  <- 설정, 백업/복원, 공유 백업, Google 로그인
@@ -160,7 +160,9 @@ vercel.json               <- 루트 Vercel 설정
 3. Notion 동기화는 제거됨 (관련 코드는 남아있으나 미사용)
 4. `position: sticky`는 iOS PWA standalone 모드에서 안됨 → flex layout 사용
 5. iOS에서 버튼 onClick이 부모 touch handler에 의해 씹힐 수 있음 → onTouchEnd + stopPropagation
-6. 다크모드 스타일은 반드시 `useTheme()` 훅 사용 (정적 import 금지)
+6. 다크모드 스타일은 반드시 `useTheme()` 훅 사용 (정적 import 금지). 색상 하드코딩 금지 → `C.textPrimary`, `C.border` 등 테마 변수 사용
 7. Firestore 동기화는 `updatedAt` 기준 last-write-wins → 항목 수정 시 `updatedAt` 반드시 갱신
+8. Firestore `setDoc` 시 `undefined` 값 제거 필수 → `stripUndefined()` 사용 (config에 `ignoreUndefinedProperties`도 설정됨)
+9. 버튼 focus outline은 `index.html` 글로벌 CSS로 제거됨 (`button:focus, button:active { outline: none }`)
 8. 타임라인 드래그 시 `non-passive` 터치 리스너 필요 (`{ passive: false }`) → `preventDefault` 호출을 위해
 9. 타임라인 자동스크롤은 뷰포트 기준 60px 영역 → 스크롤러 rect가 아닌 `window.innerHeight` 사용
