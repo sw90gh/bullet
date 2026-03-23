@@ -433,20 +433,26 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
           {urgentEntries.map(entry => {
             const dday = getDdayLabel(entry.endDate!);
             return (
-              <div key={entry.id} style={{
-                display: 'flex', alignItems: 'center', padding: '5px 0',
-                borderBottom: `1px solid ${C.borderLight}`, cursor: 'pointer',
-              }} onClick={() => onEdit(entry)}>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, color: dday.color,
-                  background: dday.bg, padding: '2px 6px', borderRadius: 4,
-                  marginRight: 8, flexShrink: 0, minWidth: 36, textAlign: 'center',
-                }}>{dday.label}</span>
-                <span style={{
-                  fontSize: 12, color: C.textPrimary, flex: 1,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{entry.text}</span>
-                <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>~{entry.endDate?.slice(5)}</span>
+              <div key={entry.id}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0 2px',
+                }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: dday.color,
+                    background: dday.bg, padding: '2px 6px', borderRadius: 4,
+                    flexShrink: 0, minWidth: 36, textAlign: 'center',
+                  }}>{dday.label}</span>
+                  <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>~{entry.endDate?.slice(5)}</span>
+                </div>
+                <EntryRow
+                  entry={entry}
+                  cycleStatus={cycleStatus}
+                  onEdit={() => onEdit(entry)}
+                  onDelete={() => onDelete(entry.id)}
+                  onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                  onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+                  onChangePriority={onChangePriority}
+                />
               </div>
             );
           })}

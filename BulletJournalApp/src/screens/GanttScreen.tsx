@@ -281,7 +281,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                         title={`${entry.text} (${entry.startDate || entry.date} ~ ${entry.endDate || entry.date})`}
                       >
                         <span style={{
-                          fontSize: 9, color: 'white', padding: '0 3px',
+                          fontSize: 9, color: C.headerText, padding: '0 3px',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           lineHeight: '20px',
                         }}>
