@@ -304,6 +304,10 @@ export default function App() {
             cycleStatus={cycleStatus}
             onAdd={(dateStr) => setModal({ mode: 'add', scope: 'daily', date: dateStr })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
+            onDelete={(id) => setDeleteConfirm(id)}
+            onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
+            onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
+            onChangePriority={changePriority}
             setCurDate={setCurDate}
             setView={(v) => setView(v as ViewType)}
           />
@@ -321,6 +325,10 @@ export default function App() {
             onEditGoal={(g) => setModal({ mode: 'edit-goal', goal: g })}
             onDeleteGoal={(id) => setDeleteConfirm('goal-' + id)}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
+            onDelete={(id) => setDeleteConfirm(id)}
+            onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
+            onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
+            onChangePriority={changePriority}
             onDayTap={(d) => { setCurDate(new Date(curY, curM, d)); setView('daily'); }}
             onToggleGoalDone={toggleGoalDone}
           />

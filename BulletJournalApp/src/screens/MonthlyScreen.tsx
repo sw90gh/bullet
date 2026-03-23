@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { getDaysInMonth, pad, getTodayStr } from '../utils/date';
-import { Entry, Goal } from '../types';
+import { Entry, Goal, EntryPriority } from '../types';
 
 interface MonthlyScreenProps {
   year: number;
@@ -15,15 +15,19 @@ interface MonthlyScreenProps {
   onEditGoal: (g: Goal) => void;
   onDeleteGoal: (id: string) => void;
   onEdit: (entry: Entry) => void;
+  onDelete: (id: string) => void;
+  onMigrate?: (entry: Entry) => void;
+  onMigrateUp?: (entry: Entry) => void;
+  onChangePriority?: (id: string, priority: EntryPriority) => void;
   onDayTap: (d: number) => void;
   onToggleGoalDone: (id: string) => void;
 }
 
 export function MonthlyScreen({
   year, month, entries, goals, cycleStatus,
-  onAddEntry, onEdit, onDayTap, onAddGoal, onEditGoal, onDeleteGoal, onToggleGoalDone
+  onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onAddGoal, onEditGoal, onDeleteGoal, onToggleGoalDone
 }: MonthlyScreenProps) {
-  const { styles } = useTheme();
+  const { styles, C } = useTheme();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
@@ -41,7 +45,7 @@ export function MonthlyScreen({
       <div style={styles.miniCal}>
         <div style={styles.miniCalHeader as React.CSSProperties}>
           {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-            <div key={d} style={{ ...styles.miniCalDow, color: d === '일' || d === '토' ? '#c0583f' : '#6b5d4d' }}>{d}</div>
+            <div key={d} style={{ ...styles.miniCalDow, color: d === '일' || d === '토' ? C.accent : C.textSecondary }}>{d}</div>
           ))}
         </div>
         <div style={styles.miniCalGrid as React.CSSProperties}>
@@ -70,11 +74,14 @@ export function MonthlyScreen({
         <button style={styles.sectionAdd as React.CSSProperties} onClick={onAddEntry}>+</button>
       </div>
       {monthEntries.length === 0 ? (
-        <p style={{ fontSize: 13, color: '#b8a99a', textAlign: 'center', padding: 20 }}>등록된 항목이 없습니다</p>
+        <p style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: 20 }}>등록된 항목이 없습니다</p>
       ) : (
         monthEntries.slice(0, 30).map(entry => (
           <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
-            onEdit={() => onEdit(entry)} onDelete={() => {}} />
+            onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+            onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+            onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+            onChangePriority={onChangePriority} />
         ))
       )}
 
@@ -87,14 +94,14 @@ export function MonthlyScreen({
         <div key={g.id} style={styles.goalRow as React.CSSProperties}
           onClick={() => onToggleGoalDone(g.id)}
           onContextMenu={(e) => { e.preventDefault(); onEditGoal(g); }}>
-          <span style={{ fontSize: 15, color: g.done ? '#4a8c3f' : '#2c2416', marginRight: 8, fontWeight: 700 }}>
+          <span style={{ fontSize: 15, color: g.done ? C.green : C.textPrimary, marginRight: 8, fontWeight: 700 }}>
             {g.done ? '×' : '·'}
           </span>
           <span style={{
-            fontSize: 14, color: g.done ? '#b8a99a' : '#3d3427', flex: 1,
+            fontSize: 14, color: g.done ? C.textMuted : C.textPrimary, flex: 1,
             textDecoration: g.done ? 'line-through' : 'none',
           }}>{g.text}</span>
-          <span style={{ fontSize: 10, color: g.done ? '#4a8c3f' : '#b8a99a', flexShrink: 0 }}>
+          <span style={{ fontSize: 10, color: g.done ? C.green : C.textMuted, flexShrink: 0 }}>
             {g.done ? '완료' : '진행 중'}
           </span>
         </div>

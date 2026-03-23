@@ -3,7 +3,7 @@ import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DAYS_KR } from '../utils/constants';
 import { getWeekDates, formatDateKey, getTodayStr } from '../utils/date';
-import { Entry } from '../types';
+import { Entry, EntryPriority } from '../types';
 
 interface WeeklyScreenProps {
   date: Date;
@@ -11,12 +11,16 @@ interface WeeklyScreenProps {
   cycleStatus: (id: string) => void;
   onAdd: (dateStr: string) => void;
   onEdit: (entry: Entry) => void;
+  onDelete: (id: string) => void;
+  onMigrate?: (entry: Entry) => void;
+  onMigrateUp?: (entry: Entry) => void;
+  onChangePriority?: (id: string, priority: EntryPriority) => void;
   setCurDate: (d: Date) => void;
   setView: (v: string) => void;
 }
 
-export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, setCurDate, setView }: WeeklyScreenProps) {
-  const { styles } = useTheme();
+export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, setCurDate, setView }: WeeklyScreenProps) {
+  const { styles, C } = useTheme();
   const weekDates = getWeekDates(date.getFullYear(), date.getMonth(), date.getDate());
   const todayStr = getTodayStr();
 
@@ -34,7 +38,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, setCur
               onClick={() => { setCurDate(wd); setView('daily'); }}>
               <span style={{
                 ...styles.weekDayName,
-                color: isWeekend ? '#c0583f' : '#2c2416',
+                color: isWeekend ? C.accent : C.textPrimary,
               }}>{DAYS_KR[wd.getDay()]}</span>
               <span style={{
                 ...styles.weekDayNum,
@@ -45,11 +49,15 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, setCur
                 onClick={(e) => { e.stopPropagation(); onAdd(dateStr); }}>+</button>
             </div>
             {dayEntries.length === 0 ? (
-              <p style={{ fontSize: 12, color: '#ccc4b8', padding: '4px 0 0 28px', fontStyle: 'italic' }}>비어 있음</p>
+              <p style={{ fontSize: 12, color: C.textLight, padding: '4px 0 0 28px', fontStyle: 'italic' }}>비어 있음</p>
             ) : (
               dayEntries.map(entry => (
                 <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
-                  onEdit={() => onEdit(entry)} onDelete={() => {}} compact />
+                  onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+                  onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                  onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+                  onChangePriority={onChangePriority}
+                  compact />
               ))
             )}
           </div>

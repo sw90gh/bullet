@@ -125,37 +125,9 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
     color: 'white',
   });
 
-  if (compact) {
-    return (
-      <div style={styles.weekEntry as React.CSSProperties}
-        onClick={() => cycleStatus(entry.id)}
-        onContextMenu={(e) => { e.preventDefault(); onEdit(); }}>
-        {pr.symbol ? <span style={{ color: '#c0583f', fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
-        {entry.type === 'event' ? (
-          <span style={{ color: '#c0583f', fontSize: 12, marginRight: 6 }}>○</span>
-        ) : (
-          <span style={{
-            color: st.color, fontSize: 14, fontWeight: 800, marginRight: 6,
-            textDecoration: ('strike' in st && st.strike) ? 'line-through' : 'none',
-          }}>{st.symbol}</span>
-        )}
-        <span style={{
-          fontSize: 13, color: isStrike ? '#b8a99a' : '#3d3427',
-          textDecoration: isStrike ? 'line-through' : 'none',
-          flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{entry.text}</span>
-        {entry.time && <span style={{ fontSize: 11, color: '#b8a99a', marginLeft: 4 }}>{entry.time}</span>}
-
-      </div>
-    );
-  }
-
-  return (
-    <div ref={entryRef} style={styles.entryOuter as React.CSSProperties}
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      onMouseDown={onMouseDown}
-      onContextMenu={(e) => { e.preventDefault(); onEdit(); }}>
-
+  // 스와이프 버튼 영역 (compact / full 공통)
+  const swipeButtons = (
+    <>
       {/* 좌측: 우선순위 버튼 (좌→우 스와이프) */}
       {onChangePriority && (
         <div style={{
@@ -202,6 +174,50 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           onTouchEnd={(e) => { e.stopPropagation(); onDelete(); setSwipeDir('none'); }}
           onClick={() => { onDelete(); setSwipeDir('none'); }}>삭제</button>
       </div>
+    </>
+  );
+
+  if (compact) {
+    return (
+      <div ref={entryRef} style={{ position: 'relative', overflow: 'hidden', borderRadius: 8, marginBottom: 2 }}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown}
+        onContextMenu={(e) => { e.preventDefault(); onEdit(); }}>
+        {swipeButtons}
+        <div style={{
+          ...styles.weekEntry as React.CSSProperties,
+          transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(160px)' : 'translateX(0)',
+          transition: 'transform 0.25s ease',
+          userSelect: 'none',
+        }}
+          onClick={() => swipeDir === 'none' && !isDragging.current && cycleStatus(entry.id)}
+        >
+          {pr.symbol ? <span style={{ color: C.accent, fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
+          {entry.type === 'event' ? (
+            <span style={{ color: C.accent, fontSize: 12, marginRight: 6 }}>○</span>
+          ) : (
+            <span style={{
+              color: st.color, fontSize: 14, fontWeight: 800, marginRight: 6,
+              textDecoration: ('strike' in st && st.strike) ? 'line-through' : 'none',
+            }}>{st.symbol}</span>
+          )}
+          <span style={{
+            fontSize: 13, color: isStrike ? C.textMuted : C.textPrimary,
+            textDecoration: isStrike ? 'line-through' : 'none',
+            flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{entry.text}</span>
+          {entry.time && <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 4 }}>{entry.time}</span>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={entryRef} style={styles.entryOuter as React.CSSProperties}
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown}
+      onContextMenu={(e) => { e.preventDefault(); onEdit(); }}>
+      {swipeButtons}
 
       {/* 메인 콘텐츠 */}
       <div style={{
