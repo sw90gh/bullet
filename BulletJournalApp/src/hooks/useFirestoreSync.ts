@@ -138,21 +138,28 @@ export function useFirestoreSync(
       firstEntrySnapshot = false;
 
       setEntries(local => {
+        // 매 스냅샷마다 localStorage에서 최신 삭제 목록을 읽어옴 (클로저 캡처 문제 방지)
+        const currentDeletedIds = new Set([...deletedEntryIds, ...getDeletedEntryIds()]);
         const localMap = new Map(local.map(e => [e.id, e]));
         const remoteMap = new Map(remoteEntries.map(e => [e.id, e]));
         const merged: Entry[] = [];
 
         const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
         for (const id of allIds) {
-          // Skip items deleted offline
-          if (deletedEntryIds.has(id)) continue;
+          if (currentDeletedIds.has(id)) continue;
 
           const l = localMap.get(id);
           const r = remoteMap.get(id);
           if (l && r) {
             merged.push((r.updatedAt || 0) >= (l.updatedAt || 0) ? r : l);
           } else if (r) {
-            merged.push(r);
+            // 리모트에만 존재 — 로컬에서 삭제한 건 아닌지 확인
+            // 로컬에 없고 리모트에만 있는데, 이전 prevRef에 있었다면 로컬 삭제된 것
+            const wasLocal = prevEntriesRef.current.some(e => e.id === id);
+            if (!wasLocal) {
+              merged.push(r); // 다른 기기에서 추가된 새 항목
+            }
+            // wasLocal이면 로컬에서 삭제된 것이므로 부활시키지 않음
           } else if (l) {
             merged.push(l);
           }
@@ -167,7 +174,7 @@ export function useFirestoreSync(
       } else {
         setSyncWithFade('synced');
       }
-      setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+      setTimeout(() => { isRemoteUpdate.current = false; }, 600);
     }, handleSyncError);
 
     const unsubGoals = subscribeToGoals(uid, (remoteGoals) => {
@@ -176,20 +183,24 @@ export function useFirestoreSync(
       firstGoalSnapshot = false;
 
       setGoals(local => {
+        const currentDeletedIds = new Set([...deletedGoalIds, ...getDeletedGoalIds()]);
         const localMap = new Map(local.map(g => [g.id, g]));
         const remoteMap = new Map(remoteGoals.map(g => [g.id, g]));
         const merged: Goal[] = [];
 
         const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
         for (const id of allIds) {
-          if (deletedGoalIds.has(id)) continue;
+          if (currentDeletedIds.has(id)) continue;
 
           const l = localMap.get(id);
           const r = remoteMap.get(id);
           if (l && r) {
             merged.push((r.updatedAt || 0) >= (l.updatedAt || 0) ? r : l);
           } else if (r) {
-            merged.push(r);
+            const wasLocal = prevGoalsRef.current.some(g => g.id === id);
+            if (!wasLocal) {
+              merged.push(r);
+            }
           } else if (l) {
             merged.push(l);
           }
@@ -202,7 +213,7 @@ export function useFirestoreSync(
         goalsReady = true;
         doInitialMerge();
       }
-      setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+      setTimeout(() => { isRemoteUpdate.current = false; }, 600);
     }, handleSyncError);
 
     return () => {
