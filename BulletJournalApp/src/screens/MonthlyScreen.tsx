@@ -2,18 +2,15 @@ import React from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { getDaysInMonth, pad, getTodayStr } from '../utils/date';
-import { Entry, Goal, EntryPriority } from '../types';
+import { Entry, EntryPriority } from '../types';
 
 interface MonthlyScreenProps {
   year: number;
   month: number;
   entries: Entry[];
-  goals: Goal[];
   cycleStatus: (id: string) => void;
   onAddEntry: () => void;
   onAddGoal: () => void;
-  onEditGoal: (g: Goal) => void;
-  onDeleteGoal: (id: string) => void;
   onEdit: (entry: Entry) => void;
   onDelete: (id: string) => void;
   onMigrate?: (entry: Entry) => void;
@@ -24,15 +21,15 @@ interface MonthlyScreenProps {
 }
 
 export function MonthlyScreen({
-  year, month, entries, goals, cycleStatus,
-  onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onAddGoal, onEditGoal, onDeleteGoal, onToggleGoalDone
+  year, month, entries, cycleStatus,
+  onAddEntry, onAddGoal, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone
 }: MonthlyScreenProps) {
   const { styles, C } = useTheme();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
-  const monthEntries = entries.filter(e => e.date?.startsWith(monthKey));
-  const monthGoals = goals.filter(g => g.year === year && g.month === month);
+  const monthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly');
+  const monthGoals = entries.filter(e => e.type === 'goal-monthly' && e.date?.startsWith(monthKey));
   const todayStr = getTodayStr();
 
   const cells: (number | null)[] = [];
@@ -90,22 +87,17 @@ export function MonthlyScreen({
         <span style={styles.sectionTitle}>월간 목표</span>
         <button style={styles.sectionAdd as React.CSSProperties} onClick={onAddGoal}>+</button>
       </div>
-      {monthGoals.map(g => (
-        <div key={g.id} style={styles.goalRow as React.CSSProperties}
-          onClick={() => onToggleGoalDone(g.id)}
-          onContextMenu={(e) => { e.preventDefault(); onEditGoal(g); }}>
-          <span style={{ fontSize: 15, color: g.done ? C.green : C.textPrimary, marginRight: 8, fontWeight: 700 }}>
-            {g.done ? '×' : '·'}
-          </span>
-          <span style={{
-            fontSize: 14, color: g.done ? C.textMuted : C.textPrimary, flex: 1,
-            textDecoration: g.done ? 'line-through' : 'none',
-          }}>{g.text}</span>
-          <span style={{ fontSize: 10, color: g.done ? C.green : C.textMuted, flexShrink: 0 }}>
-            {g.done ? '완료' : '진행 중'}
-          </span>
-        </div>
-      ))}
+      {monthGoals.length === 0 ? (
+        <p style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: 12 }}>월간 목표를 추가해보세요</p>
+      ) : (
+        monthGoals.map(entry => (
+          <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
+            onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+            onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+            onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+            onChangePriority={onChangePriority} />
+        ))
+      )}
     </div>
   );
 }

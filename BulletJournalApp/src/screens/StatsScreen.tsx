@@ -2,17 +2,16 @@ import React, { useMemo } from 'react';
 import { getStyles } from '../styles/theme';
 import { STATUS } from '../utils/constants';
 import { pad } from '../utils/date';
-import { Entry, Goal } from '../types';
+import { Entry } from '../types';
 
 interface StatsScreenProps {
   year: number;
   month: number;
   entries: Entry[];
-  goals: Goal[];
   isDark?: boolean;
 }
 
-export function StatsScreen({ year, month, entries, goals, isDark = false }: StatsScreenProps) {
+export function StatsScreen({ year, month, entries, isDark = false }: StatsScreenProps) {
   const styles = getStyles(isDark);
   const monthKey = `${year}-${pad(month + 1)}`;
   const C = isDark
@@ -94,8 +93,8 @@ export function StatsScreen({ year, month, entries, goals, isDark = false }: Sta
     return { total, done, rate: total > 0 ? Math.round((done / total) * 100) : 0 };
   }, [allYearEntries]);
 
-  const yearGoals = goals.filter(g => g.year === year);
-  const goalsDone = yearGoals.filter(g => g.done).length;
+  const yearGoals = entries.filter(e => (e.type === 'goal-yearly' || e.type === 'goal-monthly') && e.date?.startsWith(`${year}`));
+  const goalsDone = yearGoals.filter(e => e.status === 'done').length;
   const goalsRate = yearGoals.length > 0 ? Math.round((goalsDone / yearGoals.length) * 100) : 0;
 
   const barBg: React.CSSProperties = {

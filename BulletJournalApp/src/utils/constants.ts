@@ -49,6 +49,8 @@ export const TYPES = {
   task:  { symbol: '·', label: '할 일' },
   event: { symbol: '○', label: '일정' },
   note:  { symbol: '—', label: '메모' },
+  'goal-yearly':  { symbol: '◎', label: '연간목표' },
+  'goal-monthly': { symbol: '◎', label: '월간목표' },
 } as const;
 
 export const PRIORITY = {

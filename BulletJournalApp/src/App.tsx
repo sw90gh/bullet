@@ -17,13 +17,12 @@ import { NotesScreen } from './screens/NotesScreen';
 import { StatsScreen } from './screens/StatsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useEntries } from './hooks/useEntries';
-import { useGoals } from './hooks/useGoals';
 import { useAuth } from './hooks/useAuth';
 import { useFirestoreSync } from './hooks/useFirestoreSync';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
-import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime } from './utils/storage';
-import { ViewType, ModalState, Entry, Goal, EntryPriority } from './types';
+import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime, migrateGoalsToEntries } from './utils/storage';
+import { ViewType, ModalState, Entry, EntryPriority } from './types';
 
 type DarkModePref = 'system' | 'light' | 'dark';
 
@@ -71,9 +70,8 @@ export default function App() {
   const [backupDismissed, setBackupDismissed] = useState(false);
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, setEntries } = useEntries();
-  const { goals, loaded: goalsLoaded, addGoal, updateGoal, deleteGoal, setGoals } = useGoals();
   const { user, loading: authLoading, login, logout, error: authError } = useAuth();
-  const { syncStatus, syncError } = useFirestoreSync(user, entries, setEntries, goals, setGoals, entriesLoaded && goalsLoaded);
+  const { syncStatus, syncError } = useFirestoreSync(user, entries, setEntries, entriesLoaded);
 
   const curY = curDate.getFullYear();
   const curM = curDate.getMonth();
@@ -95,9 +93,9 @@ export default function App() {
   }, [updateEntry]);
 
   const toggleGoalDone = useCallback((id: string) => {
-    const goal = goals.find(g => g.id === id);
-    if (goal) updateGoal(id, { done: !goal.done });
-  }, [goals, updateGoal]);
+    const entry = entries.find(e => e.id === id);
+    if (entry) updateEntry(id, { status: entry.status === 'done' ? 'todo' : 'done' });
+  }, [entries, updateEntry]);
 
   const tagCountMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -147,15 +145,24 @@ export default function App() {
     newEntries.forEach(e => addEntry(e));
   }, [entriesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Goal → Entry 마이그레이션 (1회 실행)
+  useEffect(() => {
+    if (!entriesLoaded) return;
+    const migrated = migrateGoalsToEntries();
+    if (migrated.length > 0) {
+      migrated.forEach(e => addEntry(e));
+    }
+  }, [entriesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 자동 백업 (1시간마다)
   useEffect(() => {
-    if (!entriesLoaded || !goalsLoaded) return;
+    if (!entriesLoaded) return;
     autoBackup();
     const interval = setInterval(autoBackup, 1000 * 60 * 60);
     return () => clearInterval(interval);
-  }, [entriesLoaded, goalsLoaded, entries, goals]);
+  }, [entriesLoaded, entries]);
 
-  if (!entriesLoaded || !goalsLoaded) {
+  if (!entriesLoaded) {
     return (
       <DarkModeProvider isDark={isDark}>
         <div style={styles.loadingWrap as React.CSSProperties}>
@@ -333,12 +340,9 @@ export default function App() {
             year={curY}
             month={curM}
             entries={filteredEntries}
-            goals={goals}
             cycleStatus={cycleStatus}
             onAddEntry={() => setModal({ mode: 'add', scope: 'monthly', date: `${curY}-${pad(curM + 1)}` })}
-            onAddGoal={() => setModal({ mode: 'add-goal', scope: 'goal', year: curY, month: curM })}
-            onEditGoal={(g) => setModal({ mode: 'edit-goal', goal: g })}
-            onDeleteGoal={(id) => setDeleteConfirm('goal-' + id)}
+            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-${pad(curM + 1)}-01` })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -352,10 +356,15 @@ export default function App() {
         {view === 'annual' && (
           <AnnualScreen
             year={curY}
-            goals={goals}
             entries={filteredEntries}
-            onAdd={() => setModal({ mode: 'add-goal', scope: 'goal', year: curY })}
-            onEdit={(g) => setModal({ mode: 'edit-goal', goal: g })}
+            cycleStatus={cycleStatus}
+            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-01-01`, year: curY } as ModalState & { year: number })}
+            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-01-01` })}
+            onEdit={(e) => setModal({ mode: 'edit', entry: e })}
+            onDelete={(id) => setDeleteConfirm(id)}
+            onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
+            onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
+            onChangePriority={changePriority}
             onMonthTap={(m) => { setCurDate(new Date(curY, m, 1)); setView('monthly'); }}
             onToggleGoalDone={toggleGoalDone}
           />
@@ -382,7 +391,6 @@ export default function App() {
             year={curY}
             month={curM}
             entries={entries}
-            goals={goals}
             isDark={isDark}
           />
         )}
@@ -391,8 +399,7 @@ export default function App() {
       {/* FAB */}
       {view !== 'gantt' && view !== 'stats' && (
         <button style={styles.fab as React.CSSProperties} onClick={() => {
-          if (view === 'annual') setModal({ mode: 'add-goal', scope: 'goal', year: curY });
-          else setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) });
+          setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) });
         }}>+</button>
       )}
 
@@ -410,14 +417,6 @@ export default function App() {
             }
             setModal(null);
           }}
-          onSaveGoal={(data) => {
-            if (modal.mode === 'edit-goal' && modal.goal) {
-              updateGoal(modal.goal.id, data);
-            } else {
-              addGoal(data);
-            }
-            setModal(null);
-          }}
         />
       )}
 
@@ -426,11 +425,7 @@ export default function App() {
         <DeleteConfirm
           onCancel={() => setDeleteConfirm(null)}
           onDelete={() => {
-            if (deleteConfirm.startsWith('goal-')) {
-              deleteGoal(deleteConfirm.replace('goal-', ''));
-            } else {
-              deleteEntry(deleteConfirm);
-            }
+            deleteEntry(deleteConfirm);
             setDeleteConfirm(null);
           }}
         />
@@ -448,7 +443,13 @@ export default function App() {
           }}
           onMigrateUp={(goalText, year, month) => {
             migrateUpEntry(migrateTarget.entry.id);
-            addGoal({ text: goalText, year, month, done: false });
+            addEntry({
+              text: goalText,
+              type: month != null ? 'goal-monthly' : 'goal-yearly',
+              status: 'todo',
+              priority: 'none',
+              date: month != null ? `${year}-${pad(month + 1)}-01` : `${year}-01-01`,
+            } as Entry);
             setMigrateTarget(null);
           }}
         />

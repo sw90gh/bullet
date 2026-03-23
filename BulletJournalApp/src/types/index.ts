@@ -1,4 +1,4 @@
-export type EntryType = 'task' | 'event' | 'note';
+export type EntryType = 'task' | 'event' | 'note' | 'goal-yearly' | 'goal-monthly';
 export type EntryStatus = 'todo' | 'done' | 'progress' | 'migrated' | 'migrated_up' | 'cancelled';
 export type EntryPriority = 'none' | 'important' | 'urgent';
 
@@ -47,10 +47,9 @@ export interface NotionConfig {
 export type ViewType = 'all' | 'daily' | 'weekly' | 'monthly' | 'annual' | 'gantt' | 'notes' | 'stats';
 
 export interface ModalState {
-  mode: 'add' | 'edit' | 'add-goal' | 'edit-goal';
+  mode: 'add' | 'edit';
   entry?: Entry;
-  goal?: Goal;
-  scope?: 'daily' | 'monthly' | 'goal';
+  scope?: 'daily' | 'monthly';
   date?: string;
   year?: number;
   month?: number;

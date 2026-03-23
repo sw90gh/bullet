@@ -96,6 +96,44 @@ export function restoreAutoBackup(): boolean {
   }
 }
 
+// === Goal → Entry 마이그레이션 ===
+const GOALS_MIGRATED_KEY = 'bujo-goals-migrated';
+
+export function migrateGoalsToEntries(): import('../types').Entry[] {
+  if (localStorage.getItem(GOALS_MIGRATED_KEY)) return [];
+  const raw = localStorage.getItem('bujo-goals');
+  if (!raw) { localStorage.setItem(GOALS_MIGRATED_KEY, '1'); return []; }
+
+  try {
+    const goals = JSON.parse(raw) as Array<{
+      id: string; text: string; year: number; month?: number | null;
+      done: boolean; updatedAt?: number;
+    }>;
+    if (!goals.length) { localStorage.setItem(GOALS_MIGRATED_KEY, '1'); return []; }
+
+    const now = Date.now();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const converted = goals.map(g => ({
+      id: g.id,
+      text: g.text,
+      type: (g.month != null ? 'goal-monthly' : 'goal-yearly') as import('../types').EntryType,
+      status: (g.done ? 'done' : 'todo') as import('../types').EntryStatus,
+      priority: 'none' as import('../types').EntryPriority,
+      date: g.month != null
+        ? `${g.year}-${pad(g.month + 1)}-01`
+        : `${g.year}-01-01`,
+      createdAt: g.updatedAt || now,
+      updatedAt: g.updatedAt || now,
+    }));
+
+    localStorage.setItem(GOALS_MIGRATED_KEY, '1');
+    return converted;
+  } catch {
+    localStorage.setItem(GOALS_MIGRATED_KEY, '1');
+    return [];
+  }
+}
+
 // === 삭제 추적 (오프라인 삭제 동기화용) ===
 const DELETED_ENTRIES_KEY = 'bujo-deleted-entries';
 const DELETED_GOALS_KEY = 'bujo-deleted-goals';
