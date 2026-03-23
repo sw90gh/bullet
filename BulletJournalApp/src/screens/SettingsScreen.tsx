@@ -59,10 +59,21 @@ export function SettingsScreen({
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={{ ...styles.modal, maxHeight: '90vh' } as React.CSSProperties} onClick={e => e.stopPropagation()}>
+      <div style={{ ...styles.modal, maxHeight: '80vh' } as React.CSSProperties} onClick={e => e.stopPropagation()}>
+        {/* 그랩바 — 탭하면 닫기 */}
+        <div style={{ padding: '12px 0 4px', cursor: 'pointer' }} onClick={onClose}>
+          <div style={{
+            width: 36, height: 4, borderRadius: 2, margin: '0 auto',
+            background: isDark ? '#555' : '#ccc4b8',
+          }} />
+        </div>
         <div style={styles.modalHeader as React.CSSProperties}>
           <h3 style={styles.modalTitle}>설정</h3>
-          <button style={styles.modalClose} onClick={onClose}>✕</button>
+          <button style={{
+            ...styles.modalClose,
+            minWidth: 44, minHeight: 44,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} onClick={onClose}>✕</button>
         </div>
 
         <div style={styles.modalBody}>

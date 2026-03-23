@@ -28,7 +28,8 @@ export function Header({ curDate, view, nav, goToday, onSettings, urgentCount = 
   const [quote, setQuote] = useState(getDailyQuote());
 
   let label = '';
-  if (view === 'daily') label = `${m + 1}월 ${d}일 ${dow}요일`;
+  if (view === 'all') label = '전체 항목';
+  else if (view === 'daily') label = `${m + 1}월 ${d}일 ${dow}요일`;
   else if (view === 'weekly') label = `${m + 1}월 ${getMonthWeekNumber(curDate)}주차 (${getWeekNumber(curDate)}주차)`;
   else if (view === 'monthly') label = `${y}년 ${m + 1}월`;
   else if (view === 'gantt') label = `${y}년 ${m + 1}월 간트`;

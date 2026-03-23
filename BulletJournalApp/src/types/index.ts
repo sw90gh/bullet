@@ -44,7 +44,7 @@ export interface NotionConfig {
   lastSync?: number;
 }
 
-export type ViewType = 'daily' | 'weekly' | 'monthly' | 'annual' | 'gantt' | 'notes' | 'stats';
+export type ViewType = 'all' | 'daily' | 'weekly' | 'monthly' | 'annual' | 'gantt' | 'notes' | 'stats';
 
 export interface ModalState {
   mode: 'add' | 'edit' | 'add-goal' | 'edit-goal';

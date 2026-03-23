@@ -7,6 +7,7 @@ import { EntryModal } from './components/EntryModal';
 import { MigrateModal } from './components/MigrateModal';
 import { DeleteConfirm } from './components/DeleteConfirm';
 import { SearchModal } from './components/SearchModal';
+import { AllScreen } from './screens/AllScreen';
 import { DailyScreen } from './screens/DailyScreen';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { MonthlyScreen } from './screens/MonthlyScreen';
@@ -184,6 +185,7 @@ export default function App() {
       {/* View Tabs */}
       <div style={styles.tabBar as React.CSSProperties}>
         {([
+          { key: 'all' as ViewType, label: '전체' },
           { key: 'daily' as ViewType, label: '일간' },
           { key: 'weekly' as ViewType, label: '주간' },
           { key: 'monthly' as ViewType, label: '월간' },
@@ -281,6 +283,19 @@ export default function App() {
 
       {/* Content */}
       <main style={styles.main}>
+        {view === 'all' && (
+          <AllScreen
+            entries={filteredEntries}
+            cycleStatus={cycleStatus}
+            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
+            onEdit={(e) => setModal({ mode: 'edit', entry: e })}
+            onDelete={(id) => setDeleteConfirm(id)}
+            onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
+            onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
+            onChangePriority={changePriority}
+          />
+        )}
+
         {view === 'daily' && (
           <DailyScreen
             date={curDate}
