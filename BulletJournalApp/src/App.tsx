@@ -19,6 +19,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { useEntries } from './hooks/useEntries';
 import { useAuth } from './hooks/useAuth';
 import { useFirestoreSync } from './hooks/useFirestoreSync';
+import { useNotifications } from './hooks/useNotifications';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
 import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime, migrateGoalsToEntries } from './utils/storage';
@@ -69,9 +70,17 @@ export default function App() {
   const [tagBarExpanded, setTagBarExpanded] = useState(false);
   const [backupDismissed, setBackupDismissed] = useState(false);
 
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('bujo-notifications') !== 'off');
+
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, setEntries } = useEntries();
   const { user, loading: authLoading, login, logout, error: authError } = useAuth();
   const { syncStatus, syncError } = useFirestoreSync(user, entries, setEntries, entriesLoaded);
+  useNotifications(entries, notificationsEnabled);
+
+  const toggleNotifications = useCallback((on: boolean) => {
+    setNotificationsEnabled(on);
+    localStorage.setItem('bujo-notifications', on ? 'on' : 'off');
+  }, []);
 
   const curY = curDate.getFullYear();
   const curM = curDate.getMonth();
@@ -480,6 +489,8 @@ export default function App() {
           syncStatus={syncStatus}
           syncError={syncError}
           authError={authError}
+          notificationsEnabled={notificationsEnabled}
+          onNotificationsChange={toggleNotifications}
         />
       )}
     </div>

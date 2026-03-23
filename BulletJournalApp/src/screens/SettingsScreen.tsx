@@ -25,11 +25,14 @@ interface SettingsScreenProps {
   syncStatus?: SyncStatus;
   syncError?: string | null;
   authError?: string | null;
+  notificationsEnabled?: boolean;
+  onNotificationsChange?: (on: boolean) => void;
 }
 
 export function SettingsScreen({
   onClose, tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
   user, authLoading, onLogin, onLogout, syncStatus = 'idle', syncError, authError,
+  notificationsEnabled = false, onNotificationsChange,
 }: SettingsScreenProps) {
   const styles = getStyles(isDark);
   const [importText, setImportText] = useState('');
@@ -168,6 +171,38 @@ export function SettingsScreen({
               ))}
             </div>
           </div>
+
+          {/* Notifications */}
+          {'Notification' in window && onNotificationsChange && (
+            <div style={styles.settingsSection}>
+              <div style={styles.settingsLabel}>알림</div>
+              <div style={styles.darkModeToggle}>
+                <div>
+                  <span style={{ fontSize: 13, color: isDark ? '#e8e0d4' : '#2c2416' }}>시간 알림</span>
+                  <p style={{ fontSize: 11, color: isDark ? '#6b5d4d' : '#b8a99a', margin: '2px 0 0' }}>
+                    시간이 지정된 일정/할일의 시작 시간에 알림
+                  </p>
+                </div>
+                <button
+                  style={{
+                    ...styles.toggleSwitch as React.CSSProperties,
+                    background: notificationsEnabled ? '#c0583f' : '#ccc',
+                  }}
+                  onClick={() => onNotificationsChange(!notificationsEnabled)}
+                >
+                  <div style={{
+                    ...styles.toggleKnob,
+                    transform: notificationsEnabled ? 'translateX(20px)' : 'translateX(0)',
+                  }} />
+                </button>
+              </div>
+              {notificationsEnabled && Notification.permission === 'denied' && (
+                <p style={{ fontSize: 11, color: '#c0583f', marginTop: 4 }}>
+                  브라우저 알림이 차단되어 있습니다. 브라우저 설정에서 허용해주세요.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Tag Management */}
           {tagList.length > 0 && (

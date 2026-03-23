@@ -104,7 +104,8 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
     const startOffset = Math.max(0, daysBetween(rangeStart, start));
     const endOffset = Math.min(totalDays - 1, daysBetween(rangeStart, end));
     const left = startOffset * dayWidth;
-    const width = Math.max(dayWidth * 0.8, (endOffset - startOffset + 1) * dayWidth - 4);
+    const rawWidth = (endOffset - startOffset + 1) * dayWidth - 4;
+    const width = Math.max(Math.max(dayWidth, 28), rawWidth);
     return { left, width };
   };
 
@@ -285,7 +286,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           lineHeight: '20px',
                         }}>
-                          {width > 50 ? entry.text : ''}
+                          {width > 30 ? entry.text : ''}
                         </span>
                       </div>
                     </div>
