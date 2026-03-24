@@ -363,8 +363,7 @@ export default function App() {
             month={curM}
             entries={filteredEntries}
             cycleStatus={cycleStatus}
-            onAddEntry={() => setModal({ mode: 'add', scope: 'monthly', date: `${curY}-${pad(curM + 1)}` })}
-            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-${pad(curM + 1)}-01`, defaultType: 'goal-monthly' })}
+            onAddEntry={() => setModal({ mode: 'add', scope: 'monthly', date: `${curY}-${pad(curM + 1)}`, hideGoalType: true })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -476,18 +475,17 @@ export default function App() {
             migrateEntry(migrateTarget.entry.id, targetDate);
             setMigrateTarget(null);
           }}
-          onMigrateUp={(goalText, year, month) => {
+          onMigrateUp={(goalText, year, _month, goalDate) => {
             const goalId = genId();
             migrateUpEntry(migrateTarget.entry.id);
-            // 원본 항목에 목표 연결
             updateEntry(migrateTarget.entry.id, { linkedGoalId: goalId });
             addEntry({
               id: goalId,
               text: goalText,
-              type: month != null ? 'goal-monthly' : 'goal-yearly',
+              type: 'goal-yearly',
               status: 'todo',
               priority: 'none',
-              date: month != null ? `${year}-${pad(month + 1)}-01` : `${year}-01-01`,
+              date: goalDate || `${year}-12-31`,
               linkedEntryId: migrateTarget.entry.id,
               createdAt: Date.now(),
             } as Entry);

@@ -152,7 +152,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                 {!modal.hideGoalType && (
                   <button
                     style={{ ...styles.chip, ...(isGoalType ? styles.chipActive : {}), padding: '4px 6px', fontSize: 10 }}
-                    onClick={() => setType(type === 'goal-monthly' ? 'goal-monthly' : 'goal-yearly')}>
+                    onClick={() => setType('goal-yearly')}>
                     <span style={{ marginRight: 3 }}>◎</span>목표
                   </button>
                 )}
@@ -172,20 +172,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
             </div>
           </div>
 
-          {/* 목표 범위 (연간/월간) */}
-          {isGoalType && (
-            <div style={{ marginTop: 4 }}>
-              <label style={labelSmall}>목표 범위</label>
-              <div style={styles.chipRow as React.CSSProperties}>
-                <button
-                  style={{ ...styles.chip, ...(type === 'goal-yearly' ? styles.chipActive : {}), padding: '4px 8px', fontSize: 10 }}
-                  onClick={() => setType('goal-yearly')}>연간</button>
-                <button
-                  style={{ ...styles.chip, ...(type === 'goal-monthly' ? styles.chipActive : {}), padding: '4px 8px', fontSize: 10 }}
-                  onClick={() => setType('goal-monthly')}>월간</button>
-              </div>
-            </div>
-          )}
+          {/* 목표는 항상 goal-yearly */}
 
           {/* 상태 (메모는 상태 없음) */}
           {type !== 'note' && (
@@ -288,7 +275,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
           {/* 목표일 경우 간단한 날짜 표시 */}
           {isGoalType && (
             <div style={{ marginTop: 4 }}>
-              <label style={labelSmall}>기준 날짜</label>
+              <label style={labelSmall}>목표 달성 시점</label>
               <input type="date" style={inputSmall} value={date}
                 onChange={e => setDate(e.target.value)} />
             </div>

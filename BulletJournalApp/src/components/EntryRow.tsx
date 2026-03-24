@@ -202,6 +202,8 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           {pr.symbol ? <span style={{ color: C.accent, fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
           {entry.type === 'event' ? (
             <span style={{ color: C.accent, fontSize: 12, marginRight: 6 }}>○</span>
+          ) : entry.type === 'goal-yearly' ? (
+            <span style={{ color: C.blue, fontSize: 13, fontWeight: 800, marginRight: 6 }}>◎</span>
           ) : (
             <span style={{
               color: statusColor(entry.status), fontSize: 14, fontWeight: 800, marginRight: 6,
@@ -237,6 +239,8 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? C.accent : C.amber }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (
           <span style={{ ...styles.entrySym, color: C.accent, fontSize: 18 }}>○</span>
+        ) : entry.type === 'goal-yearly' ? (
+          <span style={{ ...styles.entrySym, color: C.blue, fontSize: 18 }}>◎</span>
         ) : entry.type === 'note' ? (
           <span style={{ ...styles.entrySym, color: C.textSecondary, fontSize: 16 }}>—</span>
         ) : (

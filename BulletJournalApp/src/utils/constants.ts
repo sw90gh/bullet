@@ -58,8 +58,8 @@ export const TYPES = {
   task:  { symbol: '·', label: '할 일' },
   event: { symbol: '○', label: '일정' },
   note:  { symbol: '—', label: '메모' },
-  'goal-yearly':  { symbol: '◎', label: '연간목표' },
-  'goal-monthly': { symbol: '◎', label: '월간목표' },
+  'goal-yearly':  { symbol: '◎', label: '목표' },
+  'goal-monthly': { symbol: '◎', label: '목표' }, // 레거시 호환
 } as const;
 
 // 유형별 시간표 색상
@@ -68,7 +68,7 @@ export const TYPE_COLORS: Record<string, { light: string; dark: string }> = {
   event:          { light: '#c0583f', dark: '#e07060' },
   note:           { light: '#b8a99a', dark: '#8a7b6c' },
   'goal-yearly':  { light: '#3a7ca5', dark: '#6abadf' },
-  'goal-monthly': { light: '#3a7ca5', dark: '#6abadf' },
+  'goal-monthly': { light: '#3a7ca5', dark: '#6abadf' }, // 레거시 호환
 };
 
 export const PRIORITY = {

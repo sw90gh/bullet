@@ -1,4 +1,4 @@
-export type EntryType = 'task' | 'event' | 'note' | 'goal-yearly' | 'goal-monthly';
+export type EntryType = 'task' | 'event' | 'note' | 'goal-yearly' | 'goal-monthly'; // goal-monthly는 레거시, goal-yearly로 통합
 export type EntryStatus = 'todo' | 'done' | 'progress' | 'migrated' | 'migrated_up' | 'cancelled';
 export type EntryPriority = 'none' | 'important' | 'urgent';
 

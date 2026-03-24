@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
-import { MONTHS_KR } from '../utils/constants';
+// MONTHS_KR 제거 — 월간 목표 선택 폐지
 import { getTodayStr, addDays } from '../utils/date';
 import { Entry } from '../types';
 
@@ -9,15 +9,15 @@ interface MigrateModalProps {
   type: 'migrated' | 'migrated_up';
   onClose: () => void;
   onMigrate: (targetDate: string) => void;
-  onMigrateUp: (goalText: string, year: number, month?: number) => void;
+  onMigrateUp: (goalText: string, year: number, month?: number, goalDate?: string) => void;
 }
 
 export function MigrateModal({ entry, type, onClose, onMigrate, onMigrateUp }: MigrateModalProps) {
   const { styles } = useTheme();
   const today = getTodayStr();
   const [targetDate, setTargetDate] = useState(addDays(today, 1));
-  const [goalYear, setGoalYear] = useState(new Date().getFullYear());
-  const [goalMonth, setGoalMonth] = useState<number | null>(new Date().getMonth());
+  const [goalYear] = useState(new Date().getFullYear());
+  const [goalDate, setGoalDate] = useState(`${new Date().getFullYear()}-12-31`);
 
   if (type === 'migrated') {
     return (
@@ -71,27 +71,19 @@ export function MigrateModal({ entry, type, onClose, onMigrate, onMigrateUp }: M
         </div>
         <div style={styles.modalBody}>
           <p style={{ fontSize: 13, color: '#6b5d4d', marginBottom: 12 }}>
-            "{entry.text}"을(를) 월간/연간 목표로 격상합니다.
+            "{entry.text}"을(를) 연간 목표로 격상합니다.
           </p>
 
-          <label style={styles.fieldLabel}>범위</label>
-          <div style={styles.chipRow as React.CSSProperties}>
-            <button
-              style={{ ...styles.chip, ...(goalMonth === null ? styles.chipActive : {}) }}
-              onClick={() => setGoalMonth(null)}>
-              {goalYear}년 연간 목표
-            </button>
-            {MONTHS_KR.map((ml, i) => (
-              <button key={i}
-                style={{ ...styles.chip, ...(goalMonth === i ? styles.chipActive : {}) }}
-                onClick={() => setGoalMonth(i)}>
-                {ml}
-              </button>
-            ))}
-          </div>
+          <label style={styles.fieldLabel}>목표 달성 시점</label>
+          <input
+            type="date"
+            style={styles.input}
+            value={goalDate}
+            onChange={e => setGoalDate(e.target.value)}
+          />
         </div>
         <button style={styles.saveBtn} onClick={() => {
-          onMigrateUp(entry.text, goalYear, goalMonth ?? undefined);
+          onMigrateUp(entry.text, goalYear, undefined, goalDate);
         }}>
           목표로 등록
         </button>

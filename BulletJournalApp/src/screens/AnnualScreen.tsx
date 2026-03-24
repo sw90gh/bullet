@@ -22,7 +22,7 @@ interface AnnualScreenProps {
 
 export function AnnualScreen({ year, entries, cycleStatus, onAdd, onAddGoal, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onMonthTap, onToggleGoalDone }: AnnualScreenProps) {
   const { styles, C } = useTheme();
-  const yearGoals = entries.filter(e => e.type === 'goal-yearly' && e.date?.startsWith(`${year}`));
+  const yearGoals = entries.filter(e => (e.type === 'goal-yearly' || e.type === 'goal-monthly') && e.date?.startsWith(`${year}`));
   const today = new Date();
 
   return (
