@@ -785,17 +785,20 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 <div style={{ padding: '8px 0' }}>
                   {untimedEntries.map(entry => {
                     const st = STATUS[entry.status] || STATUS.todo;
+                    const isOverdue = entry.date < dateStr;
                     return (
                       <div key={entry.id} style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
                         cursor: 'pointer',
+                        background: isOverdue ? `${C.accent}06` : 'transparent',
                       }} onClick={() => {
                         if (onUpdateEntry) {
                           const endHour = parseInt(placePanel.split(':')[0]) + 1;
                           onUpdateEntry(entry.id, {
                             time: placePanel,
                             endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
+                            date: dateStr,
                           });
                         }
                         setPlacePanel(null);
@@ -807,6 +810,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {entry.text}
                         </span>
+                        {isOverdue && (
+                          <span style={{
+                            fontSize: 9, color: C.accent, background: `${C.accent}15`,
+                            padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                          }}>밀림 {entry.date.slice(5)}</span>
+                        )}
                       </div>
                     );
                   })}
