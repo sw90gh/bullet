@@ -52,6 +52,15 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
 
   return (
     <div>
+      {/* 주간 요약 */}
+      <DailySummary entries={entries} label="이번 주" filterFn={(e) => {
+        const ds = e.date;
+        if (!ds) return false;
+        const first = formatDateKey(weekDates[0]);
+        const last = formatDateKey(weekDates[6]);
+        return ds >= first && ds <= last && e.type !== 'goal-yearly' && e.type !== 'goal-monthly';
+      }} />
+
       {/* 뷰 모드 토글 */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
         <button style={{
@@ -63,15 +72,6 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
           ...(viewMode === 'timeline' ? styles.chipActive : {}),
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
-
-      {/* 주간 요약 */}
-      <DailySummary entries={entries} label="이번 주" filterFn={(e) => {
-        const ds = e.date;
-        if (!ds) return false;
-        const first = formatDateKey(weekDates[0]);
-        const last = formatDateKey(weekDates[6]);
-        return ds >= first && ds <= last && e.type !== 'goal-yearly' && e.type !== 'goal-monthly';
-      }} />
 
       {/* 밀린 항목 */}
       {(() => {
