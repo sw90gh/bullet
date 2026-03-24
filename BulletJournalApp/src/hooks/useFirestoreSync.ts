@@ -86,11 +86,13 @@ export function useFirestoreSync(
         return current;
       });
 
-      // Apply offline deletes to server
-      for (const id of deletedEntryIds) {
-        deleteEntryFromFirestore(uid, id).catch(console.error);
-      }
-      clearDeletedEntryIds();
+      // Apply offline deletes to server, then clear tracking
+      const deletePromises = Array.from(deletedEntryIds).map(id =>
+        deleteEntryFromFirestore(uid, id).catch(console.error)
+      );
+      Promise.all(deletePromises).then(() => {
+        clearDeletedEntryIds();
+      });
 
       setSyncWithFade('synced');
     };

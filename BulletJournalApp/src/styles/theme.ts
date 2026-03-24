@@ -124,8 +124,8 @@ export function getStyles(isDark: boolean): Styles {
     entrySym: { fontSize: 22, fontWeight: 800, width: 20, textAlign: 'center', flexShrink: 0, lineHeight: 1 },
     entryText: { fontSize: 14, lineHeight: 1.5, color: C.textPrimary },
     timeTag: {
-      display: 'inline-block', fontSize: 11, color: C.textMuted, marginLeft: 6,
-      background: isDark ? '#333' : '#f5f0e8', padding: '1px 6px', borderRadius: 4,
+      display: 'inline-block', fontSize: 11, color: C.textSecondary, marginLeft: 6,
+      background: isDark ? '#3a3530' : '#f5f0e8', padding: '1px 6px', borderRadius: 4,
     },
     statusBadge: {
       fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 6,
@@ -214,7 +214,7 @@ export function getStyles(isDark: boolean): Styles {
 
     /* fab */
     fab: {
-      position: 'fixed', bottom: 36, right: 'calc(50% - 180px)',
+      position: 'fixed', bottom: 36, left: '50%', transform: 'translateX(-50%)',
       width: 52, height: 52, borderRadius: '50%',
       background: C.primary, color: isDark ? '#1a1a1a' : C.headerText, fontSize: 28,
       border: 'none', boxShadow: isDark ? '0 4px 14px rgba(0,0,0,0.5)' : '0 4px 14px rgba(44,36,22,0.3)',

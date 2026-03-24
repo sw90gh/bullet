@@ -8,6 +8,7 @@ interface EntryModalProps {
   modal: ModalState;
   onClose: () => void;
   onSaveEntry: (data: Partial<Entry>) => void;
+  onDelete?: (id: string) => void;
   allTags?: string[];
 }
 
@@ -17,7 +18,7 @@ const ENTRY_TYPES = {
   note:  TYPES.note,
 };
 
-export function EntryModal({ modal, onClose, onSaveEntry, allTags = [] }: EntryModalProps) {
+export function EntryModal({ modal, onClose, onSaveEntry, onDelete, allTags = [] }: EntryModalProps) {
   const { styles, C } = useTheme();
   const existing = modal.entry;
 
@@ -332,6 +333,24 @@ export function EntryModal({ modal, onClose, onSaveEntry, allTags = [] }: EntryM
                 </div>
               )}
             </div>
+          )}
+
+          {/* 삭제 버튼 (수정 모드에서만) */}
+          {modal.mode === 'edit' && modal.entry && onDelete && (
+            <button
+              style={{
+                width: '100%', marginTop: 16, padding: 12, borderRadius: 10,
+                border: `1.5px solid ${C.accent}`, background: 'transparent',
+                color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+              }}
+              onClick={() => {
+                if (confirm('이 항목을 삭제하시겠습니까?')) {
+                  onDelete(modal.entry!.id);
+                  onClose();
+                }
+              }}
+            >삭제</button>
           )}
         </div>
       </div>

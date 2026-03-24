@@ -426,6 +426,10 @@ export default function App() {
             }
             setModal(null);
           }}
+          onDelete={(id) => {
+            deleteEntry(id);
+            setModal(null);
+          }}
         />
       )}
 

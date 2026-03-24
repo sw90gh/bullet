@@ -261,7 +261,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             </div>
           )}
           {entry.memo && (
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.4,
+            <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2, lineHeight: 1.4,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {entry.memo}
             </div>
