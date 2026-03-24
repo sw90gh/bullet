@@ -517,7 +517,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
           background: C.bgWhite, borderRadius: 14, overflow: 'hidden',
           boxShadow: `0 1px 3px ${C.cardShadow}`,
           touchAction: dragState ? 'none' : 'auto',
-        }}>
+          userSelect: 'none', WebkitUserSelect: 'none',
+        } as React.CSSProperties}>
           {/* 시간 미지정 항목 - 드래그 가능 */}
           {untimedEntries.length > 0 && (
             <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
