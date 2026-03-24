@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { getStyles } from './styles/theme';
 import { COLORS_DARK } from './utils/constants';
 import { DarkModeProvider } from './hooks/useDarkModeContext';
@@ -70,6 +70,7 @@ export default function App() {
   const [tagBarExpanded, setTagBarExpanded] = useState(false);
   const [backupDismissed, setBackupDismissed] = useState(false);
 
+  const mainRef = useRef<HTMLElement>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('bujo-notifications') !== 'off');
 
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, setEntries } = useEntries();
@@ -212,7 +213,14 @@ export default function App() {
         ]).map(t => (
           <button key={t.key}
             style={{ ...styles.tab, ...(view === t.key ? styles.tabActive : {}) }}
-            onClick={(e) => { setView(t.key); (e.target as HTMLElement).blur(); }}>
+            onClick={(e) => {
+              if (view === t.key) {
+                mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                setView(t.key);
+              }
+              (e.target as HTMLElement).blur();
+            }}>
             {t.label}
           </button>
         ))}
@@ -298,7 +306,7 @@ export default function App() {
       )}
 
       {/* Content */}
-      <main style={styles.main}>
+      <main ref={mainRef} style={styles.main}>
         {view === 'all' && (
           <AllScreen
             entries={filteredEntries}
