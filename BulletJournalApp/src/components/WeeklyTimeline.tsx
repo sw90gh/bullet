@@ -55,11 +55,13 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     });
   }, [entries, dateStrs]);
 
-  // 밀린 + 미배치 항목
+  // 미배치 항목 (밀린 항목은 오늘 포함 뷰에서만 표시)
+  const todayInView = dateStrs.includes(todayStr);
   const untimedEntries = useMemo(() => {
     const untimed = entries.filter(e => {
       if (!dateStrs.includes(e.date)) {
-        // 밀린 항목: 오늘 이전 날짜이며 미완료 (3일 뷰 기준이 아닌 오늘 기준)
+        // 3일 범위 밖 → 밀린 항목으로만 포함 (오늘이 뷰에 포함된 경우만)
+        if (!todayInView) return false;
         if (!e.date || e.date >= todayStr) return false;
         if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
         return true;
@@ -73,7 +75,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
       if (aOverdue !== bOverdue) return aOverdue - bOverdue;
       return a.date.localeCompare(b.date);
     });
-  }, [entries, dateStrs, todayStr]);
+  }, [entries, dateStrs, todayStr, todayInView]);
 
   const colWidth = `calc((100% - ${TIME_LABEL_WIDTH}px) / 3)`;
 
