@@ -128,6 +128,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const autoScrollSpeed = useRef(0);
   const lastTouchY = useRef(0);
   const dragStateRef = useRef<typeof dragState>(null);
+  const pendingDragRef = useRef<{
+    type: 'move' | 'resize' | 'place';
+    entry: Entry;
+    startY: number;
+    mode: 'move' | 'resize' | 'place';
+  } | null>(null);
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'place';
     entryId: string;
@@ -212,25 +218,14 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
     return clientY - rect.top;
   }, []);
 
-  // Drag: move a timed entry
+  const DRAG_THRESHOLD = 10; // px — 이 이상 이동해야 드래그 시작
+
+  // 터치: pending 상태로 저장 (즉시 드래그 안 함 → 스크롤 허용)
   const handleEntryTouchStart = useCallback((e: React.TouchEvent, entry: Entry, mode: 'move' | 'resize') => {
     if (!onUpdateEntry) return;
-    e.stopPropagation();
     didDragMove.current = false;
     const touch = e.touches[0];
-    const startMin = timeToMinutes(entry.time!);
-    const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-    const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-    const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
-    setDragState({
-      type: mode,
-      entryId: entry.id,
-      startY: touch.clientY,
-      origMinutes: startMin,
-      origEndMinutes: endMin,
-      currentTop: top,
-      currentHeight: height,
-    });
+    pendingDragRef.current = { type: mode, entry, startY: touch.clientY, mode };
   }, [onUpdateEntry]);
 
   // Mouse: move a timed entry (PC)
@@ -272,18 +267,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   // Drag: place an untimed entry onto timeline
   const handleUntimedTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     if (!onUpdateEntry) return;
-    e.stopPropagation();
     didDragMove.current = false;
     const touch = e.touches[0];
-    setDragState({
-      type: 'place',
-      entryId: entry.id,
-      startY: touch.clientY,
-      origMinutes: START_HOUR * 60,
-      origEndMinutes: START_HOUR * 60 + 60,
-      currentTop: -999, // hidden until finger enters timeline
-      currentHeight: HOUR_HEIGHT - 2,
-    });
+    pendingDragRef.current = { type: 'place', entry, startY: touch.clientY, mode: 'place' };
   }, [onUpdateEntry]);
 
   // Use refs for handlers so the native listener always sees latest state
@@ -291,9 +277,51 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const handleTouchEndRef = useRef<() => void>(() => {});
 
   handleTouchMoveRef.current = (e: TouchEvent) => {
-    if (!dragStateRef.current) return;
-    e.preventDefault(); // works because registered as { passive: false }
     const touch = e.touches[0];
+
+    // pending 상태: threshold 이전에는 스크롤 허용
+    if (pendingDragRef.current && !dragStateRef.current) {
+      const deltaY = Math.abs(touch.clientY - pendingDragRef.current.startY);
+      if (deltaY < DRAG_THRESHOLD) return; // 아직 스크롤 중 — preventDefault 안 함
+
+      // threshold 초과 → 실제 드래그 시작
+      const pending = pendingDragRef.current;
+      const entry = pending.entry;
+      e.preventDefault();
+      didDragMove.current = true;
+
+      if (pending.mode === 'place') {
+        setDragState({
+          type: 'place',
+          entryId: entry.id,
+          startY: pending.startY,
+          origMinutes: START_HOUR * 60,
+          origEndMinutes: START_HOUR * 60 + 60,
+          currentTop: -999,
+          currentHeight: HOUR_HEIGHT - 2,
+        });
+      } else {
+        const startMin = timeToMinutes(entry.time!);
+        const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+        const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+        const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+        setDragState({
+          type: pending.mode,
+          entryId: entry.id,
+          startY: pending.startY,
+          origMinutes: startMin,
+          origEndMinutes: endMin,
+          currentTop: top,
+          currentHeight: height,
+        });
+      }
+      pendingDragRef.current = null;
+      lastTouchY.current = touch.clientY;
+      return;
+    }
+
+    if (!dragStateRef.current) return;
+    e.preventDefault();
     lastTouchY.current = touch.clientY;
     const deltaY = touch.clientY - dragStateRef.current.startY;
     if (Math.abs(deltaY) > 5) didDragMove.current = true;
@@ -323,6 +351,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
 
   handleTouchEndRef.current = () => {
     stopAutoScroll();
+    pendingDragRef.current = null; // pending 초기화
     const ds = dragStateRef.current;
     if (!ds || !onUpdateEntry) {
       setDragState(null);
