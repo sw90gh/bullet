@@ -64,8 +64,23 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     });
   const isToday = dateStr === todayStr;
 
+  // 밀린 항목: 오늘보다 이전 날짜인데 미완료인 항목
+  const overdueEntries = isToday ? allEntries.filter(e => {
+    if (!e.date || e.date >= todayStr) return false;
+    if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
+    return true;
+  }).sort((a, b) => {
+    const mc = (b.migrateCount || 0) - (a.migrateCount || 0);
+    if (mc !== 0) return mc;
+    return a.date.localeCompare(b.date);
+  }) : [];
+
   const timedEntries = dayEntries.filter(e => e.time);
-  const untimedEntries = dayEntries.filter(e => !e.time);
+  const untimedToday = dayEntries.filter(e => !e.time);
+  // 밀린 항목도 미배치 대상에 포함 (오늘 시간표에서 배치 가능)
+  const untimedEntries = isToday
+    ? [...untimedToday, ...overdueEntries.filter(e => !e.time)]
+    : untimedToday;
 
   // Memoized overlap layout calculation
   const timedLayout = useMemo(() => {
@@ -110,18 +125,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
     return daysBetween(todayStr, e.endDate) <= 3;
   }).sort((a, b) => daysBetween(todayStr, a.endDate!) - daysBetween(todayStr, b.endDate!)) : [];
-
-  // 밀린 항목: 오늘보다 이전 날짜인데 미완료인 항목
-  const overdueEntries = isToday ? allEntries.filter(e => {
-    if (!e.date || e.date >= todayStr) return false;
-    if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
-    return true;
-  }).sort((a, b) => {
-    // 이관 횟수 높은 순, 같으면 날짜 오래된 순
-    const mc = (b.migrateCount || 0) - (a.migrateCount || 0);
-    if (mc !== 0) return mc;
-    return a.date.localeCompare(b.date);
-  }) : [];
 
   const getDdayLabel = (endDate: string) => {
     const d = daysBetween(todayStr, endDate);
