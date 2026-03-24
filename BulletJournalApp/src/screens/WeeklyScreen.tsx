@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { WeeklyTimeline } from '../components/WeeklyTimeline';
@@ -33,6 +33,15 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
     const todayIdx = weekDates.findIndex(d => formatDateKey(d) === todayStr);
     return Math.max(0, Math.min(4, todayIdx >= 0 ? todayIdx - 1 : 0));
   });
+
+  // date 변경 시 (오늘 버튼 등) offset 재계산
+  useEffect(() => {
+    const dateStr = formatDateKey(date);
+    const idx = weekDates.findIndex(d => formatDateKey(d) === dateStr);
+    if (idx >= 0) {
+      setTimelineOffset(Math.max(0, Math.min(4, idx - 1)));
+    }
+  }, [date, weekDates]);
 
   const timelineDates = useMemo(() => {
     return weekDates.slice(timelineOffset, timelineOffset + 3);
