@@ -59,8 +59,8 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
   const untimedEntries = useMemo(() => {
     const untimed = entries.filter(e => {
       if (!dateStrs.includes(e.date)) {
-        // 밀린 항목: 3일 범위 밖이고 날짜가 이전이며 미완료
-        if (!e.date || e.date >= firstDateStr) return false;
+        // 밀린 항목: 오늘 이전 날짜이며 미완료 (3일 뷰 기준이 아닌 오늘 기준)
+        if (!e.date || e.date >= todayStr) return false;
         if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
         return true;
       }
@@ -68,12 +68,12 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
       return !e.time;
     });
     return untimed.sort((a, b) => {
-      const aOverdue = a.date < firstDateStr ? 0 : 1;
-      const bOverdue = b.date < firstDateStr ? 0 : 1;
+      const aOverdue = a.date < todayStr ? 0 : 1;
+      const bOverdue = b.date < todayStr ? 0 : 1;
       if (aOverdue !== bOverdue) return aOverdue - bOverdue;
       return a.date.localeCompare(b.date);
     });
-  }, [entries, dateStrs, firstDateStr]);
+  }, [entries, dateStrs, todayStr]);
 
   const colWidth = `calc((100% - ${TIME_LABEL_WIDTH}px) / 3)`;
 
@@ -306,7 +306,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
           </div>
           {untimedEntries.map(entry => {
             const st = STATUS[entry.status] || STATUS.todo;
-            const isOverdue = entry.date < firstDateStr;
+            const isOverdue = entry.date < todayStr;
             const isDragging = dragState?.entryId === entry.id;
             return (
               <div key={entry.id} style={{
@@ -532,7 +532,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
             <div style={{ padding: '8px 0' }}>
               {untimedEntries.map(entry => {
                 const st = STATUS[entry.status] || STATUS.todo;
-                const isOverdue = entry.date < firstDateStr;
+                const isOverdue = entry.date < todayStr;
                 return (
                   <div key={entry.id} style={{
                     display: 'flex', alignItems: 'center', gap: 8,
