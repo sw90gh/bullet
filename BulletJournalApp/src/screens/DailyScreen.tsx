@@ -573,7 +573,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     background: isDragging ? `${C.blue}15` : isOverdue ? `${C.accent}08` : 'transparent',
                     border: `1px dashed ${isDragging ? C.blue : isOverdue ? `${C.accent}30` : 'transparent'}`,
                     marginBottom: 2, transition: 'background 0.15s',
-                    touchAction: 'none',
+                    touchAction: isDragging ? 'none' : 'auto',
                   }}
                   onTouchStart={e => handleUntimedTouchStart(e, entry)}
                   onMouseDown={e => handleUntimedMouseDown(e, entry)}
@@ -703,7 +703,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       zIndex: isDraggingThis ? 15 : 5 + col,
                       opacity: isEntryDone ? 0.6 : 1,
                       transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
-                      touchAction: 'none',
+                      touchAction: isDraggingThis ? 'none' : 'auto',
                     }}
                     onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
                     onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
@@ -754,7 +754,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       style={{
                         position: 'absolute', left: 0, right: 0, bottom: 0, height: 12,
                         cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        touchAction: 'none',
+                        touchAction: dragState ? 'none' : 'auto',
                       }}
                       onTouchStart={e => {
                         e.stopPropagation();
