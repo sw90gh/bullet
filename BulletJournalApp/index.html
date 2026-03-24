@@ -12,7 +12,10 @@
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       *:focus, *:focus-visible, *:focus-within { outline: 2px solid transparent !important; outline-offset: 0 !important; }
-      button, input, select, textarea { outline: none; -webkit-appearance: none; }
+      button { outline: none; -webkit-appearance: none; }
+      button:focus, button:focus-visible { border-color: inherit !important; }
+      input, select, textarea { outline: none; }
+      input:focus, select:focus, textarea:focus { border-color: inherit !important; }
       button::-moz-focus-inner { border: 0; padding: 0; }
       html, body, #root { height: 100%; overflow: hidden; }
       body { background: #faf6f0; overscroll-behavior: none; }
