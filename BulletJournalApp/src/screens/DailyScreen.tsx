@@ -3,7 +3,7 @@ import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
 import { formatDateKey, getTodayStr, daysBetween } from '../utils/date';
-import { STATUS } from '../utils/constants';
+import { STATUS, TYPE_COLORS, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
 
 interface DailyScreenProps {
@@ -677,11 +677,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 const height = isDraggingThis && dragState.type === 'resize'
                   ? dragState.currentHeight
                   : Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+                const typeColor = (isDark ? TYPE_COLORS[entry.type]?.dark : TYPE_COLORS[entry.type]?.light) || C.textPrimary;
                 const stColor = statusColor(entry.status);
+                const st = STATUS[entry.status] || STATUS.todo;
+                const statusLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
                 const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
-                // Overlap layout: each column takes proportional width, later columns overlap earlier ones
-                // Each overlapping entry shifts 12% to the right
                 const leftPct = col * 12;
                 const widthPct = 100 - leftPct;
 
@@ -693,10 +694,10 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       right: 4,
                       width: totalCols > 1 ? `calc(${widthPct}% - 8px)` : undefined,
                       top, height,
-                      background: isDraggingThis ? `${stColor}40` : stColor + '20',
-                      borderLeft: `3px solid ${stColor}`,
+                      background: isDraggingThis ? `${typeColor}40` : typeColor + '15',
+                      borderLeft: `3px solid ${typeColor}`,
                       borderRadius: '0 6px 6px 0',
-                      padding: '3px 8px',
+                      padding: '3px 6px',
                       cursor: 'grab',
                       overflow: 'hidden',
                       zIndex: isDraggingThis ? 15 : 5 + col,
@@ -708,7 +709,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
                     onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span style={{
+                        fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+                        background: stColor + '18', color: stColor,
+                      }}>{statusLabel}</span>
                       <div style={{
                         fontSize: 11, fontWeight: 600, flex: 1, minWidth: 0,
                         color: isEntryDone ? C.textMuted : C.textPrimary,

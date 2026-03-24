@@ -62,6 +62,15 @@ export const TYPES = {
   'goal-monthly': { symbol: '◎', label: '월간목표' },
 } as const;
 
+// 유형별 시간표 색상
+export const TYPE_COLORS: Record<string, { light: string; dark: string }> = {
+  task:           { light: '#2c2416', dark: '#e8e0d4' },
+  event:          { light: '#c0583f', dark: '#e07060' },
+  note:           { light: '#b8a99a', dark: '#8a7b6c' },
+  'goal-yearly':  { light: '#3a7ca5', dark: '#6abadf' },
+  'goal-monthly': { light: '#3a7ca5', dark: '#6abadf' },
+};
+
 export const PRIORITY = {
   none:      { symbol: '',  label: '없음' },
   important: { symbol: '★', label: '중요' },

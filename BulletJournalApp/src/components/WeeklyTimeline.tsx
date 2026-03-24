@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
-import { STATUS } from '../utils/constants';
+import { STATUS, TYPE_COLORS, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { formatDateKey, getTodayStr } from '../utils/date';
 import { Entry } from '../types';
 
@@ -38,7 +38,7 @@ function yToMinutes(y: number): number {
 const DAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토'];
 
 export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: WeeklyTimelineProps) {
-  const { C, statusColor } = useTheme();
+  const { C, isDark, statusColor } = useTheme();
   const todayStr = getTodayStr();
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -436,6 +436,10 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                 : ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
               const height = Math.max(20, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
               const colIdx = isDraggingThis ? dragState.currentColIdx : ci;
+              const typeColor = (isDark ? TYPE_COLORS[entry.type]?.dark : TYPE_COLORS[entry.type]?.light) || C.textPrimary;
+              const stColor = statusColor(entry.status);
+              const st = STATUS[entry.status] || STATUS.todo;
+              const statusLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
               const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
               return (
@@ -444,10 +448,10 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                     position: 'absolute', top,
                     left: `calc(${TIME_LABEL_WIDTH}px + ${colIdx} * ${colWidth} + 3px)`,
                     width: `calc(${colWidth} - 6px)`, height,
-                    background: isDraggingThis ? `${statusColor(entry.status)}40` : statusColor(entry.status) + '20',
-                    borderLeft: `3px solid ${statusColor(entry.status)}`,
+                    background: isDraggingThis ? `${typeColor}40` : typeColor + '15',
+                    borderLeft: `3px solid ${typeColor}`,
                     borderRadius: '0 4px 4px 0',
-                    padding: '2px 4px', cursor: 'grab', overflow: 'hidden',
+                    padding: '2px 3px', cursor: 'grab', overflow: 'hidden',
                     zIndex: isDraggingThis ? 15 : 3,
                     opacity: isEntryDone ? 0.5 : 1,
                     transition: isDraggingThis ? 'none' : 'top 0.2s, left 0.2s',
@@ -458,8 +462,14 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                   onClick={() => { if (!didDragMove.current) onEdit(entry); }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {height > 22 && (
+                      <span style={{
+                        fontSize: 7, fontWeight: 700, padding: '0px 3px', borderRadius: 2, flexShrink: 0,
+                        background: stColor + '18', color: stColor,
+                      }}>{statusLabel}</span>
+                    )}
                     <div style={{
-                      fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0,
+                      fontSize: 9, fontWeight: 600, flex: 1, minWidth: 0,
                       color: isEntryDone ? C.textMuted : C.textPrimary,
                       textDecoration: isEntryDone ? 'line-through' : 'none',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
