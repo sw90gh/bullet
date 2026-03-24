@@ -28,7 +28,13 @@ export function MonthlyScreen({
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
-  const monthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly');
+  const monthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly')
+    .sort((a, b) => {
+      const po: Record<string, number> = { urgent: 0, important: 1, none: 2 };
+      if (po[a.priority || 'none'] !== po[b.priority || 'none'])
+        return po[a.priority || 'none'] - po[b.priority || 'none'];
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
   const monthGoals = entries.filter(e => e.type === 'goal-monthly' && e.date?.startsWith(monthKey));
   const todayStr = getTodayStr();
 
