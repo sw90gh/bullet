@@ -700,9 +700,10 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       }}>{entry.text}</div>
                       {onUpdateEntry && !isDraggingThis && (
                         <button style={{
-                          background: 'none', border: 'none', fontSize: 10, color: C.textMuted,
-                          cursor: 'pointer', padding: '0 2px', flexShrink: 0, lineHeight: 1,
-                          opacity: 0.6,
+                          background: `${C.textMuted}18`, border: 'none', fontSize: 12, color: C.textMuted,
+                          cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
+                          minWidth: 28, minHeight: 28, borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
