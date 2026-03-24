@@ -479,9 +479,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
 
   return (
     <div>
-      {isToday && <div style={styles.todayBadge}>TODAY</div>}
-
-      <DailySummary date={date} entries={allEntries} />
+      <DailySummary entries={allEntries} label={isToday ? '오늘' : `${date.getMonth() + 1}/${date.getDate()}`} filterFn={(e) => e.date === dateStr && e.type !== 'goal-yearly' && e.type !== 'goal-monthly'} />
 
       {/* 뷰 모드 토글 */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
