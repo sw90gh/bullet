@@ -231,14 +231,26 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     return clientY - rect.top;
   }, []);
 
-  const DRAG_THRESHOLD = 10; // px — 이 이상 이동해야 드래그 시작
+  const LONG_PRESS_MS = 350; // 롱프레스 후 드래그 시작
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragReadyRef = useRef(false); // 롱프레스 완료 → 드래그 가능
 
-  // 터치: pending 상태로 저장 (즉시 드래그 안 함 → 스크롤 허용)
+  // 터치: 롱프레스 후 드래그 가능 (짧은 터치+이동은 스크롤)
   const handleEntryTouchStart = useCallback((e: React.TouchEvent, entry: Entry, mode: 'move' | 'resize') => {
     if (!onUpdateEntry) return;
     didDragMove.current = false;
+    dragReadyRef.current = false;
     const touch = e.touches[0];
     pendingDragRef.current = { type: mode, entry, startY: touch.clientY, mode };
+
+    // 롱프레스 타이머
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      if (!pendingDragRef.current) return;
+      dragReadyRef.current = true;
+      // 진동 피드백 (지원 시)
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, LONG_PRESS_MS);
   }, [onUpdateEntry]);
 
   // Mouse: move a timed entry (PC)
@@ -281,8 +293,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   const handleUntimedTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     if (!onUpdateEntry) return;
     didDragMove.current = false;
+    dragReadyRef.current = false;
     const touch = e.touches[0];
     pendingDragRef.current = { type: 'place', entry, startY: touch.clientY, mode: 'place' };
+
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      if (!pendingDragRef.current) return;
+      dragReadyRef.current = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, LONG_PRESS_MS);
   }, [onUpdateEntry]);
 
   // Use refs for handlers so the native listener always sees latest state
@@ -292,12 +312,19 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   handleTouchMoveRef.current = (e: TouchEvent) => {
     const touch = e.touches[0];
 
-    // pending 상태: threshold 이전에는 스크롤 허용
+    // pending 상태: 롱프레스 완료 전에 이동하면 스크롤로 취급 → pending 취소
     if (pendingDragRef.current && !dragStateRef.current) {
-      const deltaY = Math.abs(touch.clientY - pendingDragRef.current.startY);
-      if (deltaY < DRAG_THRESHOLD) return; // 아직 스크롤 중 — preventDefault 안 함
+      if (!dragReadyRef.current) {
+        // 롱프레스 전에 이동 → 스크롤이므로 pending 취소
+        const deltaY = Math.abs(touch.clientY - pendingDragRef.current.startY);
+        if (deltaY > 8) {
+          pendingDragRef.current = null;
+          if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        }
+        return; // 스크롤 허용
+      }
 
-      // threshold 초과 → 실제 드래그 시작
+      // 롱프레스 완료 → 드래그 시작
       const pending = pendingDragRef.current;
       const entry = pending.entry;
       e.preventDefault();
@@ -364,7 +391,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
 
   handleTouchEndRef.current = () => {
     stopAutoScroll();
-    pendingDragRef.current = null; // pending 초기화
+    pendingDragRef.current = null;
+    dragReadyRef.current = false;
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
     const ds = dragStateRef.current;
     if (!ds || !onUpdateEntry) {
       setDragState(null);
