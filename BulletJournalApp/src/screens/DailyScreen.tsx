@@ -558,12 +558,13 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               {untimedEntries.map(entry => {
                 const st = STATUS[entry.status] || STATUS.todo;
                 const isDragging = dragState?.entryId === entry.id;
+                const isOverdue = entry.date < dateStr;
                 return (
                   <div key={entry.id} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 4px',
                     cursor: 'grab', borderRadius: 6,
-                    background: isDragging ? `${C.blue}15` : 'transparent',
-                    border: `1px dashed ${isDragging ? C.blue : 'transparent'}`,
+                    background: isDragging ? `${C.blue}15` : isOverdue ? `${C.accent}08` : 'transparent',
+                    border: `1px dashed ${isDragging ? C.blue : isOverdue ? `${C.accent}30` : 'transparent'}`,
                     marginBottom: 2, transition: 'background 0.15s',
                     touchAction: 'none',
                   }}
@@ -576,6 +577,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       fontSize: 12, color: C.textPrimary, flex: 1,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{entry.text}</span>
+                    {isOverdue && (
+                      <span style={{
+                        fontSize: 8, color: C.accent, background: `${C.accent}15`,
+                        padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+                      }}>{entry.date.slice(5)}</span>
+                    )}
                     <span style={{ fontSize: 10, color: C.textMuted }}>⠿</span>
                   </div>
                 );
