@@ -1,26 +1,31 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
-import { formatDateKey, getTodayStr } from '../utils/date';
+import { formatDateKey } from '../utils/date';
 import { Entry } from '../types';
 
 interface DailySummaryProps {
-  date: Date;
+  date?: Date;
   entries: Entry[];
+  filterFn?: (e: Entry) => boolean;  // 커스텀 필터 (주간/월간용)
+  label?: string;
 }
 
-export function DailySummary({ date, entries }: DailySummaryProps) {
+export function DailySummary({ date, entries, filterFn, label }: DailySummaryProps) {
   const { C } = useTheme();
-  const dateStr = formatDateKey(date);
 
   const stats = useMemo(() => {
-    const dayEntries = entries.filter(e => e.date === dateStr);
-    const total = dayEntries.length;
-    const done = dayEntries.filter(e => e.status === 'done').length;
-    const progress = dayEntries.filter(e => e.status === 'progress').length;
-    const todo = dayEntries.filter(e => e.status === 'todo').length;
+    const filtered = filterFn
+      ? entries.filter(filterFn)
+      : date
+        ? entries.filter(e => e.date === formatDateKey(date))
+        : [];
+    const total = filtered.length;
+    const done = filtered.filter(e => e.status === 'done').length;
+    const progress = filtered.filter(e => e.status === 'progress').length;
+    const todo = filtered.filter(e => e.status === 'todo').length;
     const rate = total > 0 ? Math.round((done / total) * 100) : 0;
     return { total, done, progress, todo, rate };
-  }, [entries, dateStr]);
+  }, [entries, date, filterFn]);
 
   if (stats.total === 0) return null;
 
@@ -41,20 +46,23 @@ export function DailySummary({ date, entries }: DailySummaryProps) {
           fontSize: 10, fontWeight: 700, color: C.textPrimary,
         }}>{stats.rate}%</div>
       </div>
-      <div style={{ flex: 1, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{ fontSize: 11, color: C.textSecondary }}>
-          <span style={{ fontWeight: 700, color: C.green }}>{stats.done}</span>/{stats.total} 완료
+      <div style={{ flex: 1 }}>
+        {label && <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2 }}>{label}</div>}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ fontSize: 11, color: C.textSecondary }}>
+            <span style={{ fontWeight: 700, color: C.green }}>{stats.done}</span>/{stats.total} 완료
+          </div>
+          {stats.todo > 0 && (
+            <div style={{ fontSize: 11, color: C.textMuted }}>
+              남은 할일 <span style={{ fontWeight: 600 }}>{stats.todo}</span>
+            </div>
+          )}
+          {stats.progress > 0 && (
+            <div style={{ fontSize: 11, color: C.amber }}>
+              진행 중 <span style={{ fontWeight: 600 }}>{stats.progress}</span>
+            </div>
+          )}
         </div>
-        {stats.todo > 0 && (
-          <div style={{ fontSize: 11, color: C.textMuted }}>
-            남은 할일 <span style={{ fontWeight: 600 }}>{stats.todo}</span>
-          </div>
-        )}
-        {stats.progress > 0 && (
-          <div style={{ fontSize: 11, color: C.amber }}>
-            진행 중 <span style={{ fontWeight: 600 }}>{stats.progress}</span>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
+import { DailySummary } from '../components/DailySummary';
 import { getDaysInMonth, pad, getTodayStr } from '../utils/date';
 import { Entry, EntryPriority } from '../types';
 
@@ -42,6 +43,11 @@ export function MonthlyScreen({
 
   return (
     <div>
+      {/* 월간 요약 */}
+      <DailySummary entries={entries} label="이번 달" filterFn={(e) => {
+        return !!e.date && e.date.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly';
+      }} />
+
       {/* Mini Calendar */}
       <div style={styles.miniCal}>
         <div style={styles.miniCalHeader as React.CSSProperties}>

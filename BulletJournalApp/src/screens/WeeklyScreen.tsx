@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
+import { DailySummary } from '../components/DailySummary';
 import { WeeklyTimeline } from '../components/WeeklyTimeline';
 import { DAYS_KR } from '../utils/constants';
 import { getWeekDates, formatDateKey, getTodayStr } from '../utils/date';
@@ -62,6 +63,15 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
           ...(viewMode === 'timeline' ? styles.chipActive : {}),
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
+
+      {/* 주간 요약 */}
+      <DailySummary entries={entries} label="이번 주" filterFn={(e) => {
+        const ds = e.date;
+        if (!ds) return false;
+        const first = formatDateKey(weekDates[0]);
+        const last = formatDateKey(weekDates[6]);
+        return ds >= first && ds <= last && e.type !== 'goal-yearly' && e.type !== 'goal-monthly';
+      }} />
 
       {/* 밀린 항목 */}
       {(() => {
