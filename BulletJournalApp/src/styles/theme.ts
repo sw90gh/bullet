@@ -75,6 +75,7 @@ export function getStyles(isDark: boolean): Styles {
       background: 'transparent', border: `1.5px solid ${C.border}`,
       fontSize: 13, fontWeight: 500, color: C.textSecondary,
       cursor: 'pointer', fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+      outline: 'none', boxShadow: 'none', WebkitTapHighlightColor: 'transparent',
     },
     tabActive: {
       background: C.primary, borderColor: C.primary, color: isDark ? '#1a1a1a' : C.headerText,
