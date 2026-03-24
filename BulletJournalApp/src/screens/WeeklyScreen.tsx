@@ -34,14 +34,15 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
     return Math.max(0, Math.min(4, todayIdx >= 0 ? todayIdx - 1 : 0));
   });
 
-  // date 변경 시 (오늘 버튼 등) offset 재계산
+  // 주가 변경될 때만 offset 리셋 (오늘 버튼, 주간 네비)
+  const weekKey = weekDates.map(d => formatDateKey(d)).join(',');
   useEffect(() => {
     const dateStr = formatDateKey(date);
     const idx = weekDates.findIndex(d => formatDateKey(d) === dateStr);
     if (idx >= 0) {
       setTimelineOffset(Math.max(0, Math.min(4, idx - 1)));
     }
-  }, [date, weekDates]);
+  }, [weekKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const timelineDates = useMemo(() => {
     return weekDates.slice(timelineOffset, timelineOffset + 3);
