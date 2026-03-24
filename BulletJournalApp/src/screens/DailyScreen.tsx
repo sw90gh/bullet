@@ -50,6 +50,7 @@ function yToMinutes(y: number): number {
 export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry }: DailyScreenProps) {
   const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
+  const [placePanel, setPlacePanel] = useState<string | null>(null); // 시간 문자열 or null
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
   const dayEntries = entries
@@ -589,8 +590,13 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                   position: 'relative', cursor: 'pointer',
                 }}
                   onClick={() => {
-                    if (!dragState && !didDragMove.current && onAddAtTime) {
-                      onAddAtTime(`${hour.toString().padStart(2, '0')}:00`);
+                    if (!dragState && !didDragMove.current) {
+                      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                      if (untimedEntries.length > 0) {
+                        setPlacePanel(timeStr);
+                      } else if (onAddAtTime) {
+                        onAddAtTime(timeStr);
+                      }
                     }
                   }}
                 >
@@ -685,12 +691,27 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
                     onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
-                    <div style={{
-                      fontSize: 11, fontWeight: 600,
-                      color: isEntryDone ? C.textMuted : C.textPrimary,
-                      textDecoration: isEntryDone ? 'line-through' : 'none',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{entry.text}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 600, flex: 1, minWidth: 0,
+                        color: isEntryDone ? C.textMuted : C.textPrimary,
+                        textDecoration: isEntryDone ? 'line-through' : 'none',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{entry.text}</div>
+                      {onUpdateEntry && !isDraggingThis && (
+                        <button style={{
+                          background: 'none', border: 'none', fontSize: 10, color: C.textMuted,
+                          cursor: 'pointer', padding: '0 2px', flexShrink: 0, lineHeight: 1,
+                          opacity: 0.6,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateEntry(entry.id, { time: undefined, endTime: undefined });
+                        }}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        >✕</button>
+                      )}
+                    </div>
                     {height > 30 && (
                       <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>
                         {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
@@ -721,6 +742,71 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 );
               })}
           </div>
+
+          {/* 시간 배치 선택 패널 */}
+          {placePanel && (
+            <div style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+              zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            }} onClick={() => setPlacePanel(null)}>
+              <div style={{
+                background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+                maxHeight: '50vh', overflow: 'auto', padding: '0 20px 24px',
+                paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+              }} onClick={e => e.stopPropagation()}>
+                <div style={{
+                  padding: '14px 0 10px', borderBottom: `1px solid ${C.borderLight}`,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary }}>
+                    {placePanel}에 배치
+                  </span>
+                  <button style={{
+                    background: 'none', border: 'none', fontSize: 16, color: C.textMuted,
+                    cursor: 'pointer', padding: 4,
+                  }} onClick={() => setPlacePanel(null)}>✕</button>
+                </div>
+                <div style={{ padding: '8px 0' }}>
+                  {untimedEntries.map(entry => {
+                    const st = STATUS[entry.status] || STATUS.todo;
+                    return (
+                      <div key={entry.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                        cursor: 'pointer',
+                      }} onClick={() => {
+                        if (onUpdateEntry) {
+                          const endHour = parseInt(placePanel.split(':')[0]) + 1;
+                          onUpdateEntry(entry.id, {
+                            time: placePanel,
+                            endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
+                          });
+                        }
+                        setPlacePanel(null);
+                      }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(entry.status), width: 18, textAlign: 'center' }}>
+                          {st.symbol}
+                        </span>
+                        <span style={{ fontSize: 13, color: C.textPrimary, flex: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {entry.text}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <button style={{
+                    width: '100%', marginTop: 8, padding: 12, borderRadius: 10,
+                    border: `1.5px dashed ${C.border}`, background: 'transparent',
+                    color: C.textSecondary, fontSize: 13, cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }} onClick={() => {
+                    setPlacePanel(null);
+                    if (onAddAtTime) onAddAtTime(placePanel);
+                  }}>+ 새 항목 추가</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
