@@ -97,7 +97,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
       })()}
 
       {viewMode === 'list' ? (
-        // 기존 목록 뷰
+        // 구분선형 목록 뷰
         <div>
           {weekDates.map(wd => {
             const dateStr = formatDateKey(wd);
@@ -106,23 +106,38 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
             const isWeekend = wd.getDay() === 0 || wd.getDay() === 6;
 
             return (
-              <div key={dateStr} style={{ ...styles.weekDay, ...(isT ? styles.weekDayToday : {}) } as React.CSSProperties}>
-                <div style={styles.weekDayHeader as React.CSSProperties}
-                  onClick={() => { setCurDate(wd); setView('daily'); }}>
+              <div key={dateStr} style={{ marginBottom: 8 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 2px 4px', borderBottom: `1px solid ${isT ? C.accent + '40' : C.borderLight}`,
+                  marginBottom: 4, cursor: 'pointer',
+                }} onClick={() => { setCurDate(wd); setView('daily'); }}>
                   <span style={{
-                    ...styles.weekDayName,
-                    color: isWeekend ? C.accent : C.textPrimary,
+                    fontSize: 12, fontWeight: 700,
+                    color: isT ? C.accent : isWeekend ? `${C.accent}88` : C.textSecondary,
                   }}>{DAYS_KR[wd.getDay()]}</span>
                   <span style={{
-                    ...styles.weekDayNum,
-                    ...(isT ? styles.weekDayNumToday : {}),
+                    fontSize: 12, fontWeight: isT ? 700 : 500,
+                    color: isT ? C.accent : C.textPrimary,
+                    ...(isT ? {
+                      background: C.accent, color: 'white', borderRadius: '50%',
+                      width: 20, height: 20, display: 'inline-flex',
+                      alignItems: 'center', justifyContent: 'center', fontSize: 11,
+                    } : {}),
                   } as React.CSSProperties}>{wd.getDate()}</span>
+                  <span style={{ fontSize: 11, color: C.textMuted }}>
+                    {dayEntries.length > 0 ? `${dayEntries.length}건` : ''}
+                  </span>
                   <div style={{ flex: 1 }} />
-                  <button style={styles.weekAddBtn as React.CSSProperties}
-                    onClick={(e) => { e.stopPropagation(); onAdd(dateStr); }}>+</button>
+                  <button style={{
+                    background: 'none', border: `1px solid ${C.border}`, color: C.textMuted,
+                    width: 20, height: 20, borderRadius: '50%', fontSize: 14, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                    fontFamily: '-apple-system, sans-serif',
+                  }} onClick={(e) => { e.stopPropagation(); onAdd(dateStr); }}>+</button>
                 </div>
                 {dayEntries.length === 0 ? (
-                  <p style={{ fontSize: 12, color: C.textLight, padding: '4px 0 0 28px', fontStyle: 'italic' }}>비어 있음</p>
+                  <p style={{ fontSize: 11, color: C.textLight, padding: '2px 4px', fontStyle: 'italic' }}>비어 있음</p>
                 ) : (
                   dayEntries.map(entry => (
                     <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
