@@ -77,9 +77,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
 
   const timedEntries = dayEntries.filter(e => e.time);
   const untimedToday = dayEntries.filter(e => !e.time);
-  // 밀린 항목도 미배치 대상에 포함 (오늘 시간표에서 배치 가능)
+  // 밀린 항목도 미배치 대상에 포함 (시간 유무 관계없이 — 과거 시간표 항목도 포함)
   const untimedEntries = isToday
-    ? [...untimedToday, ...overdueEntries.filter(e => !e.time)]
+    ? [...untimedToday, ...overdueEntries]
     : untimedToday;
 
   // Memoized overlap layout calculation
