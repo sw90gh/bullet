@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
-import { STATUS, TYPES, PRIORITY } from '../utils/constants';
+import { STATUS, TYPES, PRIORITY, STATUS_CYCLE_BY_TYPE, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { getTodayStr } from '../utils/date';
 import { ModalState, Entry, RecurringConfig } from '../types';
 
@@ -174,19 +174,30 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, allTags = []
             </div>
           )}
 
-          {/* 상태 */}
+          {/* 상태 (메모는 상태 없음) */}
+          {type !== 'note' && (
           <div style={{ marginTop: 4 }}>
             <label style={labelSmall}>상태</label>
             <div style={styles.chipRow as React.CSSProperties}>
-              {Object.entries(STATUS).map(([k, v]) => (
-                <button key={k}
-                  style={{ ...styles.chip, ...(status === k ? { ...styles.chipActive, background: v.color } : {}), padding: '4px 6px', fontSize: 10 }}
-                  onClick={() => setStatus(k)}>
-                  <span style={{ marginRight: 3 }}>{v.symbol}</span>{v.label}
-                </button>
-              ))}
+              {(() => {
+                const cycle = STATUS_CYCLE_BY_TYPE[type] || Object.keys(STATUS);
+                const allowedStatuses = new Set([...cycle, 'migrated', 'migrated_up']);
+                return Object.entries(STATUS)
+                  .filter(([k]) => allowedStatuses.has(k))
+                  .map(([k, v]) => {
+                    const label = STATUS_LABEL_BY_TYPE[type]?.[k] || v.label;
+                    return (
+                      <button key={k}
+                        style={{ ...styles.chip, ...(status === k ? { ...styles.chipActive, background: v.color } : {}), padding: '4px 6px', fontSize: 10 }}
+                        onClick={() => setStatus(k)}>
+                        <span style={{ marginRight: 3 }}>{v.symbol}</span>{label}
+                      </button>
+                    );
+                  });
+              })()}
             </div>
           </div>
+          )}
 
           {/* 날짜/시간 (목표가 아닌 경우) */}
           {!isGoalType && (

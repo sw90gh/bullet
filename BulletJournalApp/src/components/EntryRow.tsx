@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
-import { STATUS, TYPES, PRIORITY } from '../utils/constants';
+import { STATUS, TYPES, PRIORITY, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
 
 interface EntryRowProps {
@@ -274,7 +274,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           )}
         </div>
         <span style={{ ...styles.statusBadge, background: statusColor(entry.status) + '18', color: statusColor(entry.status) }}>
-          {st.label}
+          {STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label}
         </span>
       </div>
     </div>

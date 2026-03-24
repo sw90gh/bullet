@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Entry, EntryStatus } from '../types';
 import { uid } from '../utils/date';
 import { loadData, saveData, trackDeletedEntry } from '../utils/storage';
-import { STATUS_CYCLE } from '../utils/constants';
+import { STATUS_CYCLE, STATUS_CYCLE_BY_TYPE } from '../utils/constants';
 
 const STORAGE_KEY = 'bujo-entries';
 
@@ -41,8 +41,10 @@ export function useEntries() {
   const cycleStatus = useCallback((id: string) => {
     setEntries(prev => prev.map(e => {
       if (e.id !== id) return e;
-      const idx = STATUS_CYCLE.indexOf(e.status as typeof STATUS_CYCLE[number]);
-      const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+      const cycle = STATUS_CYCLE_BY_TYPE[e.type] || STATUS_CYCLE;
+      if (cycle.length === 0) return e; // 메모: 상태 순환 없음
+      const idx = cycle.indexOf(e.status as typeof cycle[number]);
+      const next = cycle[(idx + 1) % cycle.length];
       return { ...e, status: next as EntryStatus, updatedAt: Date.now() };
     }));
   }, []);
