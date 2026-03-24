@@ -6,7 +6,7 @@ import { Entry } from '../types';
 
 interface WeeklyTimelineProps {
   dates: Date[];          // 3일 배열
-  entries: Entry[];
+  entries: Entry[];       // 전체 entries (밀린 항목 포함)
   onEdit: (entry: Entry) => void;
   onUpdateEntry: (id: string, updates: Partial<Entry>) => void;
 }
@@ -44,6 +44,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
   const gridRef = useRef<HTMLDivElement>(null);
 
   const dateStrs = useMemo(() => dates.map(d => formatDateKey(d)), [dates]);
+  const firstDateStr = dateStrs[0] || todayStr;
 
   // 날짜별 시간 지정 항목
   const columns = useMemo(() => {
@@ -54,7 +55,30 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     });
   }, [entries, dateStrs]);
 
+  // 밀린 + 미배치 항목
+  const untimedEntries = useMemo(() => {
+    const untimed = entries.filter(e => {
+      if (!dateStrs.includes(e.date)) {
+        // 밀린 항목: 3일 범위 밖이고 날짜가 이전이며 미완료
+        if (!e.date || e.date >= firstDateStr) return false;
+        if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
+        return true;
+      }
+      // 3일 범위 내 시간 미지정
+      return !e.time;
+    });
+    return untimed.sort((a, b) => {
+      const aOverdue = a.date < firstDateStr ? 0 : 1;
+      const bOverdue = b.date < firstDateStr ? 0 : 1;
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+      return a.date.localeCompare(b.date);
+    });
+  }, [entries, dateStrs, firstDateStr]);
+
   const colWidth = `calc((100% - ${TIME_LABEL_WIDTH}px) / 3)`;
+
+  // Place panel state
+  const [placePanel, setPlacePanel] = useState<{ time: string; colIdx: number } | null>(null);
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -80,7 +104,6 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
   const didDragMove = useRef(false);
   const DRAG_THRESHOLD = 10;
 
-  // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     didDragMove.current = false;
     const touch = e.touches[0];
@@ -95,13 +118,36 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     return Math.max(0, Math.min(2, Math.floor(x / colW)));
   }, []);
 
+  // Shared drop logic
+  const handleDrop = useCallback((ds: typeof dragState) => {
+    if (!ds) return;
+    if (!didDragMove.current) return;
+
+    const newStartMin = snapMinutes(START_HOUR * 60 + (ds.currentTop / HOUR_HEIGHT) * 60);
+    const duration = ds.origEndMinutes - ds.origMinutes;
+    const newEndMin = newStartMin + duration;
+    const newDate = dateStrs[ds.currentColIdx] || ds.origDateStr;
+
+    const updates: Partial<Entry> = {
+      time: minutesToTime(newStartMin),
+      endTime: minutesToTime(newEndMin),
+    };
+    if (newDate !== ds.origDateStr) {
+      const draggedEntry = entries.find(e => e.id === ds.entryId);
+      if (draggedEntry) {
+        updates.originalDate = draggedEntry.originalDate || draggedEntry.date;
+      }
+      updates.date = newDate;
+    }
+    onUpdateEntry(ds.entryId, updates);
+  }, [dateStrs, entries, onUpdateEntry]);
+
   const handleTouchMoveRef = useRef<(e: TouchEvent) => void>(() => {});
   const handleTouchEndRef = useRef<() => void>(() => {});
 
   handleTouchMoveRef.current = (e: TouchEvent) => {
     const touch = e.touches[0];
 
-    // Pending → activate drag after threshold
     if (pendingDragRef.current && !dragStateRef.current) {
       const dy = Math.abs(touch.clientY - pendingDragRef.current.startY);
       const dx = Math.abs(touch.clientX - pendingDragRef.current.startX);
@@ -112,7 +158,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
       e.preventDefault();
       didDragMove.current = true;
 
-      const startMin = timeToMinutes(entry.time!);
+      const startMin = entry.time ? timeToMinutes(entry.time) : START_HOUR * 60;
       const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
       const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
       const height = Math.max(20, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
@@ -137,7 +183,6 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     e.preventDefault();
     didDragMove.current = true;
 
-    const ds = dragStateRef.current;
     if (!gridRef.current) return;
     const rect = gridRef.current.getBoundingClientRect();
     const y = touch.clientY - rect.top - HEADER_HEIGHT;
@@ -152,22 +197,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     pendingDragRef.current = null;
     const ds = dragStateRef.current;
     if (!ds) { setDragState(null); return; }
-
-    if (didDragMove.current) {
-      const newStartMin = snapMinutes(START_HOUR * 60 + (ds.currentTop / HOUR_HEIGHT) * 60);
-      const duration = ds.origEndMinutes - ds.origMinutes;
-      const newEndMin = newStartMin + duration;
-      const newDate = dateStrs[ds.currentColIdx] || ds.origDateStr;
-
-      const updates: Partial<Entry> = {
-        time: minutesToTime(newStartMin),
-        endTime: minutesToTime(newEndMin),
-      };
-      if (newDate !== ds.origDateStr) {
-        updates.date = newDate;
-      }
-      onUpdateEntry(ds.entryId, updates);
-    }
+    handleDrop(ds);
     setDragState(null);
   };
 
@@ -176,7 +206,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     if (e.button !== 0) return;
     didDragMove.current = false;
 
-    const startMin = timeToMinutes(entry.time!);
+    const startMin = entry.time ? timeToMinutes(entry.time) : START_HOUR * 60;
     const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
     const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
     const height = Math.max(20, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
@@ -217,30 +247,15 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-
-      const ds = dragStateRef.current;
-      if (!ds) { setDragState(null); return; }
-      if (didDragMove.current) {
-        const newStartMin = snapMinutes(START_HOUR * 60 + (ds.currentTop / HOUR_HEIGHT) * 60);
-        const duration = ds.origEndMinutes - ds.origMinutes;
-        const newEndMin = newStartMin + duration;
-        const newDate = dateStrs[ds.currentColIdx] || ds.origDateStr;
-        const updates: Partial<Entry> = {
-          time: minutesToTime(newStartMin),
-          endTime: minutesToTime(newEndMin),
-        };
-        if (newDate !== ds.origDateStr) updates.date = newDate;
-        onUpdateEntry(ds.entryId, updates);
-      }
+      handleDrop(dragStateRef.current);
       setDragState(null);
     };
 
     setDragState(state);
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [dateStrs, onUpdateEntry, getColIdxFromX]);
+  }, [dateStrs, handleDrop]);
 
-  // Register non-passive touch listeners
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -258,18 +273,22 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const nowTop = ((nowMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
 
-  // 마운트 시 현재 시간으로 자동 스크롤
   useEffect(() => {
     if (!dateStrs.includes(todayStr)) return;
     const timer = setTimeout(() => {
       const scroller = containerRef.current?.closest('[style*="overflow"]') as HTMLElement
         || containerRef.current?.parentElement?.parentElement;
-      if (scroller) {
-        scroller.scrollTop = Math.max(0, nowTop - 80);
-      }
+      if (scroller) scroller.scrollTop = Math.max(0, nowTop - 80);
     }, 50);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✕ 해제 핸들러
+  const handleUnassign = useCallback((entry: Entry) => {
+    const revert: Partial<Entry> = { time: undefined, endTime: undefined };
+    if (entry.originalDate) { revert.date = entry.originalDate; revert.originalDate = undefined; }
+    onUpdateEntry(entry.id, revert);
+  }, [onUpdateEntry]);
 
   return (
     <div ref={containerRef} style={{
@@ -278,6 +297,43 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
       userSelect: 'none', WebkitUserSelect: 'none',
       touchAction: dragState ? 'none' : 'auto',
     } as React.CSSProperties}>
+
+      {/* 미배치 항목 (밀린 항목 포함) */}
+      {untimedEntries.length > 0 && (
+        <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
+          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>
+            미배치 ({untimedEntries.length}건 · 끌어서 배치)
+          </div>
+          {untimedEntries.map(entry => {
+            const st = STATUS[entry.status] || STATUS.todo;
+            const isOverdue = entry.date < firstDateStr;
+            const isDragging = dragState?.entryId === entry.id;
+            return (
+              <div key={entry.id} style={{
+                display: 'flex', alignItems: 'center', gap: 4, padding: '4px 4px',
+                cursor: 'grab', borderRadius: 6,
+                background: isDragging ? `${C.blue}15` : isOverdue ? `${C.accent}08` : 'transparent',
+                border: `1px dashed ${isDragging ? C.blue : isOverdue ? `${C.accent}30` : 'transparent'}`,
+                marginBottom: 2, touchAction: 'none',
+              }}
+              onTouchStart={e => handleTouchStart(e, entry)}
+              onMouseDown={e => handleMouseDown(e, entry)}
+              onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 800, color: statusColor(entry.status), width: 14, textAlign: 'center' }}>{st.symbol}</span>
+                <span style={{ fontSize: 11, color: C.textPrimary, flex: 1,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.text}</span>
+                {isOverdue && (
+                  <span style={{ fontSize: 8, color: C.accent, background: `${C.accent}15`,
+                    padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>{entry.date.slice(5)}</span>
+                )}
+                <span style={{ fontSize: 9, color: C.textMuted }}>⠿</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div ref={gridRef} style={{ position: 'relative' }}>
         {/* Column headers */}
         <div style={{
@@ -330,9 +386,16 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                 }}>{hour.toString().padStart(2, '0')}</div>
                 {dates.map((_, ci) => (
                   <div key={ci} style={{
-                    flex: 1,
-                    borderLeft: `1px solid ${C.borderLight}`,
-                    position: 'relative',
+                    flex: 1, borderLeft: `1px solid ${C.borderLight}`,
+                    position: 'relative', cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    if (!dragState && !didDragMove.current) {
+                      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                      if (untimedEntries.length > 0) {
+                        setPlacePanel({ time: timeStr, colIdx: ci });
+                      }
+                    }
                   }}>
                     <div style={{
                       position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0,
@@ -349,12 +412,9 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
             const todayColIdx = dateStrs.indexOf(todayStr);
             return (
               <div style={{
-                position: 'absolute',
-                top: nowTop,
+                position: 'absolute', top: nowTop,
                 left: `calc(${TIME_LABEL_WIDTH}px + ${todayColIdx} * ${colWidth})`,
-                width: colWidth,
-                borderTop: `2px solid ${C.accent}`,
-                zIndex: 5,
+                width: colWidth, borderTop: `2px solid ${C.accent}`, zIndex: 5,
               }}>
                 <div style={{
                   position: 'absolute', left: -4, top: -4, width: 6, height: 6,
@@ -374,23 +434,18 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                 : ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
               const height = Math.max(20, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
               const colIdx = isDraggingThis ? dragState.currentColIdx : ci;
-              const st = STATUS[entry.status] || STATUS.todo;
               const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
               return (
                 <div key={entry.id}
                   style={{
-                    position: 'absolute',
-                    top,
+                    position: 'absolute', top,
                     left: `calc(${TIME_LABEL_WIDTH}px + ${colIdx} * ${colWidth} + 3px)`,
-                    width: `calc(${colWidth} - 6px)`,
-                    height,
+                    width: `calc(${colWidth} - 6px)`, height,
                     background: isDraggingThis ? `${statusColor(entry.status)}40` : statusColor(entry.status) + '20',
                     borderLeft: `3px solid ${statusColor(entry.status)}`,
                     borderRadius: '0 4px 4px 0',
-                    padding: '2px 4px',
-                    cursor: 'grab',
-                    overflow: 'hidden',
+                    padding: '2px 4px', cursor: 'grab', overflow: 'hidden',
                     zIndex: isDraggingThis ? 15 : 3,
                     opacity: isEntryDone ? 0.5 : 1,
                     transition: isDraggingThis ? 'none' : 'top 0.2s, left 0.2s',
@@ -400,12 +455,28 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                   onMouseDown={e => handleMouseDown(e, entry)}
                   onClick={() => { if (!didDragMove.current) onEdit(entry); }}
                 >
-                  <div style={{
-                    fontSize: 10, fontWeight: 600,
-                    color: isEntryDone ? C.textMuted : C.textPrimary,
-                    textDecoration: isEntryDone ? 'line-through' : 'none',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{entry.text}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <div style={{
+                      fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0,
+                      color: isEntryDone ? C.textMuted : C.textPrimary,
+                      textDecoration: isEntryDone ? 'line-through' : 'none',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{entry.text}</div>
+                    {/* ✕ 시간 해제 */}
+                    {!isDraggingThis && (
+                      <button style={{
+                        background: `${C.textMuted}18`, border: 'none', fontSize: 10, color: C.textMuted,
+                        cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
+                        minWidth: 20, minHeight: 20, borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                      onTouchStart={e => e.stopPropagation()}
+                      onMouseDown={e => e.stopPropagation()}
+                      onTouchEnd={e => { e.stopPropagation(); handleUnassign(entry); }}
+                      onClick={e => { e.stopPropagation(); handleUnassign(entry); }}
+                      >✕</button>
+                    )}
+                  </div>
                   {height > 24 && (
                     <div style={{ fontSize: 8, color: C.textMuted }}>
                       {entry.time}{entry.endTime ? `-${entry.endTime}` : ''}
@@ -419,28 +490,86 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
           {/* Drag ghost */}
           {dragState && (
             <div style={{
-              position: 'absolute',
-              top: dragState.currentTop,
+              position: 'absolute', top: dragState.currentTop,
               left: `calc(${TIME_LABEL_WIDTH}px + ${dragState.currentColIdx} * ${colWidth} + 3px)`,
-              width: `calc(${colWidth} - 6px)`,
-              height: dragState.currentHeight,
-              background: `${C.blue}25`,
-              borderLeft: `3px solid ${C.blue}`,
-              borderRadius: '0 4px 4px 0',
-              padding: '2px 6px',
-              zIndex: 20,
-              opacity: 0.7,
-              pointerEvents: 'none',
+              width: `calc(${colWidth} - 6px)`, height: dragState.currentHeight,
+              background: `${C.blue}25`, borderLeft: `3px solid ${C.blue}`,
+              borderRadius: '0 4px 4px 0', padding: '2px 6px',
+              zIndex: 20, opacity: 0.7, pointerEvents: 'none',
             }}>
               <div style={{ fontSize: 9, fontWeight: 600, color: C.blue }}>
                 {minutesToTime(snapMinutes(START_HOUR * 60 + (dragState.currentTop / HOUR_HEIGHT) * 60))}
-                {' → '}
-                {dateStrs[dragState.currentColIdx]?.slice(5)}
+                {' → '}{dateStrs[dragState.currentColIdx]?.slice(5)}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* 배치 선택 패널 */}
+      {placePanel && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={() => setPlacePanel(null)}>
+          <div style={{
+            background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+            maxHeight: '50vh', overflow: 'auto', padding: '0 20px 24px',
+            paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              padding: '14px 0 10px', borderBottom: `1px solid ${C.borderLight}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary }}>
+                {dateStrs[placePanel.colIdx]?.slice(5)} {placePanel.time}에 배치
+              </span>
+              <button style={{
+                background: 'none', border: 'none', fontSize: 16, color: C.textMuted,
+                cursor: 'pointer', padding: 4,
+              }} onClick={() => setPlacePanel(null)}>✕</button>
+            </div>
+            <div style={{ padding: '8px 0' }}>
+              {untimedEntries.map(entry => {
+                const st = STATUS[entry.status] || STATUS.todo;
+                const isOverdue = entry.date < firstDateStr;
+                return (
+                  <div key={entry.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                    cursor: 'pointer', background: isOverdue ? `${C.accent}06` : 'transparent',
+                  }} onClick={() => {
+                    const targetDate = dateStrs[placePanel.colIdx];
+                    const endHour = parseInt(placePanel.time.split(':')[0]) + 1;
+                    const updates: Partial<Entry> = {
+                      time: placePanel.time,
+                      endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
+                    };
+                    if (entry.date !== targetDate) {
+                      updates.originalDate = entry.originalDate || entry.date;
+                      updates.date = targetDate;
+                    }
+                    onUpdateEntry(entry.id, updates);
+                    setPlacePanel(null);
+                  }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(entry.status), width: 18, textAlign: 'center' }}>
+                      {st.symbol}
+                    </span>
+                    <span style={{ fontSize: 13, color: C.textPrimary, flex: 1,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {entry.text}
+                    </span>
+                    {isOverdue && (
+                      <span style={{ fontSize: 9, color: C.accent, background: `${C.accent}15`,
+                        padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>밀림 {entry.date.slice(5)}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
