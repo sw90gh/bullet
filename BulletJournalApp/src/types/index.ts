@@ -21,6 +21,7 @@ export interface Entry {
   recurring?: RecurringConfig;
   subtasks?: Subtask[];
   migrateCount?: number;
+  originalDate?: string;  // 밀린 항목 배치 시 원래 날짜 보관 (✕ 해제 시 복원용)
   updatedAt?: number;
 }
 

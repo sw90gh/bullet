@@ -376,10 +376,17 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         const newStartMin = snapMinutes(START_HOUR * 60 + (ds.currentTop / HOUR_HEIGHT) * 60);
         const duration = ds.origEndMinutes - ds.origMinutes;
         const newEndMin = newStartMin + duration;
-        onUpdateEntry(ds.entryId, {
+        const updates: Partial<Entry> = {
           time: minutesToTime(newStartMin),
           endTime: minutesToTime(newEndMin),
-        });
+        };
+        // 밀린 항목이면 date를 오늘로 변경 + originalDate 보관
+        const draggedEntry = entries.find(e => e.id === ds.entryId) || allEntries.find(e => e.id === ds.entryId);
+        if (draggedEntry && draggedEntry.date < dateStr) {
+          updates.originalDate = draggedEntry.originalDate || draggedEntry.date;
+          updates.date = dateStr;
+        }
+        onUpdateEntry(ds.entryId, updates);
       } else if (ds.type === 'resize') {
         const newEndMin = snapMinutes(ds.origMinutes + ((ds.currentHeight + 2) / HOUR_HEIGHT) * 60);
         onUpdateEntry(ds.entryId, {
@@ -719,11 +726,15 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchEnd={(e) => {
                           e.stopPropagation();
-                          onUpdateEntry(entry.id, { time: undefined, endTime: undefined });
+                          const revert: Partial<Entry> = { time: undefined, endTime: undefined };
+                          if (entry.originalDate) { revert.date = entry.originalDate; revert.originalDate = undefined; }
+                          onUpdateEntry(entry.id, revert);
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onUpdateEntry(entry.id, { time: undefined, endTime: undefined });
+                          const revert: Partial<Entry> = { time: undefined, endTime: undefined };
+                          if (entry.originalDate) { revert.date = entry.originalDate; revert.originalDate = undefined; }
+                          onUpdateEntry(entry.id, revert);
                         }}
                         >✕</button>
                       )}
@@ -795,11 +806,15 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       }} onClick={() => {
                         if (onUpdateEntry) {
                           const endHour = parseInt(placePanel.split(':')[0]) + 1;
-                          onUpdateEntry(entry.id, {
+                          const updates: Partial<Entry> = {
                             time: placePanel,
                             endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
-                            date: dateStr,
-                          });
+                          };
+                          if (entry.date !== dateStr) {
+                            updates.originalDate = entry.originalDate || entry.date;
+                            updates.date = dateStr;
+                          }
+                          onUpdateEntry(entry.id, updates);
                         }
                         setPlacePanel(null);
                       }}>
