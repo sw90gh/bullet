@@ -28,6 +28,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
   const isDragging = useRef(false);
+  const justClosedSwipe = useRef(false);
 
   // Close swipe when clicking/tapping outside this entry
   useEffect(() => {
@@ -85,7 +86,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
     if (diff < -60) setSwipeDir('left');
     else if (diff > 60) setSwipeDir(swipeDir === 'none' ? 'right' : 'none');
     else if (Math.abs(diff) < 10 && !isDragging.current) {
-      if (swipeDir !== 'none') setSwipeDir('none');
+      if (swipeDir !== 'none') {
+        // 스와이프 닫는 터치 → cycleStatus 차단
+        justClosedSwipe.current = true;
+        setTimeout(() => { justClosedSwipe.current = false; }, 300);
+        setSwipeDir('none');
+      }
     }
     pointerStart.current = null;
   }, [swipeDir, clearLongPress]);
@@ -190,7 +196,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           transition: 'transform 0.25s ease',
           userSelect: 'none',
         }}
-          onClick={() => swipeDir === 'none' && !isDragging.current && cycleStatus(entry.id)}
+          onClick={() => swipeDir === 'none' && !isDragging.current && !justClosedSwipe.current && cycleStatus(entry.id)}
         >
           {pr.symbol ? <span style={{ color: C.accent, fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
           {entry.type === 'event' ? (

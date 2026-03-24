@@ -54,11 +54,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
   const dayEntries = entries
     .filter(e => e.date === dateStr)
     .sort((a, b) => {
-      // 완료/취소 항목은 하단으로
-      const doneStatuses = new Set(['done', 'cancelled', 'migrated', 'migrated_up']);
-      const aDone = doneStatuses.has(a.status) ? 1 : 0;
-      const bDone = doneStatuses.has(b.status) ? 1 : 0;
-      if (aDone !== bDone) return aDone - bDone;
+      // 우선순위 정렬 (긴급→중요→없음), 같으면 생성순
       const po: Record<string, number> = { urgent: 0, important: 1, none: 2 };
       if (po[a.priority || 'none'] !== po[b.priority || 'none'])
         return po[a.priority || 'none'] - po[b.priority || 'none'];
