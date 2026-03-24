@@ -87,14 +87,15 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
     else if (diff > 60) setSwipeDir(swipeDir === 'none' ? 'right' : 'none');
     else if (Math.abs(diff) < 10 && !isDragging.current) {
       if (swipeDir !== 'none') {
-        // 스와이프 닫는 터치 → cycleStatus 차단
-        justClosedSwipe.current = true;
-        setTimeout(() => { justClosedSwipe.current = false; }, 300);
+        // 스와이프 닫기만 — 상태 변경 안 함
         setSwipeDir('none');
+      } else {
+        // 스와이프 없는 상태에서 탭 → 상태 순환
+        cycleStatus(entry.id);
       }
     }
     pointerStart.current = null;
-  }, [swipeDir, clearLongPress]);
+  }, [swipeDir, clearLongPress, cycleStatus, entry.id]);
 
   // Touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
@@ -196,7 +197,6 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
           transition: 'transform 0.25s ease',
           userSelect: 'none',
         }}
-          onClick={() => swipeDir === 'none' && !isDragging.current && !justClosedSwipe.current && cycleStatus(entry.id)}
         >
           {pr.symbol ? <span style={{ color: C.accent, fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
           {entry.type === 'event' ? (
@@ -232,7 +232,6 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         transition: 'transform 0.25s ease',
         userSelect: 'none',
       }}
-        onClick={() => swipeDir === 'none' && !isDragging.current && cycleStatus(entry.id)}
       >
         {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? C.accent : C.amber }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (

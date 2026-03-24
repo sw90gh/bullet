@@ -482,6 +482,7 @@ export default function App() {
               status: 'todo',
               priority: 'none',
               date: month != null ? `${year}-${pad(month + 1)}-01` : `${year}-01-01`,
+              linkedEntryId: migrateTarget.entry.id,
             } as Entry);
             setMigrateTarget(null);
           }}

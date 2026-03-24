@@ -22,6 +22,7 @@ export interface Entry {
   subtasks?: Subtask[];
   migrateCount?: number;
   originalDate?: string;  // 밀린 항목 배치 시 원래 날짜 보관 (✕ 해제 시 복원용)
+  linkedEntryId?: string; // 상위 이관 시 원본 항목 ID
   updatedAt?: number;
 }
 

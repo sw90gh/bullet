@@ -44,6 +44,34 @@ export function MonthlyScreen({
 
   return (
     <div>
+      {/* Monthly Goals — 최상단 */}
+      <div style={{ marginBottom: 8 }}>
+        <div style={{
+          fontSize: 12, fontWeight: 700, color: C.blue,
+          padding: '6px 2px 4px', borderBottom: `1px solid ${C.blue}40`,
+          marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span>월간 목표 ({monthGoals.length}건)</span>
+          <button style={{
+            background: 'none', border: `1px solid ${C.border}`, color: C.textMuted,
+            width: 20, height: 20, borderRadius: '50%', fontSize: 14, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+            fontFamily: '-apple-system, sans-serif',
+          }} onClick={onAddGoal}>+</button>
+        </div>
+        {monthGoals.length === 0 ? (
+          <p style={{ fontSize: 11, color: C.textMuted, padding: '4px 4px', fontStyle: 'italic' }}>스와이프 → 상위 이관으로 목표를 등록하세요</p>
+        ) : (
+          monthGoals.map(entry => (
+            <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
+              onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+              onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+              onChangePriority={onChangePriority} />
+          ))
+        )}
+      </div>
+
       {/* Mini Calendar */}
       <div style={styles.miniCal}>
         <div style={styles.miniCalHeader as React.CSSProperties}>
@@ -132,22 +160,7 @@ export function MonthlyScreen({
         ))
       )}
 
-      {/* Monthly Goals */}
-      <div style={{ ...styles.sectionHeader as React.CSSProperties, marginTop: 20 }}>
-        <span style={styles.sectionTitle}>월간 목표</span>
-        <button style={styles.sectionAdd as React.CSSProperties} onClick={onAddGoal}>+</button>
-      </div>
-      {monthGoals.length === 0 ? (
-        <p style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: 12 }}>월간 목표를 추가해보세요</p>
-      ) : (
-        monthGoals.map(entry => (
-          <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
-            onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
-            onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-            onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-            onChangePriority={onChangePriority} />
-        ))
-      )}
+      {/* Monthly Goals — 상단으로 이동됨 */}
     </div>
   );
 }
