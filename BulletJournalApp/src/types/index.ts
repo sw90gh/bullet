@@ -20,6 +20,7 @@ export interface Entry {
   notionLastSync?: number;
   recurring?: RecurringConfig;
   subtasks?: Subtask[];
+  migrateCount?: number;
   updatedAt?: number;
 }
 

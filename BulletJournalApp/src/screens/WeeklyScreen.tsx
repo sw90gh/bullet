@@ -63,6 +63,39 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
 
+      {/* 밀린 항목 */}
+      {(() => {
+        const overdue = entries.filter(e => {
+          if (!e.date || e.date >= todayStr) return false;
+          if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
+          return true;
+        }).sort((a, b) => {
+          const mc = (b.migrateCount || 0) - (a.migrateCount || 0);
+          if (mc !== 0) return mc;
+          return a.date.localeCompare(b.date);
+        });
+        if (overdue.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{
+              fontSize: 12, fontWeight: 700, color: C.accent,
+              padding: '6px 2px 4px', borderBottom: `1px solid ${C.accent}40`,
+              marginBottom: 4,
+            }}>
+              밀린 항목 ({overdue.length}건)
+            </div>
+            {overdue.map(entry => (
+              <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
+                onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+                onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+                onChangePriority={onChangePriority}
+                compact />
+            ))}
+          </div>
+        );
+      })()}
+
       {viewMode === 'list' ? (
         // 기존 목록 뷰
         <div>

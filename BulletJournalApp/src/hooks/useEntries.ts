@@ -64,6 +64,7 @@ export function useEntries() {
         startDate: targetDate,
         endDate: original.endDate ? targetDate : undefined,
         status: 'todo' as EntryStatus,
+        migrateCount: (original.migrateCount || 0) + 1,
         createdAt: now,
         updatedAt: now,
       };

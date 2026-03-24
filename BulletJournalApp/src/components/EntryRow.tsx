@@ -255,6 +255,14 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             color: isStrike ? C.textMuted : C.textPrimary,
           }}>{entry.text}</span>
           {entry.time && <span style={styles.timeTag}>{entry.time}</span>}
+          {(entry.migrateCount || 0) >= 2 && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, marginLeft: 4,
+              padding: '1px 5px', borderRadius: 3,
+              background: (entry.migrateCount || 0) >= 3 ? `${C.accent}20` : `${C.amber}20`,
+              color: (entry.migrateCount || 0) >= 3 ? C.accent : C.amber,
+            }}>{entry.migrateCount}회 이관{(entry.migrateCount || 0) >= 3 ? '!' : ''}</span>
+          )}
 
           {entry.tags && entry.tags.length > 0 && (
             <div style={{ marginTop: 2 }}>

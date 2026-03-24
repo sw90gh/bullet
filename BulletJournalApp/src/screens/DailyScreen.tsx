@@ -110,6 +110,18 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     return daysBetween(todayStr, e.endDate) <= 3;
   }).sort((a, b) => daysBetween(todayStr, a.endDate!) - daysBetween(todayStr, b.endDate!)) : [];
 
+  // 밀린 항목: 오늘보다 이전 날짜인데 미완료인 항목
+  const overdueEntries = isToday ? allEntries.filter(e => {
+    if (!e.date || e.date >= todayStr) return false;
+    if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
+    return true;
+  }).sort((a, b) => {
+    // 이관 횟수 높은 순, 같으면 날짜 오래된 순
+    const mc = (b.migrateCount || 0) - (a.migrateCount || 0);
+    if (mc !== 0) return mc;
+    return a.date.localeCompare(b.date);
+  }) : [];
+
   const getDdayLabel = (endDate: string) => {
     const d = daysBetween(todayStr, endDate);
     if (d < 0) return { label: `D+${Math.abs(d)}`, color: '#c0583f', bg: '#c0583f15' };
@@ -447,38 +459,55 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
 
+      {/* 밀린 항목 */}
+      {overdueEntries.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 700, color: C.accent,
+            padding: '6px 2px 4px', borderBottom: `1px solid ${C.accent}40`,
+            marginBottom: 4,
+          }}>
+            밀린 항목 ({overdueEntries.length}건)
+          </div>
+          {overdueEntries.map(entry => (
+            <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
+              onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+              onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+              onChangePriority={onChangePriority} />
+          ))}
+        </div>
+      )}
+
       {/* 마감 임박 */}
       {urgentEntries.length > 0 && (
-        <div style={{
-          background: C.bgWhite, borderRadius: 12, padding: '10px 14px', marginBottom: 10,
-          boxShadow: `0 1px 3px ${C.cardShadow}`, border: `1px solid ${C.accent}20`,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.accent, marginBottom: 6 }}>
-            ⏰ 마감 임박 ({urgentEntries.length})
+        <div style={{ marginBottom: 8 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 700, color: C.amber,
+            padding: '6px 2px 4px', borderBottom: `1px solid ${C.amber}40`,
+            marginBottom: 4,
+          }}>
+            마감 임박 ({urgentEntries.length}건)
           </div>
           {urgentEntries.map(entry => {
             const dday = getDdayLabel(entry.endDate!);
             return (
               <div key={entry.id}>
                 <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0 2px',
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '4px 2px 2px',
                 }}>
                   <span style={{
                     fontSize: 10, fontWeight: 700, color: dday.color,
                     background: dday.bg, padding: '2px 6px', borderRadius: 4,
                     flexShrink: 0, minWidth: 36, textAlign: 'center',
                   }}>{dday.label}</span>
-                  <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>~{entry.endDate?.slice(5)}</span>
+                  <span style={{ fontSize: 10, color: C.textMuted }}>~{entry.endDate?.slice(5)}</span>
                 </div>
-                <EntryRow
-                  entry={entry}
-                  cycleStatus={cycleStatus}
-                  onEdit={() => onEdit(entry)}
-                  onDelete={() => onDelete(entry.id)}
+                <EntryRow entry={entry} cycleStatus={cycleStatus}
+                  onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
                   onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
                   onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-                  onChangePriority={onChangePriority}
-                />
+                  onChangePriority={onChangePriority} />
               </div>
             );
           })}
