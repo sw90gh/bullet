@@ -705,11 +705,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                           minWidth: 28, minHeight: 28, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => {
+                          e.stopPropagation();
+                          onUpdateEntry(entry.id, { time: undefined, endTime: undefined });
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           onUpdateEntry(entry.id, { time: undefined, endTime: undefined });
                         }}
-                        onTouchEnd={(e) => e.stopPropagation()}
                         >✕</button>
                       )}
                     </div>
