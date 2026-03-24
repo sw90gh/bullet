@@ -90,7 +90,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
                 onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
                 onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
                 onChangePriority={onChangePriority}
-                compact />
+                />
             ))}
           </div>
         );
@@ -145,7 +145,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
                       onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
                       onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
                       onChangePriority={onChangePriority}
-                      compact />
+                      />
                   ))
                 )}
               </div>
