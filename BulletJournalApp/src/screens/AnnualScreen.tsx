@@ -35,13 +35,18 @@ export function AnnualScreen({ year, entries, cycleStatus, onAdd, onAddGoal, onE
       {yearGoals.length === 0 ? (
         <p style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: 16 }}>연간 목표를 추가해보세요</p>
       ) : (
-        yearGoals.map(entry => (
-          <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
-            onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
-            onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-            onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-            onChangePriority={onChangePriority} />
-        ))
+        yearGoals.map(entry => {
+          const linked = entries.filter(e => e.linkedGoalId === entry.id);
+          const doneCount = linked.filter(e => e.status === 'done').length;
+          return (
+            <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
+              onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
+              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+              onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+              onChangePriority={onChangePriority}
+              goalProgress={(linked.length > 0 || entry.targetCount) ? { done: doneCount, total: linked.length, target: entry.targetCount || 0 } : undefined} />
+          );
+        })
       )}
 
       {/* 12 Month Grid */}

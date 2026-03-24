@@ -62,13 +62,18 @@ export function MonthlyScreen({
         {monthGoals.length === 0 ? (
           <p style={{ fontSize: 11, color: C.textMuted, padding: '4px 4px', fontStyle: 'italic' }}>스와이프 → 상위 이관으로 목표를 등록하세요</p>
         ) : (
-          monthGoals.map(entry => (
+          monthGoals.map(entry => {
+            const linked = entries.filter(e => e.linkedGoalId === entry.id);
+            const doneCount = linked.filter(e => e.status === 'done').length;
+            return (
             <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
               onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
               onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
               onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+              goalProgress={(linked.length > 0 || entry.targetCount) ? { done: doneCount, total: linked.length, target: entry.targetCount || 0 } : undefined}
               onChangePriority={onChangePriority} />
-          ))
+            );
+          })
         )}
       </div>
 

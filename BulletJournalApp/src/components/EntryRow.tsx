@@ -12,11 +12,12 @@ interface EntryRowProps {
   onMigrateUp?: () => void;
   onChangePriority?: (id: string, priority: EntryPriority) => void;
   compact?: boolean;
+  goalProgress?: { done: number; total: number; target: number }; // 목표 진척도
 }
 
 type SwipeDir = 'none' | 'left' | 'right';
 
-export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact }: EntryRowProps) {
+export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact, goalProgress }: EntryRowProps) {
   const { styles, C, isDark, statusColor } = useTheme();
   const [swipeDir, setSwipeDir] = useState<SwipeDir>('none');
   const st = STATUS[entry.status] || STATUS.todo;
@@ -290,6 +291,22 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
                   width: `${(entry.subtasks.filter(s => s.done).length / entry.subtasks.length) * 100}%`,
                 }} />
               </div>
+            </div>
+          )}
+          {goalProgress && (
+            <div style={{ fontSize: 10, color: C.blue, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>{goalProgress.done}/{goalProgress.target || goalProgress.total}</span>
+              <div style={{
+                flex: 1, maxWidth: 80, height: 4, borderRadius: 2, background: C.borderLight, overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: 2, background: C.blue,
+                  width: `${goalProgress.target > 0 ? Math.min(100, (goalProgress.done / goalProgress.target) * 100) : (goalProgress.total > 0 ? (goalProgress.done / goalProgress.total) * 100 : 0)}%`,
+                }} />
+              </div>
+              {goalProgress.target > 0 && (
+                <span>{Math.round((goalProgress.done / goalProgress.target) * 100)}%</span>
+              )}
             </div>
           )}
         </div>

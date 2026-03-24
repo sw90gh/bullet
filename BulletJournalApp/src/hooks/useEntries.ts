@@ -25,8 +25,8 @@ export function useEntries() {
     if (loaded) saveData(STORAGE_KEY, entries);
   }, [entries, loaded]);
 
-  const addEntry = useCallback((entry: Omit<Entry, 'id' | 'createdAt'>) => {
-    setEntries(prev => [...prev, { ...entry, id: uid(), createdAt: Date.now(), updatedAt: Date.now() } as Entry]);
+  const addEntry = useCallback((entry: Partial<Entry>) => {
+    setEntries(prev => [...prev, { ...entry, id: (entry as any).id || uid(), createdAt: (entry as any).createdAt || Date.now(), updatedAt: Date.now() } as Entry]);
   }, []);
 
   const updateEntry = useCallback((id: string, updates: Partial<Entry>) => {

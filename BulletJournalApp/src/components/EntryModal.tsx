@@ -12,6 +12,7 @@ interface EntryModalProps {
   onDelete?: (id: string) => void;
   onDuplicate?: (data: Partial<Entry>) => void;
   allTags?: string[];
+  allEntries?: Entry[];  // 목표 연결용
 }
 
 const ENTRY_TYPES = {
@@ -20,7 +21,7 @@ const ENTRY_TYPES = {
   note:  TYPES.note,
 };
 
-export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, allTags = [] }: EntryModalProps) {
+export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, allTags = [], allEntries = [] }: EntryModalProps) {
   const { styles, C } = useTheme();
   const existing = modal.entry;
 
@@ -39,8 +40,11 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const [recurringType, setRecurringType] = useState<string>(existing?.recurring?.type || 'none');
   const [recurringInterval, setRecurringInterval] = useState<number>(existing?.recurring?.interval || 1);
   const [recurringEndDate, setRecurringEndDate] = useState<string>(existing?.recurring?.endDate || '');
+  const [targetCount, setTargetCount] = useState<number>(existing?.targetCount || 0);
+  const [linkedGoalId, setLinkedGoalId] = useState<string>(existing?.linkedGoalId || '');
 
   const isGoalType = type === 'goal-yearly' || type === 'goal-monthly';
+  const activeGoals = allEntries.filter(e => (e.type === 'goal-yearly' || e.type === 'goal-monthly') && e.status !== 'done' && e.status !== 'cancelled');
 
   const handleSave = () => {
     if (!text.trim()) return;
@@ -62,6 +66,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       memo: memo.trim() || undefined,
       subtasks: subtasks.length > 0 ? subtasks : undefined,
       recurring: isGoalType ? undefined : recurring,
+      targetCount: isGoalType && targetCount > 0 ? targetCount : undefined,
+      linkedGoalId: !isGoalType && linkedGoalId ? linkedGoalId : undefined,
     });
   };
 
@@ -143,11 +149,13 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                     <span style={{ marginRight: 3 }}>{v.symbol}</span>{v.label}
                   </button>
                 ))}
-                <button
-                  style={{ ...styles.chip, ...(isGoalType ? styles.chipActive : {}), padding: '4px 6px', fontSize: 10 }}
-                  onClick={() => setType(type === 'goal-monthly' ? 'goal-monthly' : 'goal-yearly')}>
-                  <span style={{ marginRight: 3 }}>◎</span>목표
-                </button>
+                {!modal.hideGoalType && (
+                  <button
+                    style={{ ...styles.chip, ...(isGoalType ? styles.chipActive : {}), padding: '4px 6px', fontSize: 10 }}
+                    onClick={() => setType(type === 'goal-monthly' ? 'goal-monthly' : 'goal-yearly')}>
+                    <span style={{ marginRight: 3 }}>◎</span>목표
+                  </button>
+                )}
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -315,6 +323,42 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
               placeholder="세부 내용이나 참고사항"
               onChange={e => setMemo(e.target.value)} />
           </div>
+
+          {/* 목표: 달성 목표 횟수 */}
+          {isGoalType && (
+            <div style={{ marginTop: 4 }}>
+              <label style={labelSmall}>달성 목표 횟수 (0=횟수 무관)</label>
+              <input type="number" style={inputSmall} value={targetCount} min={0} max={9999}
+                placeholder="예: 40"
+                onChange={e => setTargetCount(Math.max(0, parseInt(e.target.value) || 0))} />
+              {modal.mode === 'edit' && existing && (() => {
+                const linked = allEntries.filter(e => e.linkedGoalId === existing.id);
+                const doneCount = linked.filter(e => e.status === 'done').length;
+                return linked.length > 0 ? (
+                  <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 4 }}>
+                    연결된 항목: {linked.length}건 ({doneCount}건 완료)
+                    {targetCount > 0 && ` — ${Math.round((doneCount / targetCount) * 100)}% 달성`}
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
+
+          {/* 일반 항목: 목표 연결 */}
+          {!isGoalType && activeGoals.length > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <label style={labelSmall}>목표 연결</label>
+              <select style={{ ...inputSmall, height: 34 }} value={linkedGoalId}
+                onChange={e => setLinkedGoalId(e.target.value)}>
+                <option value="">연결 안 함</option>
+                {activeGoals.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.type === 'goal-yearly' ? '연간' : '월간'}: {g.text}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* 서브태스크 (체크리스트) */}
           <div style={{ marginTop: 4 }}>

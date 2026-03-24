@@ -20,7 +20,7 @@ import { useEntries } from './hooks/useEntries';
 import { useAuth } from './hooks/useAuth';
 import { useFirestoreSync } from './hooks/useFirestoreSync';
 import { useNotifications } from './hooks/useNotifications';
-import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
+import { formatDateKey, pad, getTodayStr, daysBetween, uid as genId } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
 import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime, migrateGoalsToEntries } from './utils/storage';
 import { cleanupFirestoreGoals } from './utils/firestore';
@@ -314,7 +314,7 @@ export default function App() {
           <AllScreen
             entries={filteredEntries}
             cycleStatus={cycleStatus}
-            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
+            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), hideGoalType: true })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -329,8 +329,8 @@ export default function App() {
             entries={filteredEntries}
             allEntries={entries}
             cycleStatus={cycleStatus}
-            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
-            onAddAtTime={(time) => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultTime: time })}
+            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), hideGoalType: true })}
+            onAddAtTime={(time) => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultTime: time, hideGoalType: true })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -345,7 +345,7 @@ export default function App() {
             date={curDate}
             entries={filteredEntries}
             cycleStatus={cycleStatus}
-            onAdd={(dateStr) => setModal({ mode: 'add', scope: 'daily', date: dateStr })}
+            onAdd={(dateStr) => setModal({ mode: 'add', scope: 'daily', date: dateStr, hideGoalType: true })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -364,7 +364,7 @@ export default function App() {
             entries={filteredEntries}
             cycleStatus={cycleStatus}
             onAddEntry={() => setModal({ mode: 'add', scope: 'monthly', date: `${curY}-${pad(curM + 1)}` })}
-            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-${pad(curM + 1)}-01` })}
+            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-${pad(curM + 1)}-01`, defaultType: 'goal-monthly' })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -381,7 +381,7 @@ export default function App() {
             entries={filteredEntries}
             cycleStatus={cycleStatus}
             onAdd={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-01-01`, year: curY } as ModalState & { year: number })}
-            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-01-01` })}
+            onAddGoal={() => setModal({ mode: 'add', scope: 'daily', date: `${curY}-01-01`, defaultType: 'goal-yearly' })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -424,7 +424,8 @@ export default function App() {
           const defaultType = view === 'annual' ? 'goal-yearly' as const
             : view === 'notes' ? 'note' as const
             : undefined;
-          setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultType });
+          const hideGoalType = view !== 'annual' && view !== 'monthly';
+          setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultType, hideGoalType });
         }}>+</button>
       )}
 
@@ -434,6 +435,7 @@ export default function App() {
           modal={modal}
           onClose={() => setModal(null)}
           allTags={allTags}
+          allEntries={entries}
           onSaveEntry={(data) => {
             if (modal.mode === 'edit' && modal.entry) {
               updateEntry(modal.entry.id, data);
@@ -475,14 +477,19 @@ export default function App() {
             setMigrateTarget(null);
           }}
           onMigrateUp={(goalText, year, month) => {
+            const goalId = genId();
             migrateUpEntry(migrateTarget.entry.id);
+            // 원본 항목에 목표 연결
+            updateEntry(migrateTarget.entry.id, { linkedGoalId: goalId });
             addEntry({
+              id: goalId,
               text: goalText,
               type: month != null ? 'goal-monthly' : 'goal-yearly',
               status: 'todo',
               priority: 'none',
               date: month != null ? `${year}-${pad(month + 1)}-01` : `${year}-01-01`,
               linkedEntryId: migrateTarget.entry.id,
+              createdAt: Date.now(),
             } as Entry);
             setMigrateTarget(null);
           }}

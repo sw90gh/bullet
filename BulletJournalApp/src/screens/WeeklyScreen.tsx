@@ -162,7 +162,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
                 background: 'none', border: 'none', fontSize: 20, color: C.textSecondary,
                 cursor: 'pointer', padding: '4px 8px', opacity: timelineOffset > 0 ? 1 : 0.3,
               }}
-              onClick={() => setTimelineOffset(Math.max(0, timelineOffset - 3))}
+              onClick={() => setTimelineOffset(Math.max(0, timelineOffset - 1))}
               disabled={timelineOffset <= 0}
             >‹</button>
             <span style={{ fontSize: 12, color: C.textSecondary, minWidth: 120, textAlign: 'center' }}>
@@ -175,7 +175,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
                 background: 'none', border: 'none', fontSize: 20, color: C.textSecondary,
                 cursor: 'pointer', padding: '4px 8px', opacity: timelineOffset < 4 ? 1 : 0.3,
               }}
-              onClick={() => setTimelineOffset(Math.min(4, timelineOffset + 3))}
+              onClick={() => setTimelineOffset(Math.min(4, timelineOffset + 1))}
               disabled={timelineOffset >= 4}
             >›</button>
           </div>
