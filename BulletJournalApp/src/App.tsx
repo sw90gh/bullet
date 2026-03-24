@@ -212,7 +212,7 @@ export default function App() {
         ]).map(t => (
           <button key={t.key}
             style={{ ...styles.tab, ...(view === t.key ? styles.tabActive : {}) }}
-            onClick={() => setView(t.key)}>
+            onClick={(e) => { setView(t.key); (e.target as HTMLElement).blur(); }}>
             {t.label}
           </button>
         ))}
