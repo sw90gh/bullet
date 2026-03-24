@@ -45,6 +45,15 @@ export const STATUS = {
   cancelled:   { symbol: '·', label: '취소',     color: '#b8a99a', strike: true },
 } as const;
 
+export const STATUS_DARK: Record<string, string> = {
+  todo:        '#e8e0d4',
+  done:        '#6acc5a',
+  progress:    '#e0a85f',
+  migrated:    '#6abadf',
+  migrated_up: '#6abadf',
+  cancelled:   '#8a7b6c',
+} as const;
+
 export const TYPES = {
   task:  { symbol: '·', label: '할 일' },
   event: { symbol: '○', label: '일정' },

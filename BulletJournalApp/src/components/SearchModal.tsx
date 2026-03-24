@@ -10,7 +10,7 @@ interface SearchModalProps {
 }
 
 export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
-  const { styles, C } = useTheme();
+  const { styles, C, statusColor } = useTheme();
   const [query, setQuery] = useState('');
 
   const results = useMemo(() => {
@@ -66,7 +66,7 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
                 cursor: 'pointer',
               }} onClick={() => { onEdit(entry); onClose(); }}>
                 <span style={{
-                  fontSize: 14, fontWeight: 800, color: st.color,
+                  fontSize: 14, fontWeight: 800, color: statusColor(entry.status),
                   width: 18, textAlign: 'center', flexShrink: 0,
                 }}>{st.symbol}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -87,7 +87,7 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
                   </div>
                 </div>
                 <span style={{
-                  fontSize: 9, color: st.color, background: st.color + '18',
+                  fontSize: 9, color: statusColor(entry.status), background: statusColor(entry.status) + '18',
                   padding: '2px 6px', borderRadius: 4, flexShrink: 0,
                 }}>{st.label}</span>
               </div>

@@ -17,7 +17,7 @@ const ROW_HEIGHT = 36;
 const LABEL_WIDTH = 110;
 
 export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) {
-  const { styles, C } = useTheme();
+  const { styles, C, statusColor } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<GanttRange>('month');
   const todayStr = formatDateKey(new Date());
@@ -110,8 +110,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
   };
 
   const getBarColor = (entry: Entry) => {
-    const st = STATUS[entry.status];
-    return st ? st.color : C.textPrimary;
+    return statusColor(entry.status);
   };
 
   const [hideInactive, setHideInactive] = useState(false);
@@ -152,7 +151,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         {Object.entries(STATUS).map(([k, v]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: v.color,
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: statusColor(k),
               opacity: k === 'cancelled' || k === 'migrated' || k === 'migrated_up' ? 0.3 : k === 'done' ? 0.7 : 1 }} />
             <span style={{ color: C.textSecondary }}>{v.label}</span>
           </div>

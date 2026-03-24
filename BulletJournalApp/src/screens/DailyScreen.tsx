@@ -47,7 +47,7 @@ function yToMinutes(y: number): number {
 }
 
 export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry }: DailyScreenProps) {
-  const { styles, isDark, C } = useTheme();
+  const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
@@ -511,7 +511,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                   onMouseDown={e => handleUntimedMouseDown(e, entry)}
                   onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 800, color: st.color, width: 16, textAlign: 'center' }}>{st.symbol}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: statusColor(entry.status), width: 16, textAlign: 'center' }}>{st.symbol}</span>
                     <span style={{
                       fontSize: 12, color: C.textPrimary, flex: 1,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -592,7 +592,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                 const height = isDraggingThis && dragState.type === 'resize'
                   ? dragState.currentHeight
                   : Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
-                const st = STATUS[entry.status] || STATUS.todo;
+                const stColor = statusColor(entry.status);
                 const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
                 // Overlap layout: each column takes proportional width, later columns overlap earlier ones
@@ -608,8 +608,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
                       right: 4,
                       width: totalCols > 1 ? `calc(${widthPct}% - 8px)` : undefined,
                       top, height,
-                      background: isDraggingThis ? `${st.color}40` : st.color + '20',
-                      borderLeft: `3px solid ${st.color}`,
+                      background: isDraggingThis ? `${stColor}40` : stColor + '20',
+                      borderLeft: `3px solid ${stColor}`,
                       borderRadius: '0 6px 6px 0',
                       padding: '3px 8px',
                       cursor: 'grab',

@@ -17,7 +17,7 @@ interface EntryRowProps {
 type SwipeDir = 'none' | 'left' | 'right';
 
 export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact }: EntryRowProps) {
-  const { styles, C } = useTheme();
+  const { styles, C, isDark, statusColor } = useTheme();
   const [swipeDir, setSwipeDir] = useState<SwipeDir>('none');
   const st = STATUS[entry.status] || STATUS.todo;
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
@@ -121,8 +121,8 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const priorityBtnStyle = (key: string, active: boolean): React.CSSProperties => ({
     flex: 1, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
     fontFamily: '-apple-system, sans-serif',
-    background: active ? '#2c2416' : key === 'urgent' ? '#c0583f' : key === 'important' ? '#c0883f' : '#b8a99a',
-    color: 'white',
+    background: active ? C.primary : key === 'urgent' ? C.accent : key === 'important' ? C.amber : C.textMuted,
+    color: isDark ? '#1a1a1a' : 'white',
   });
 
   // 스와이프 버튼 영역 (compact / full 공통)
@@ -197,7 +197,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             <span style={{ color: C.accent, fontSize: 12, marginRight: 6 }}>○</span>
           ) : (
             <span style={{
-              color: st.color, fontSize: 14, fontWeight: 800, marginRight: 6,
+              color: statusColor(entry.status), fontSize: 14, fontWeight: 800, marginRight: 6,
               textDecoration: ('strike' in st && st.strike) ? 'line-through' : 'none',
             }}>{st.symbol}</span>
           )}
@@ -228,15 +228,15 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       }}
         onClick={() => swipeDir === 'none' && !isDragging.current && cycleStatus(entry.id)}
       >
-        {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? '#c0583f' : '#c0883f' }}>{pr.symbol}</span> : null}
+        {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? C.accent : C.amber }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (
-          <span style={{ ...styles.entrySym, color: '#c0583f', fontSize: 18 }}>○</span>
+          <span style={{ ...styles.entrySym, color: C.accent, fontSize: 18 }}>○</span>
         ) : entry.type === 'note' ? (
-          <span style={{ ...styles.entrySym, color: '#6b5d4d', fontSize: 16 }}>—</span>
+          <span style={{ ...styles.entrySym, color: C.textSecondary, fontSize: 16 }}>—</span>
         ) : (
           <span style={{
             ...styles.entrySym,
-            color: st.color,
+            color: statusColor(entry.status),
             textDecoration: ('strike' in st && st.strike) ? 'line-through' : 'none',
             fontSize: entry.status === 'done' ? 20 : 22,
             fontWeight: 800,
@@ -254,20 +254,20 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
             <div style={{ marginTop: 2 }}>
               {entry.tags.map((tag, i) => (
                 <span key={i} style={{
-                  fontSize: 10, color: '#3a7ca5', background: '#3a7ca510',
+                  fontSize: 10, color: C.blue, background: `${C.blue}10`,
                   padding: '1px 5px', borderRadius: 3, marginRight: 3,
                 }}>#{tag}</span>
               ))}
             </div>
           )}
           {entry.memo && (
-            <div style={{ fontSize: 11, color: '#b8a99a', marginTop: 2, lineHeight: 1.4,
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 1.4,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {entry.memo}
             </div>
           )}
         </div>
-        <span style={{ ...styles.statusBadge, background: st.color + '18', color: st.color }}>
+        <span style={{ ...styles.statusBadge, background: statusColor(entry.status) + '18', color: statusColor(entry.status) }}>
           {st.label}
         </span>
       </div>
