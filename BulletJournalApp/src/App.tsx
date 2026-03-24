@@ -23,6 +23,7 @@ import { useNotifications } from './hooks/useNotifications';
 import { formatDateKey, pad, getTodayStr, daysBetween } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
 import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime, migrateGoalsToEntries } from './utils/storage';
+import { cleanupFirestoreGoals } from './utils/firestore';
 import { ViewType, ModalState, Entry, EntryPriority } from './types';
 
 type DarkModePref = 'system' | 'light' | 'dark';
@@ -162,6 +163,8 @@ export default function App() {
     if (migrated.length > 0) {
       migrated.forEach(e => addEntry(e));
     }
+    // Firestore goals 컬렉션 정리 (로그인 상태)
+    if (user) cleanupFirestoreGoals(user.uid);
   }, [entriesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 자동 백업 (1시간마다)
@@ -327,6 +330,7 @@ export default function App() {
             allEntries={entries}
             cycleStatus={cycleStatus}
             onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) })}
+            onAddAtTime={(time) => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultTime: time })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
             onDelete={(id) => setDeleteConfirm(id)}
             onMigrate={(e) => setMigrateTarget({ entry: e, type: 'migrated' })}
@@ -417,7 +421,10 @@ export default function App() {
       {/* FAB */}
       {view !== 'gantt' && view !== 'stats' && (
         <button style={styles.fab as React.CSSProperties} onClick={() => {
-          setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate) });
+          const defaultType = view === 'annual' ? 'goal-yearly' as const
+            : view === 'notes' ? 'note' as const
+            : undefined;
+          setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultType });
         }}>+</button>
       )}
 
@@ -437,6 +444,10 @@ export default function App() {
           }}
           onDelete={(id) => {
             deleteEntry(id);
+            setModal(null);
+          }}
+          onDuplicate={(data) => {
+            addEntry(data as Entry);
             setModal(null);
           }}
         />
@@ -483,6 +494,8 @@ export default function App() {
           entries={entries}
           onClose={() => setShowSearch(false)}
           onEdit={(e) => { setModal({ mode: 'edit', entry: e }); setShowSearch(false); }}
+          cycleStatus={cycleStatus}
+          onDelete={(id) => deleteEntry(id)}
         />
       )}
 

@@ -12,6 +12,7 @@ interface DailyScreenProps {
   allEntries: Entry[];
   cycleStatus: (id: string) => void;
   onAdd: () => void;
+  onAddAtTime?: (time: string) => void;
   onEdit: (entry: Entry) => void;
   onDelete: (id: string) => void;
   onMigrate?: (entry: Entry) => void;
@@ -46,7 +47,7 @@ function yToMinutes(y: number): number {
   return snapMinutes(Math.max(START_HOUR * 60, Math.min(END_HOUR * 60, raw)));
 }
 
-export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry }: DailyScreenProps) {
+export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry }: DailyScreenProps) {
   const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const dateStr = formatDateKey(date);
@@ -556,8 +557,14 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onE
               return (
                 <div key={hour} style={{
                   height: HOUR_HEIGHT, borderBottom: `1px solid ${C.borderLight}`,
-                  position: 'relative',
-                }}>
+                  position: 'relative', cursor: 'pointer',
+                }}
+                  onClick={() => {
+                    if (!dragState && !didDragMove.current && onAddAtTime) {
+                      onAddAtTime(`${hour.toString().padStart(2, '0')}:00`);
+                    }
+                  }}
+                >
                   <span style={{
                     position: 'absolute', left: -44, top: -7, fontSize: 10, color: C.textMuted,
                     width: 36, textAlign: 'right',

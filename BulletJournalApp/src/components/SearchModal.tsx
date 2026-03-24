@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
-import { STATUS, PRIORITY } from '../utils/constants';
+import { STATUS, PRIORITY, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { Entry } from '../types';
 
 interface SearchModalProps {
   entries: Entry[];
   onClose: () => void;
   onEdit: (entry: Entry) => void;
+  cycleStatus?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
+export function SearchModal({ entries, onClose, onEdit, cycleStatus, onDelete }: SearchModalProps) {
   const { styles, C, statusColor } = useTheme();
   const [query, setQuery] = useState('');
 
@@ -59,20 +61,25 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
           {results.map(entry => {
             const st = STATUS[entry.status] || STATUS.todo;
             const pr = PRIORITY[entry.priority] || PRIORITY.none;
+            const statusLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
             return (
               <div key={entry.id} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
-                cursor: 'pointer',
-              }} onClick={() => { onEdit(entry); onClose(); }}>
+              }}>
+                {/* 상태 심볼 — 탭하면 상태 순환 */}
                 <span style={{
                   fontSize: 14, fontWeight: 800, color: statusColor(entry.status),
-                  width: 18, textAlign: 'center', flexShrink: 0,
-                }}>{st.symbol}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                  width: 24, textAlign: 'center', flexShrink: 0, cursor: 'pointer',
+                  padding: '4px 0',
+                }} onClick={() => cycleStatus?.(entry.id)}>{st.symbol}</span>
+                {/* 본문 — 탭하면 수정 */}
+                <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                  onClick={() => { onEdit(entry); onClose(); }}>
                   <div style={{
                     fontSize: 13, color: C.textPrimary,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    textDecoration: entry.status === 'done' || entry.status === 'cancelled' ? 'line-through' : 'none',
                   }}>
                     {pr.symbol && <span style={{ color: C.accent, marginRight: 3 }}>{pr.symbol}</span>}
                     {entry.text}
@@ -89,7 +96,16 @@ export function SearchModal({ entries, onClose, onEdit }: SearchModalProps) {
                 <span style={{
                   fontSize: 9, color: statusColor(entry.status), background: statusColor(entry.status) + '18',
                   padding: '2px 6px', borderRadius: 4, flexShrink: 0,
-                }}>{st.label}</span>
+                }}>{statusLabel}</span>
+                {/* 삭제 버튼 */}
+                {onDelete && (
+                  <button style={{
+                    background: 'none', border: 'none', fontSize: 12, color: C.textMuted,
+                    cursor: 'pointer', padding: '4px', flexShrink: 0,
+                  }} onClick={() => {
+                    if (confirm('삭제하시겠습니까?')) onDelete(entry.id);
+                  }}>✕</button>
+                )}
               </div>
             );
           })}

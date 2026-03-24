@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY, STATUS_CYCLE_BY_TYPE, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { getTodayStr } from '../utils/date';
-import { ModalState, Entry, RecurringConfig } from '../types';
+import { ModalState, Entry, RecurringConfig, Subtask } from '../types';
+import { uid as genId } from '../utils/date';
 
 interface EntryModalProps {
   modal: ModalState;
   onClose: () => void;
   onSaveEntry: (data: Partial<Entry>) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (data: Partial<Entry>) => void;
   allTags?: string[];
 }
 
@@ -18,20 +20,22 @@ const ENTRY_TYPES = {
   note:  TYPES.note,
 };
 
-export function EntryModal({ modal, onClose, onSaveEntry, onDelete, allTags = [] }: EntryModalProps) {
+export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, allTags = [] }: EntryModalProps) {
   const { styles, C } = useTheme();
   const existing = modal.entry;
 
   const [text, setText] = useState(existing?.text || '');
-  const [type, setType] = useState<string>(existing?.type || 'task');
+  const [type, setType] = useState<string>(existing?.type || modal.defaultType || 'task');
   const [status, setStatus] = useState<string>(existing?.status || 'todo');
   const [priority, setPriority] = useState<string>(existing?.priority || 'none');
   const [date, setDate] = useState<string>(existing?.date || modal.date || getTodayStr());
   const [endDate, setEndDate] = useState<string>(existing?.endDate || '');
-  const [time, setTime] = useState<string>(existing?.time || '');
+  const [time, setTime] = useState<string>(existing?.time || modal.defaultTime || '');
   const [endTime, setEndTime] = useState<string>(existing?.endTime || '');
   const [tags, setTags] = useState<string>(existing?.tags?.join(', ') || '');
   const [memo, setMemo] = useState<string>(existing?.memo || '');
+  const [subtasks, setSubtasks] = useState<Subtask[]>(existing?.subtasks || []);
+  const [newSubtask, setNewSubtask] = useState('');
   const [recurringType, setRecurringType] = useState<string>(existing?.recurring?.type || 'none');
   const [recurringInterval, setRecurringInterval] = useState<number>(existing?.recurring?.interval || 1);
   const [recurringEndDate, setRecurringEndDate] = useState<string>(existing?.recurring?.endDate || '');
@@ -56,6 +60,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, allTags = []
       endTime: isMultiDay || isGoalType ? undefined : (endTime || undefined),
       tags: parsedTags.length > 0 ? parsedTags : undefined,
       memo: memo.trim() || undefined,
+      subtasks: subtasks.length > 0 ? subtasks : undefined,
       recurring: isGoalType ? undefined : recurring,
     });
   };
@@ -311,6 +316,55 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, allTags = []
               onChange={e => setMemo(e.target.value)} />
           </div>
 
+          {/* 서브태스크 (체크리스트) */}
+          <div style={{ marginTop: 4 }}>
+            <label style={labelSmall}>체크리스트</label>
+            {subtasks.map((st, idx) => (
+              <div key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <input type="checkbox" checked={st.done}
+                  style={{ width: 16, height: 16, accentColor: C.green, flexShrink: 0 }}
+                  onChange={() => {
+                    const updated = [...subtasks];
+                    updated[idx] = { ...st, done: !st.done };
+                    setSubtasks(updated);
+                  }} />
+                <input style={{ ...inputSmall, flex: 1, textDecoration: st.done ? 'line-through' : 'none', color: st.done ? C.textMuted : C.textPrimary }}
+                  value={st.text}
+                  onChange={e => {
+                    const updated = [...subtasks];
+                    updated[idx] = { ...st, text: e.target.value };
+                    setSubtasks(updated);
+                  }} />
+                <button style={{
+                  background: 'none', border: 'none', fontSize: 14, color: C.textMuted,
+                  cursor: 'pointer', padding: '2px 4px', flexShrink: 0,
+                }} onClick={() => setSubtasks(subtasks.filter((_, j) => j !== idx))}>✕</button>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input style={{ ...inputSmall, flex: 1 }}
+                placeholder="새 항목 추가..."
+                value={newSubtask}
+                onChange={e => setNewSubtask(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newSubtask.trim()) {
+                    setSubtasks([...subtasks, { id: genId(), text: newSubtask.trim(), done: false }]);
+                    setNewSubtask('');
+                  }
+                }} />
+              <button style={{
+                background: C.primary, color: C.headerText, border: 'none',
+                borderRadius: 6, padding: '0 10px', fontSize: 14, cursor: 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+              }} onClick={() => {
+                if (newSubtask.trim()) {
+                  setSubtasks([...subtasks, { id: genId(), text: newSubtask.trim(), done: false }]);
+                  setNewSubtask('');
+                }
+              }}>+</button>
+            </div>
+          </div>
+
           {/* 반복 (목표가 아닌 경우) */}
           {!isGoalType && (
             <div style={{ marginTop: 4 }}>
@@ -347,21 +401,47 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, allTags = []
           )}
 
           {/* 삭제 버튼 (수정 모드에서만) */}
-          {modal.mode === 'edit' && modal.entry && onDelete && (
-            <button
-              style={{
-                width: '100%', marginTop: 16, padding: 12, borderRadius: 10,
-                border: `1.5px solid ${C.accent}`, background: 'transparent',
-                color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                fontFamily: '-apple-system, sans-serif',
-              }}
-              onClick={() => {
-                if (confirm('이 항목을 삭제하시겠습니까?')) {
-                  onDelete(modal.entry!.id);
-                  onClose();
-                }
-              }}
-            >삭제</button>
+          {modal.mode === 'edit' && modal.entry && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              {onDuplicate && (
+                <button
+                  style={{
+                    flex: 1, padding: 12, borderRadius: 10,
+                    border: `1.5px solid ${C.border}`, background: 'transparent',
+                    color: C.textSecondary, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }}
+                  onClick={() => {
+                    const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+                    onDuplicate({
+                      text: text.trim(), type: type as Entry['type'],
+                      status: 'todo' as Entry['status'], priority: priority as Entry['priority'],
+                      date, endDate: endDate || undefined,
+                      time: time || undefined, endTime: endTime || undefined,
+                      tags: parsedTags.length > 0 ? parsedTags : undefined,
+                      memo: memo.trim() || undefined,
+                    });
+                    onClose();
+                  }}
+                >복제</button>
+              )}
+              {onDelete && (
+                <button
+                  style={{
+                    flex: 1, padding: 12, borderRadius: 10,
+                    border: `1.5px solid ${C.accent}`, background: 'transparent',
+                    color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }}
+                  onClick={() => {
+                    if (confirm('이 항목을 삭제하시겠습니까?')) {
+                      onDelete(modal.entry!.id);
+                      onClose();
+                    }
+                  }}
+                >삭제</button>
+              )}
+            </div>
           )}
         </div>
       </div>

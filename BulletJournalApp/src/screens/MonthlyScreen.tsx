@@ -49,16 +49,27 @@ export function MonthlyScreen({
           {cells.map((d, i) => {
             if (!d) return <div key={i} style={styles.miniCalCell as React.CSSProperties} />;
             const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
-            const hasEntries = monthEntries.some(e => e.date === dateStr);
+            const dayItems = monthEntries.filter(e => e.date === dateStr);
             const isT = dateStr === todayStr;
             return (
-              <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, cursor: 'pointer' }}
+              <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, cursor: 'pointer', padding: '4px 1px' }}
                 onClick={() => onDayTap(d)}>
                 <span style={{
                   ...styles.miniCalNum,
                   ...(isT ? styles.miniCalToday : {}),
                 } as React.CSSProperties}>{d}</span>
-                {hasEntries && <div style={styles.miniCalDot} />}
+                {dayItems.length > 0 && (
+                  <div style={{ marginTop: 1 }}>
+                    <div style={{
+                      fontSize: 7, color: C.textMuted, lineHeight: 1.2,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      maxWidth: '100%', padding: '0 1px',
+                    }}>{dayItems[0].text.slice(0, 4)}</div>
+                    {dayItems.length > 1 && (
+                      <div style={{ fontSize: 6, color: C.blue }}>+{dayItems.length - 1}</div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

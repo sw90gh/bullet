@@ -272,6 +272,19 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
               {entry.memo}
             </div>
           )}
+          {entry.subtasks && entry.subtasks.length > 0 && (
+            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}</span>
+              <div style={{
+                flex: 1, maxWidth: 60, height: 3, borderRadius: 2, background: C.borderLight, overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: 2, background: C.green,
+                  width: `${(entry.subtasks.filter(s => s.done).length / entry.subtasks.length) * 100}%`,
+                }} />
+              </div>
+            </div>
+          )}
         </div>
         <span style={{ ...styles.statusBadge, background: statusColor(entry.status) + '18', color: statusColor(entry.status) }}>
           {STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label}

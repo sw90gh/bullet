@@ -220,20 +220,38 @@ export function StatsScreen({ year, month, entries, isDark = false }: StatsScree
       )}
 
       {/* 목표 달성률 */}
-      {yearGoals.length > 0 && (
-        <div style={cardStyle}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>
-            {year}년 목표 달성 ({goalsDone}/{yearGoals.length})
+      {yearGoals.length > 0 && (() => {
+        const yearly = yearGoals.filter(e => e.type === 'goal-yearly');
+        const yearlyDone = yearly.filter(e => e.status === 'done').length;
+        const yearlyRate = yearly.length > 0 ? Math.round((yearlyDone / yearly.length) * 100) : 0;
+        const monthlyGoals = yearGoals.filter(e => e.type === 'goal-monthly');
+        const monthlyDone = monthlyGoals.filter(e => e.status === 'done').length;
+        const monthlyRate = monthlyGoals.length > 0 ? Math.round((monthlyDone / monthlyGoals.length) * 100) : 0;
+        return (
+          <div style={cardStyle}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>
+              목표 달성 ({goalsDone}/{yearGoals.length})
+            </div>
+            {yearly.length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>연간 목표 ({yearlyDone}/{yearly.length})</div>
+                <div style={barBg}>
+                  <div style={{ height: '100%', borderRadius: 3, background: C.green, width: `${yearlyRate}%` }} />
+                </div>
+              </div>
+            )}
+            {monthlyGoals.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>월간 목표 ({monthlyDone}/{monthlyGoals.length})</div>
+                <div style={barBg}>
+                  <div style={{ height: '100%', borderRadius: 3, background: C.blue, width: `${monthlyRate}%` }} />
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: C.sub, textAlign: 'center', marginTop: 6 }}>전체 {goalsRate}% 달성</div>
           </div>
-          <div style={barBg}>
-            <div style={{
-              height: '100%', borderRadius: 3, background: C.green,
-              width: `${goalsRate}%`,
-            }} />
-          </div>
-          <div style={{ fontSize: 11, color: C.sub, textAlign: 'center', marginTop: 6 }}>{goalsRate}% 달성</div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

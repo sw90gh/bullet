@@ -258,6 +258,19 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const nowTop = ((nowMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
 
+  // 마운트 시 현재 시간으로 자동 스크롤
+  useEffect(() => {
+    if (!dateStrs.includes(todayStr)) return;
+    const timer = setTimeout(() => {
+      const scroller = containerRef.current?.closest('[style*="overflow"]') as HTMLElement
+        || containerRef.current?.parentElement?.parentElement;
+      if (scroller) {
+        scroller.scrollTop = Math.max(0, nowTop - 80);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div ref={containerRef} style={{
       background: C.bgWhite, borderRadius: 14, overflow: 'hidden',

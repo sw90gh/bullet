@@ -19,7 +19,14 @@ export interface Entry {
   notionPageId?: string;
   notionLastSync?: number;
   recurring?: RecurringConfig;
+  subtasks?: Subtask[];
   updatedAt?: number;
+}
+
+export interface Subtask {
+  id: string;
+  text: string;
+  done: boolean;
 }
 
 export interface RecurringConfig {
@@ -53,4 +60,6 @@ export interface ModalState {
   date?: string;
   year?: number;
   month?: number;
+  defaultType?: EntryType;
+  defaultTime?: string;
 }
