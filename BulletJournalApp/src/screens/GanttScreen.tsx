@@ -181,9 +181,10 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
         <div style={{
           ...styles.ganttContainer as React.CSSProperties,
           position: 'relative',
-          maxHeight: 'calc(100vh - 320px)',
+          maxHeight: 'calc(100vh - 240px)',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
+          overflowX: 'auto',
         } as React.CSSProperties}>
           <div style={{ display: 'flex' }}>
             {/* Fixed label column */}
@@ -318,28 +319,11 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
         </div>
       )}
 
-      {/* Stats */}
-      <div style={{ marginTop: 16, padding: '12px 14px', background: C.bgWhite, borderRadius: 12,
-        boxShadow: `0 1px 3px ${C.cardShadow}` }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary, marginBottom: 8 }}>통계</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center' }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary }}>{ganttEntries.length}</div>
-            <div style={{ fontSize: 11, color: C.textSecondary }}>전체</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: C.green }}>
-              {ganttEntries.filter(e => e.status === 'done').length}
-            </div>
-            <div style={{ fontSize: 11, color: C.textSecondary }}>완료</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: C.amber }}>
-              {ganttEntries.filter(e => e.status === 'progress').length}
-            </div>
-            <div style={{ fontSize: 11, color: C.textSecondary }}>진행 중</div>
-          </div>
-        </div>
+      {/* 간결한 통계 */}
+      <div style={{ display: 'flex', gap: 12, marginTop: 8, justifyContent: 'center' }}>
+        <span style={{ fontSize: 11, color: C.textSecondary }}>전체 <strong>{ganttEntries.length}</strong></span>
+        <span style={{ fontSize: 11, color: C.green }}>완료 <strong>{ganttEntries.filter(e => e.status === 'done').length}</strong></span>
+        <span style={{ fontSize: 11, color: C.amber }}>진행 <strong>{ganttEntries.filter(e => e.status === 'progress').length}</strong></span>
       </div>
     </div>
   );
