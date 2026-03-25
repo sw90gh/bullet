@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -25,16 +25,19 @@ export function MonthlyScreen({
   onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone
 }: MonthlyScreenProps) {
   const { styles, C } = useTheme();
+  const [showAll, setShowAll] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
-  const monthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly')
+  const allMonthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly')
     .sort((a, b) => {
       const po: Record<string, number> = { urgent: 0, important: 1, none: 2 };
       if (po[a.priority || 'none'] !== po[b.priority || 'none'])
         return po[a.priority || 'none'] - po[b.priority || 'none'];
       return (a.createdAt || 0) - (b.createdAt || 0);
     });
+  const monthEntries = showAll ? allMonthEntries : allMonthEntries.filter(e => e.status === 'todo' || e.status === 'progress');
   const todayStr = getTodayStr();
 
   const cells: (number | null)[] = [];
@@ -47,6 +50,22 @@ export function MonthlyScreen({
       <DailySummary entries={entries} label="이번 달" filterFn={(e) => {
         return !!e.date && e.date.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly';
       }} />
+
+      {/* 필터 */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        <button style={{
+          ...styles.chip, flex: 1, textAlign: 'center',
+          ...(showAll ? {} : styles.chipActive),
+        }} onClick={() => setShowAll(false)}>
+          미완료 ({allMonthEntries.filter(e => e.status === 'todo' || e.status === 'progress').length})
+        </button>
+        <button style={{
+          ...styles.chip, flex: 1, textAlign: 'center',
+          ...(showAll ? styles.chipActive : {}),
+        }} onClick={() => setShowAll(true)}>
+          전체 ({allMonthEntries.length})
+        </button>
+      </div>
 
       {/* Mini Calendar */}
       <div style={styles.miniCal}>
@@ -63,7 +82,7 @@ export function MonthlyScreen({
             const isT = dateStr === todayStr;
             return (
               <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, cursor: 'pointer', padding: '4px 1px' }}
-                onClick={() => onDayTap(d)}>
+                onClick={() => setSelectedDay(d)}>
                 <span style={{
                   ...styles.miniCalNum,
                   ...(isT ? styles.miniCalToday : {}),
@@ -136,7 +155,68 @@ export function MonthlyScreen({
         ))
       )}
 
-      {/* 월간 목표 제거됨 — 목표는 연간 탭에서만 관리 */}
+      {/* 날짜 팝업 */}
+      {selectedDay && (() => {
+        const dayStr = `${year}-${pad(month + 1)}-${pad(selectedDay)}`;
+        const dayDate = new Date(year, month, selectedDay);
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        const dayItems = allMonthEntries.filter(e => e.date === dayStr);
+        const isT = dayStr === todayStr;
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }} onClick={() => setSelectedDay(null)}>
+            <div style={{
+              background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+              maxHeight: '60vh', overflow: 'auto', padding: '0 20px 24px',
+              paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{
+                padding: '14px 0 10px', borderBottom: `1px solid ${C.borderLight}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{
+                  fontSize: 15, fontWeight: 700,
+                  color: isT ? C.accent : C.textPrimary,
+                }}>
+                  {month + 1}/{selectedDay} ({days[dayDate.getDay()]})
+                  {isT ? ' · 오늘' : ''}
+                  <span style={{ fontWeight: 400, color: C.textMuted, marginLeft: 8, fontSize: 12 }}>
+                    {dayItems.length}건
+                  </span>
+                </span>
+                <button style={{
+                  background: 'none', border: 'none', fontSize: 16, color: C.textMuted,
+                  cursor: 'pointer', padding: 4,
+                }} onClick={() => setSelectedDay(null)}>✕</button>
+              </div>
+              <div style={{ padding: '8px 0' }}>
+                {dayItems.length === 0 ? (
+                  <p style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: 20 }}>항목이 없습니다</p>
+                ) : (
+                  dayItems.map(entry => (
+                    <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
+                      onEdit={() => { setSelectedDay(null); onEdit(entry); }}
+                      onDelete={() => onDelete(entry.id)}
+                      onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                      onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+                      onChangePriority={onChangePriority} />
+                  ))
+                )}
+                <button style={{
+                  width: '100%', marginTop: 8, padding: 10, borderRadius: 10,
+                  border: `1.5px solid ${C.border}`, background: 'transparent',
+                  color: C.textSecondary, fontSize: 12, cursor: 'pointer',
+                  fontFamily: '-apple-system, sans-serif',
+                }} onClick={() => { setSelectedDay(null); onDayTap(selectedDay); }}>
+                  일간으로 이동 →
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
+import { DailySummary } from '../components/DailySummary';
 import { Entry, EntryPriority } from '../types';
 import { getTodayStr } from '../utils/date';
 
@@ -58,6 +59,9 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
 
   return (
     <div>
+      {/* 전체 요약 */}
+      <DailySummary entries={entries} label="전체 항목" filterFn={(e) => e.type !== 'goal-yearly' && e.type !== 'goal-monthly'} />
+
       {/* 필터 */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center' }}>
         <button
