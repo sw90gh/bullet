@@ -19,7 +19,9 @@ type SwipeDir = 'none' | 'left' | 'right';
 
 export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, compact, goalProgress }: EntryRowProps) {
   const { styles, C, isDark, statusColor } = useTheme();
-  const [swipeDir, setSwipeDir] = useState<SwipeDir>('none');
+  const [swipeDir, _setSwipeDir] = useState<SwipeDir>('none');
+  const swipeDirRef = useRef<SwipeDir>('none');
+  const setSwipeDir = (dir: SwipeDir) => { swipeDirRef.current = dir; _setSwipeDir(dir); };
   const st = STATUS[entry.status] || STATUS.todo;
   const pr = PRIORITY[entry.priority] || PRIORITY.none;
   const isStrike = ('strike' in st && st.strike) || entry.status === 'done';
@@ -85,10 +87,11 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       return;
     }
     const diff = clientX - pointerStart.current.x;
+    const currentSwipe = swipeDirRef.current; // ref로 최신 값 참조
     if (diff < -60) setSwipeDir('left');
-    else if (diff > 60) setSwipeDir(swipeDir === 'none' ? 'right' : 'none');
+    else if (diff > 60) setSwipeDir(currentSwipe === 'none' ? 'right' : 'none');
     else if (Math.abs(diff) < 10 && !isDragging.current) {
-      if (swipeDir !== 'none') {
+      if (currentSwipe !== 'none') {
         // 스와이프 닫기만 — 상태 변경 안 함
         setSwipeDir('none');
       } else {
@@ -101,7 +104,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       }
     }
     pointerStart.current = null;
-  }, [swipeDir, clearLongPress, cycleStatus, entry.id]);
+  }, [clearLongPress, cycleStatus, entry.id]);
 
   // Touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
