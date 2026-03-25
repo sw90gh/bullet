@@ -30,6 +30,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const didLongPress = useRef(false);
   const isDragging = useRef(false);
   const justClosedSwipe = useRef(false);
+  const justCycled = useRef(false);
 
   // Close swipe when clicking/tapping outside this entry
   useEffect(() => {
@@ -91,8 +92,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         // 스와이프 닫기만 — 상태 변경 안 함
         setSwipeDir('none');
       } else {
-        // 스와이프 없는 상태에서 탭 → 상태 순환
-        cycleStatus(entry.id);
+        // 스와이프 없는 상태에서 탭 → 상태 순환 (중복 호출 방지)
+        if (!justCycled.current) {
+          justCycled.current = true;
+          setTimeout(() => { justCycled.current = false; }, 400);
+          cycleStatus(entry.id);
+        }
       }
     }
     pointerStart.current = null;
