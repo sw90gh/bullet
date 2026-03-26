@@ -9,6 +9,7 @@ interface WeeklyTimelineProps {
   entries: Entry[];       // 전체 entries (밀린 항목 포함)
   onEdit: (entry: Entry) => void;
   onUpdateEntry: (id: string, updates: Partial<Entry>) => void;
+  cycleStatus: (id: string) => void;
 }
 
 const HOUR_HEIGHT = 44;
@@ -37,7 +38,7 @@ function yToMinutes(y: number): number {
 
 const DAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: WeeklyTimelineProps) {
+export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus }: WeeklyTimelineProps) {
   const { C, isDark, statusColor } = useTheme();
   const todayStr = getTodayStr();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -474,12 +475,24 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                       textDecoration: isEntryDone ? 'line-through' : 'none',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{entry.text}</div>
-                    {/* ✕ 시간 해제 */}
+                    {/* ↻ 상태 순환 + ✕ 시간 해제 */}
                     {!isDraggingThis && (
+                      <>
+                      <button style={{
+                        background: `${stColor}18`, border: 'none', fontSize: 9, color: stColor,
+                        cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
+                        minWidth: 18, minHeight: 18, borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                      onTouchStart={e => e.stopPropagation()}
+                      onMouseDown={e => e.stopPropagation()}
+                      onTouchEnd={e => { e.stopPropagation(); cycleStatus(entry.id); }}
+                      onClick={e => { e.stopPropagation(); cycleStatus(entry.id); }}
+                      >↻</button>
                       <button style={{
                         background: `${C.textMuted}18`, border: 'none', fontSize: 10, color: C.textMuted,
                         cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
-                        minWidth: 20, minHeight: 20, borderRadius: '50%',
+                        minWidth: 18, minHeight: 18, borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                       onTouchStart={e => e.stopPropagation()}
@@ -487,6 +500,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry }: Weekly
                       onTouchEnd={e => { e.stopPropagation(); handleUnassign(entry); }}
                       onClick={e => { e.stopPropagation(); handleUnassign(entry); }}
                       >✕</button>
+                      </>
                     )}
                   </div>
                   {height > 24 && (

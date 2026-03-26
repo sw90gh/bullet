@@ -196,6 +196,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
               entries={entries}
               onEdit={onEdit}
               onUpdateEntry={onUpdateEntry}
+              cycleStatus={cycleStatus}
             />
           )}
         </div>

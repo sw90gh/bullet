@@ -747,11 +747,26 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         textDecoration: isEntryDone ? 'line-through' : 'none',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{entry.text}</div>
-                      {onUpdateEntry && !isDraggingThis && (
+                      {!isDraggingThis && (
+                        <>
+                        {/* 상태 순환 버튼 */}
+                        <button style={{
+                          background: `${stColor}18`, border: 'none', fontSize: 11, color: stColor,
+                          cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
+                          minWidth: 24, minHeight: 24, borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => { e.stopPropagation(); cycleStatus(entry.id); }}
+                        onClick={(e) => { e.stopPropagation(); cycleStatus(entry.id); }}
+                        >↻</button>
+                        {/* 시간 해제 버튼 */}
+                        {onUpdateEntry && (
                         <button style={{
                           background: `${C.textMuted}18`, border: 'none', fontSize: 12, color: C.textMuted,
                           cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
-                          minWidth: 28, minHeight: 28, borderRadius: '50%',
+                          minWidth: 24, minHeight: 24, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                         onTouchStart={(e) => e.stopPropagation()}
@@ -769,6 +784,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                           onUpdateEntry(entry.id, revert);
                         }}
                         >✕</button>
+                        )}
+                        </>
                       )}
                     </div>
                     {height > 30 && (
