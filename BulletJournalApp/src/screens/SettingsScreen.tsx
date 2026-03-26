@@ -27,12 +27,18 @@ interface SettingsScreenProps {
   authError?: string | null;
   notificationsEnabled?: boolean;
   onNotificationsChange?: (on: boolean) => void;
+  gcalEnabled?: boolean;
+  onGcalChange?: (on: boolean) => void;
+  gcalLoading?: boolean;
+  gcalError?: string | null;
+  onGcalRefresh?: () => void;
 }
 
 export function SettingsScreen({
   onClose, tagList = [], onDeleteTag, isDark = false, darkModePref = 'system', onDarkModeChange,
   user, authLoading, onLogin, onLogout, syncStatus = 'idle', syncError, authError,
   notificationsEnabled = false, onNotificationsChange,
+  gcalEnabled = false, onGcalChange, gcalLoading, gcalError, onGcalRefresh,
 }: SettingsScreenProps) {
   const styles = getStyles(isDark);
   const [importText, setImportText] = useState('');
@@ -200,6 +206,46 @@ export function SettingsScreen({
                 <p style={{ fontSize: 11, color: '#c0583f', marginTop: 4 }}>
                   브라우저 알림이 차단되어 있습니다. 브라우저 설정에서 허용해주세요.
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Google Calendar */}
+          {user && onGcalChange && (
+            <div style={styles.settingsSection}>
+              <div style={styles.settingsLabel}>Google Calendar</div>
+              <div style={styles.darkModeToggle}>
+                <div>
+                  <span style={{ fontSize: 13, color: isDark ? '#e8e0d4' : '#2c2416' }}>캘린더 연동</span>
+                  <p style={{ fontSize: 11, color: isDark ? '#6b5d4d' : '#b8a99a', margin: '2px 0 0' }}>
+                    구글 캘린더 일정을 시간표에 표시
+                  </p>
+                </div>
+                <button
+                  style={{
+                    ...styles.toggleSwitch as React.CSSProperties,
+                    background: gcalEnabled ? '#4285f4' : '#ccc',
+                  }}
+                  onClick={() => onGcalChange(!gcalEnabled)}
+                >
+                  <div style={{
+                    ...styles.toggleKnob,
+                    transform: gcalEnabled ? 'translateX(20px)' : 'translateX(0)',
+                  }} />
+                </button>
+              </div>
+              {gcalEnabled && gcalLoading && (
+                <p style={{ fontSize: 11, color: '#4285f4', marginTop: 4 }}>캘린더 로드 중...</p>
+              )}
+              {gcalEnabled && gcalError && (
+                <p style={{ fontSize: 11, color: '#c0583f', marginTop: 4 }}>{gcalError}</p>
+              )}
+              {gcalEnabled && onGcalRefresh && (
+                <button style={{
+                  marginTop: 6, fontSize: 11, padding: '4px 12px', borderRadius: 6,
+                  border: `1px solid ${isDark ? '#3a3530' : '#ddd5c9'}`, background: 'transparent',
+                  color: isDark ? '#a89888' : '#6b5d4d', cursor: 'pointer', fontFamily: '-apple-system, sans-serif',
+                }} onClick={onGcalRefresh}>새로고침</button>
               )}
             </div>
           )}

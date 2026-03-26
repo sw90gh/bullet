@@ -5,6 +5,7 @@ import { DailySummary } from '../components/DailySummary';
 import { formatDateKey, getTodayStr, daysBetween } from '../utils/date';
 import { STATUS, TYPE_COLORS, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
+import { GoogleCalendarEvent } from '../hooks/useGoogleCalendar';
 
 interface DailyScreenProps {
   date: Date;
@@ -19,6 +20,7 @@ interface DailyScreenProps {
   onMigrateUp?: (entry: Entry) => void;
   onChangePriority?: (id: string, priority: EntryPriority) => void;
   onUpdateEntry?: (id: string, updates: Partial<Entry>) => void;
+  gcalEvents?: GoogleCalendarEvent[];
 }
 
 const HOUR_HEIGHT = 52;
@@ -47,7 +49,7 @@ function yToMinutes(y: number): number {
   return snapMinutes(Math.max(START_HOUR * 60, Math.min(END_HOUR * 60, raw)));
 }
 
-export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry }: DailyScreenProps) {
+export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, gcalEvents = [] }: DailyScreenProps) {
   const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const [placePanel, setPlacePanel] = useState<string | null>(null); // 시간 문자열 or null
@@ -817,6 +819,38 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                   </div>
                 );
               })}
+
+            {/* 구글 캘린더 일정 (읽기 전용) */}
+            {gcalEvents.filter(e => e.date === dateStr && e.startTime).map(ge => {
+              const gStartMin = ge.startTime ? parseInt(ge.startTime.split(':')[0]) * 60 + parseInt(ge.startTime.split(':')[1]) : 0;
+              const gEndMin = ge.endTime ? parseInt(ge.endTime.split(':')[0]) * 60 + parseInt(ge.endTime.split(':')[1]) : gStartMin + 60;
+              const gTop = ((gStartMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+              const gHeight = Math.max(20, ((gEndMin - gStartMin) / 60) * HOUR_HEIGHT - 2);
+              return (
+                <div key={`gcal-${ge.id}`} style={{
+                  position: 'absolute', left: 4, right: 4, top: gTop, height: gHeight,
+                  background: '#4285f415', borderLeft: '3px solid #4285f4',
+                  borderRadius: '0 6px 6px 0', padding: '3px 8px',
+                  overflow: 'hidden', zIndex: 2, opacity: 0.85,
+                  cursor: ge.htmlLink ? 'pointer' : 'default',
+                }}
+                onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ fontSize: 8, color: '#4285f4' }}>G</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, color: '#4285f4',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                    }}>{ge.summary}</span>
+                  </div>
+                  {gHeight > 28 && (
+                    <div style={{ fontSize: 9, color: '#4285f488' }}>
+                      {ge.startTime}{ge.endTime ? ` - ${ge.endTime}` : ''}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* 시간 배치 선택 패널 */}

@@ -20,6 +20,7 @@ import { useEntries } from './hooks/useEntries';
 import { useAuth } from './hooks/useAuth';
 import { useFirestoreSync } from './hooks/useFirestoreSync';
 import { useNotifications } from './hooks/useNotifications';
+import { useGoogleCalendar } from './hooks/useGoogleCalendar';
 import { formatDateKey, pad, getTodayStr, daysBetween, uid as genId } from './utils/date';
 import { generateRecurringEntries } from './utils/recurring';
 import { autoBackup, shouldRemindBackup, shareBackup, markExported, getLastExportTime, migrateGoalsToEntries } from './utils/storage';
@@ -74,10 +75,18 @@ export default function App() {
   const mainRef = useRef<HTMLElement>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('bujo-notifications') !== 'off');
 
+  const [gcalEnabled, setGcalEnabled] = useState(() => localStorage.getItem('bujo-gcal') !== 'off');
+
   const { entries, loaded: entriesLoaded, addEntry, updateEntry, deleteEntry, cycleStatus, migrateEntry, migrateUpEntry, setEntries } = useEntries();
-  const { user, loading: authLoading, login, logout, error: authError } = useAuth();
+  const { user, loading: authLoading, login, logout, error: authError, googleAccessToken } = useAuth();
   const { syncStatus, syncError } = useFirestoreSync(user, entries, setEntries, entriesLoaded);
   useNotifications(entries, notificationsEnabled);
+  const { events: gcalEvents, loading: gcalLoading, error: gcalError, refresh: gcalRefresh } = useGoogleCalendar(googleAccessToken, gcalEnabled);
+
+  const toggleGcal = useCallback((on: boolean) => {
+    setGcalEnabled(on);
+    localStorage.setItem('bujo-gcal', on ? 'on' : 'off');
+  }, []);
 
   const toggleNotifications = useCallback((on: boolean) => {
     setNotificationsEnabled(on);
@@ -337,6 +346,7 @@ export default function App() {
             onMigrateUp={(e) => setMigrateTarget({ entry: e, type: 'migrated_up' })}
             onChangePriority={changePriority}
             onUpdateEntry={updateEntry}
+            gcalEvents={gcalEvents}
           />
         )}
 
@@ -523,6 +533,11 @@ export default function App() {
           authError={authError}
           notificationsEnabled={notificationsEnabled}
           onNotificationsChange={toggleNotifications}
+          gcalEnabled={gcalEnabled}
+          onGcalChange={toggleGcal}
+          gcalLoading={gcalLoading}
+          gcalError={gcalError}
+          onGcalRefresh={gcalRefresh}
         />
       )}
     </div>
