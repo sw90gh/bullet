@@ -33,6 +33,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const isDragging = useRef(false);
   const justClosedSwipe = useRef(false);
   const justCycled = useRef(false);
+  const touchHandled = useRef(false); // 터치 후 합성 마우스 이벤트 무시용
 
   // Close swipe when clicking/tapping outside this entry
   useEffect(() => {
@@ -108,6 +109,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
 
   // Touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
+    touchHandled.current = true;
     handlePointerStart(e.touches[0].clientX, e.touches[0].clientY, e.target as HTMLElement);
   };
   const onTouchMove = (e: React.TouchEvent) => {
@@ -115,11 +117,13 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     handlePointerEnd(e.changedTouches[0].clientX);
+    // 합성 마우스 이벤트 무시 (500ms)
+    setTimeout(() => { touchHandled.current = false; }, 500);
   };
 
-  // Mouse handlers
+  // Mouse handlers (합성 마우스 이벤트 필터링)
   const onMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // left click only
+    if (e.button !== 0 || touchHandled.current) return;
     handlePointerStart(e.clientX, e.clientY, e.target as HTMLElement);
 
     const onMouseMove = (ev: MouseEvent) => {
