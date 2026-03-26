@@ -37,21 +37,22 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
     setError(null);
     try {
       const now = new Date();
-      const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
-      const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).toISOString();
+      const timeMin = new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
+      const timeMax = new Date(now.getFullYear(), now.getMonth() + 6, 0).toISOString();
 
       const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
         `timeMin=${encodeURIComponent(timeMin)}&` +
         `timeMax=${encodeURIComponent(timeMax)}&` +
-        `singleEvents=true&orderBy=startTime&maxResults=200`;
+        `singleEvents=true&orderBy=startTime&maxResults=500`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
-        if (res.status === 401) {
-          setError('캘린더 권한이 만료되었습니다. 다시 로그인해주세요.');
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('bujo-gat');
+          setError('캘린더 권한이 만료되었습니다. 로그아웃 후 다시 로그인해주세요.');
         } else {
           setError(`캘린더 로드 실패 (${res.status})`);
         }
