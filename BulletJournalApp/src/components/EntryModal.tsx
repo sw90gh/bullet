@@ -33,6 +33,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const [endDate, setEndDate] = useState<string>(existing?.endDate || '');
   const [time, setTime] = useState<string>(existing?.time || modal.defaultTime || '');
   const [endTime, setEndTime] = useState<string>(existing?.endTime || '');
+  const [allDay, setAllDay] = useState<boolean>(existing?.allDay || false);
   const [tags, setTags] = useState<string>(existing?.tags?.join(', ') || '');
   const [memo, setMemo] = useState<string>(existing?.memo || '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(existing?.subtasks || []);
@@ -60,8 +61,9 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       priority: priority as Entry['priority'],
       date,
       endDate: endDate || undefined,
-      time: isMultiDay || isGoalType ? undefined : (time || undefined),
-      endTime: isMultiDay || isGoalType ? undefined : (endTime || undefined),
+      allDay: allDay || undefined,
+      time: isMultiDay || isGoalType || allDay ? undefined : (time || undefined),
+      endTime: isMultiDay || isGoalType || allDay ? undefined : (endTime || undefined),
       tags: parsedTags.length > 0 ? parsedTags : undefined,
       memo: memo.trim() || undefined,
       subtasks: subtasks.length > 0 ? subtasks : undefined,
@@ -202,6 +204,20 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
           {/* 날짜/시간 (목표가 아닌 경우) */}
           {!isGoalType && (
             <>
+              {/* 종일 토글 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <label style={{ ...labelSmall, margin: 0 }}>종일</label>
+                <button style={{
+                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: allDay ? C.blue : C.borderLight, position: 'relative', padding: 2,
+                }} onClick={() => { setAllDay(!allDay); if (!allDay) { setTime(''); setEndTime(''); } }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', background: 'white',
+                    transition: 'transform 0.2s', transform: allDay ? 'translateX(16px)' : 'translateX(0)',
+                  }} />
+                </button>
+              </div>
+
               {/* 시작일 + 종료일 */}
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -233,8 +249,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                 </div>
               </div>
 
-              {/* 시간 (다일간이면 숨김) */}
-              {!(endDate && endDate !== date) && (
+              {/* 시간 (다일간/종일이면 숨김) */}
+              {!allDay && !(endDate && endDate !== date) && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <label style={labelSmall}>시작 시간</label>

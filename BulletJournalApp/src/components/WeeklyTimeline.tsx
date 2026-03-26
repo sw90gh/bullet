@@ -303,6 +303,36 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
       touchAction: dragState ? 'none' : 'auto',
     } as React.CSSProperties}>
 
+      {/* 종일 일정 */}
+      {(() => {
+        const allDayLocal = entries.filter(e => e.allDay && dateStrs.includes(e.date));
+        const allDayGcal = gcalEvents.filter(ge => ge.allDay && dateStrs.some(ds => ge.date?.trim().startsWith(ds)));
+        if (allDayLocal.length === 0 && allDayGcal.length === 0) return null;
+        return (
+          <div style={{ padding: '6px 12px', borderBottom: `2px solid ${C.borderLight}`, background: `${C.blue}06` }}>
+            <div style={{ fontSize: 10, color: C.blue, marginBottom: 3, fontWeight: 600 }}>종일</div>
+            {allDayLocal.map(entry => (
+              <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 0', cursor: 'pointer' }}
+                onClick={() => onEdit(entry)}>
+                <span style={{ fontSize: 9, color: statusColor(entry.status), fontWeight: 800 }}>
+                  {(STATUS[entry.status] || STATUS.todo).symbol}
+                </span>
+                <span style={{ fontSize: 10, color: C.textPrimary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.text}</span>
+                <span style={{ fontSize: 8, color: C.textMuted }}>{entry.date.slice(5)}</span>
+              </div>
+            ))}
+            {allDayGcal.map(ge => (
+              <div key={`gcal-ad-${ge.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 0', cursor: ge.htmlLink ? 'pointer' : 'default' }}
+                onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                <span style={{ fontSize: 9, color: '#4285f4', fontWeight: 700 }}>G</span>
+                <span style={{ fontSize: 10, color: '#4285f4', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ge.summary}</span>
+                <span style={{ fontSize: 8, color: '#4285f488' }}>{ge.date.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* 미배치 항목 (밀린 항목 포함) */}
       {untimedEntries.length > 0 && (
         <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>

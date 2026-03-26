@@ -13,6 +13,7 @@ export interface Entry {
   endDate?: string;     // for Gantt: defaults to date
   time?: string;
   endTime?: string;
+  allDay?: boolean;
   createdAt: number;
   tags?: string[];
   memo?: string;

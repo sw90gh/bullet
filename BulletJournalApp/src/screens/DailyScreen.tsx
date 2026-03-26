@@ -614,6 +614,35 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
           touchAction: dragState ? 'none' : 'auto',
           userSelect: 'none', WebkitUserSelect: 'none',
         } as React.CSSProperties}>
+          {/* 종일 일정 */}
+          {(() => {
+            const localAllDay = dayEntries.filter(e => e.allDay);
+            const gcalAllDay = gcalEvents.filter(e => e.date?.trim().startsWith(dateStr) && e.allDay);
+            if (localAllDay.length === 0 && gcalAllDay.length === 0) return null;
+            return (
+              <div style={{ padding: '6px 12px', borderBottom: `2px solid ${C.borderLight}`, background: `${C.blue}06` }}>
+                <div style={{ fontSize: 10, color: C.blue, marginBottom: 3, fontWeight: 600 }}>종일</div>
+                {localAllDay.map(entry => {
+                  const st = STATUS[entry.status] || STATUS.todo;
+                  return (
+                    <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}
+                      onClick={() => onEdit(entry)}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: statusColor(entry.status), width: 16, textAlign: 'center' }}>{st.symbol}</span>
+                      <span style={{ fontSize: 12, color: C.textPrimary, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.text}</span>
+                    </div>
+                  );
+                })}
+                {gcalAllDay.map(ge => (
+                  <div key={`gcal-ad-${ge.id}`} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: ge.htmlLink ? 'pointer' : 'default' }}
+                    onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                    <span style={{ fontSize: 10, color: '#4285f4', fontWeight: 700, width: 16, textAlign: 'center' }}>G</span>
+                    <span style={{ fontSize: 12, color: '#4285f4', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ge.summary}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* 시간 미지정 항목 - 드래그 가능 */}
           {untimedEntries.length > 0 && (
             <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
