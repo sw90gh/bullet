@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, PRIORITY, TYPES, DAYS_KR } from '../utils/constants';
 import { getDaysInMonth, pad, daysBetween, formatDateKey, getWeekDates, addDays } from '../utils/date';
@@ -20,12 +20,25 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
   const { styles, C, statusColor } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerScrollRef = useRef<HTMLDivElement>(null);
+  const customScrollRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<GanttRange>('month');
+  const [scrollThumb, setScrollThumb] = useState({ left: 0, width: 0, visible: false });
 
-  // 가로 스크롤 동기화 (본문 → 헤더)
+  // 가로 스크롤 동기화 (본문 → 헤더 + 커스텀 스크롤바)
   const handleBodyScroll = useCallback(() => {
     if (scrollRef.current && headerScrollRef.current) {
       headerScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+      const el = scrollRef.current;
+      const ratio = el.clientWidth / el.scrollWidth;
+      if (ratio < 1) {
+        const trackWidth = el.clientWidth - LABEL_WIDTH;
+        const thumbWidth = Math.max(30, trackWidth * ratio);
+        const scrollRatio = el.scrollLeft / (el.scrollWidth - el.clientWidth);
+        const thumbLeft = LABEL_WIDTH + scrollRatio * (trackWidth - thumbWidth);
+        setScrollThumb({ left: thumbLeft, width: thumbWidth, visible: true });
+      } else {
+        setScrollThumb(prev => ({ ...prev, visible: false }));
+      }
     }
   }, []);
   const todayStr = formatDateKey(new Date());
@@ -122,6 +135,12 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
   };
 
   const [filterMode, setFilterMode] = useState<'all' | 'hide-done' | 'hide-inactive'>('all');
+
+  // 초기/범위 변경 시 스크롤바 업데이트
+  useEffect(() => {
+    const timer = setTimeout(handleBodyScroll, 100);
+    return () => clearTimeout(timer);
+  }, [range, handleBodyScroll]);
 
   const getBarOpacity = (entry: Entry) => {
     if (entry.status === 'migrated' || entry.status === 'migrated_up') return 0.25;
@@ -261,7 +280,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             </div>
 
             {/* Scrollable timeline */}
-            <div ref={scrollRef} className="gantt-scroll" onScroll={handleBodyScroll}
+            <div ref={scrollRef} onScroll={handleBodyScroll}
               onWheel={(e) => {
                 if (scrollRef.current && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {
                   e.preventDefault();
@@ -270,7 +289,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
               }}
               style={{
               overflowX: 'auto', flex: 1,
-              position: 'relative',
+              scrollbarWidth: 'none', msOverflowStyle: 'none',
             } as React.CSSProperties}>
               <div style={{ width: totalDays * dayWidth, minWidth: '100%' }}>
 
@@ -326,6 +345,48 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             </div>
           </div>
           </div> {/* body wrapper end */}
+
+          {/* 커스텀 가로 스크롤바 (오버레이) */}
+          {scrollThumb.visible && (
+            <div ref={customScrollRef} style={{
+              position: 'absolute', bottom: 2, left: 0, right: 0, height: 10,
+              zIndex: 20, cursor: 'pointer',
+            }}
+            onMouseDown={(e) => {
+              if (!scrollRef.current) return;
+              const startX = e.clientX;
+              const startScrollLeft = scrollRef.current.scrollLeft;
+              const el = scrollRef.current;
+              const maxScroll = el.scrollWidth - el.clientWidth;
+              const trackWidth = el.clientWidth - LABEL_WIDTH;
+
+              const onMove = (ev: MouseEvent) => {
+                const dx = ev.clientX - startX;
+                const scrollDelta = (dx / trackWidth) * el.scrollWidth;
+                el.scrollLeft = Math.max(0, Math.min(maxScroll, startScrollLeft + scrollDelta));
+              };
+              const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+              };
+              document.addEventListener('mousemove', onMove);
+              document.addEventListener('mouseup', onUp);
+            }}>
+              <div style={{
+                position: 'absolute',
+                left: scrollThumb.left,
+                width: scrollThumb.width,
+                height: 6,
+                top: 2,
+                background: 'rgba(0,0,0,0.25)',
+                borderRadius: 3,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.45)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.25)')}
+              />
+            </div>
+          )}
         </div>
       )}
 
