@@ -12,7 +12,7 @@ export interface GoogleCalendarEvent {
   htmlLink?: string;
 }
 
-const CACHE_KEY = 'bujo-gcal-cache-v2'; // v2: Date 기반 파싱
+const CACHE_KEY = 'bujo-gcal-cache-v3'; // v3: 범위 축소 (1개월 전~3개월 후)
 const CACHE_TTL = 5 * 60 * 1000; // 5분
 
 export function useGoogleCalendar(accessToken: string | null, enabled: boolean) {
@@ -39,8 +39,8 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
     setError(null);
     try {
       const now = new Date();
-      const timeMin = new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
-      const timeMax = new Date(now.getFullYear(), now.getMonth() + 6, 0).toISOString();
+      const timeMin = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const timeMax = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
 
       const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
         `timeMin=${encodeURIComponent(timeMin)}&` +
