@@ -19,10 +19,12 @@ export function DailySummary({ date, entries, filterFn, label }: DailySummaryPro
       : date
         ? entries.filter(e => e.date === formatDateKey(date))
         : [];
-    const total = filtered.length;
-    const done = filtered.filter(e => e.status === 'done').length;
-    const progress = filtered.filter(e => e.status === 'progress').length;
-    const todo = filtered.filter(e => e.status === 'todo').length;
+    // 이관/취소 제외한 활성 항목만 집계
+    const active = filtered.filter(e => e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled');
+    const total = active.length;
+    const done = active.filter(e => e.status === 'done').length;
+    const progress = active.filter(e => e.status === 'progress').length;
+    const todo = active.filter(e => e.status === 'todo').length;
     const rate = total > 0 ? Math.round((done / total) * 100) : 0;
     return { total, done, progress, todo, rate };
   }, [entries, date, filterFn]);

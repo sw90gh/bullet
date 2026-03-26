@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, PRIORITY, TYPES, DAYS_KR } from '../utils/constants';
 import { getDaysInMonth, pad, daysBetween, formatDateKey, getWeekDates, addDays } from '../utils/date';
@@ -19,7 +19,15 @@ const LABEL_WIDTH = 110;
 export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) {
   const { styles, C, statusColor } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const headerScrollRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<GanttRange>('month');
+
+  // 가로 스크롤 동기화 (본문 → 헤더)
+  const handleBodyScroll = useCallback(() => {
+    if (scrollRef.current && headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = scrollRef.current.scrollLeft;
+    }
+  }, []);
   const todayStr = formatDateKey(new Date());
 
   // 범위에 따른 시작일/종료일/일수 계산
@@ -182,32 +190,46 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
           ...styles.ganttContainer as React.CSSProperties,
           position: 'relative',
           maxHeight: 'calc(100vh - 240px)',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          overflowX: 'auto',
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
         } as React.CSSProperties}>
+          {/* Sticky header row */}
+          <div style={{ display: 'flex', flexShrink: 0, borderBottom: `2px solid ${C.border}` }}>
+            <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: `2px solid ${C.border}`, height: 28 }} />
+            <div ref={headerScrollRef} style={{
+              flex: 1, overflowX: 'hidden', scrollbarWidth: 'none', msOverflowStyle: 'none',
+            } as React.CSSProperties}>
+              <div style={{ display: 'flex', width: totalDays * dayWidth, minWidth: '100%', height: 28 }}>
+                {dayLabels.map((dl, i) => (
+                  <div key={i} style={{
+                    width: dayWidth, minWidth: dayWidth, textAlign: 'center',
+                    fontSize: range === 'quarter' ? 8 : 9,
+                    color: dl.isToday ? C.accent : dl.isWeekend ? `${C.accent}88` : C.textMuted,
+                    background: dl.isToday ? `${C.accent}18` : C.bgWhite,
+                    fontWeight: dl.isToday ? 700 : 400,
+                    borderRight: `1px solid ${C.borderLight}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxSizing: 'border-box',
+                  }}>{dl.label}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable body */}
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           <div style={{ display: 'flex' }}>
             {/* Fixed label column */}
             <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, flexShrink: 0, borderRight: `2px solid ${C.border}` }}>
-              {/* Sticky header spacer */}
-              <div style={{
-                height: 28, borderBottom: `1px solid ${C.border}`, boxSizing: 'border-box',
-                position: 'sticky', top: 0, zIndex: 3, background: C.bgWhite,
-              }} />
               {displayEntries.map(entry => {
                 const pr = PRIORITY[entry.priority] || PRIORITY.none;
                 const tp = TYPES[entry.type];
                 const isInactive = entry.status === 'done' || entry.status === 'cancelled' || entry.status === 'migrated' || entry.status === 'migrated_up';
                 return (
                   <div key={entry.id} style={{
-                    height: ROW_HEIGHT,
-                    display: 'flex',
-                    alignItems: 'center',
-                    width: LABEL_WIDTH,
-                    padding: '0 4px',
-                    fontSize: 11,
-                    borderBottom: `1px solid ${C.borderLight}`,
-                    boxSizing: 'border-box',
+                    height: ROW_HEIGHT, display: 'flex', alignItems: 'center',
+                    width: LABEL_WIDTH, padding: '0 4px', fontSize: 11,
+                    borderBottom: `1px solid ${C.borderLight}`, boxSizing: 'border-box',
                     cursor: 'pointer',
                     opacity: entry.status === 'migrated' || entry.status === 'migrated_up' ? 0.4 : 1,
                   } as React.CSSProperties}
@@ -237,33 +259,11 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             </div>
 
             {/* Scrollable timeline */}
-            <div ref={scrollRef} style={{
+            <div ref={scrollRef} onScroll={handleBodyScroll} style={{
               overflowX: 'auto', flex: 1,
               scrollbarWidth: 'none', msOverflowStyle: 'none',
             } as React.CSSProperties}>
               <div style={{ width: totalDays * dayWidth, minWidth: '100%' }}>
-                {/* Day headers — sticky */}
-                <div style={{
-                  display: 'flex', borderBottom: `1px solid ${C.border}`, height: 28, boxSizing: 'border-box',
-                  position: 'sticky', top: 0, zIndex: 2, background: C.bgWhite,
-                }}>
-                  {dayLabels.map((dl, i) => (
-                    <div key={i} style={{
-                      width: dayWidth,
-                      minWidth: dayWidth,
-                      textAlign: 'center',
-                      fontSize: range === 'quarter' ? 8 : 9,
-                      color: dl.isToday ? C.accent : dl.isWeekend ? `${C.accent}88` : C.textMuted,
-                      background: dl.isToday ? `${C.accent}18` : C.bgWhite,
-                      fontWeight: dl.isToday ? 700 : 400,
-                      borderRight: `1px solid ${C.borderLight}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxSizing: 'border-box',
-                    }}>
-                      {dl.label}
-                    </div>
-                  ))}
-                </div>
 
                 {/* Bars */}
                 {displayEntries.map(entry => {
@@ -316,6 +316,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
               </div>
             </div>
           </div>
+          </div> {/* body wrapper end */}
         </div>
       )}
 
