@@ -261,7 +261,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
             </div>
 
             {/* Scrollable timeline */}
-            <div ref={scrollRef} onScroll={handleBodyScroll}
+            <div ref={scrollRef} className="gantt-scroll" onScroll={handleBodyScroll}
               onWheel={(e) => {
                 if (scrollRef.current && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {
                   e.preventDefault();
@@ -270,7 +270,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
               }}
               style={{
               overflowX: 'auto', flex: 1,
-              scrollbarWidth: 'thin',
+              position: 'relative',
             } as React.CSSProperties}>
               <div style={{ width: totalDays * dayWidth, minWidth: '100%' }}>
 
