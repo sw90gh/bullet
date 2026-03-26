@@ -349,7 +349,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
           {/* 커스텀 가로 스크롤바 (오버레이) */}
           {scrollThumb.visible && (
             <div ref={customScrollRef} style={{
-              position: 'absolute', bottom: 2, left: 0, right: 0, height: 10,
+              position: 'absolute', bottom: 4, left: 0, right: 0, height: 14,
               zIndex: 20, cursor: 'pointer',
             }}
             onMouseDown={(e) => {
@@ -376,10 +376,10 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                 position: 'absolute',
                 left: scrollThumb.left,
                 width: scrollThumb.width,
-                height: 6,
-                top: 2,
-                background: '#c0583f',
-                borderRadius: 3,
+                height: 10,
+                top: 0,
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: 5,
               }}
               />
             </div>
