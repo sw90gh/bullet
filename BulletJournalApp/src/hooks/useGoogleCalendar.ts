@@ -12,7 +12,7 @@ export interface GoogleCalendarEvent {
   htmlLink?: string;
 }
 
-const CACHE_KEY = 'bujo-gcal-cache-v3'; // v3: 범위 축소 (1개월 전~3개월 후)
+const CACHE_KEY = 'bujo-gcal-cache-v4'; // v4: 모든 캘린더에서 가져오기
 const CACHE_TTL = 5 * 60 * 1000; // 5분
 
 export function useGoogleCalendar(accessToken: string | null, enabled: boolean) {
@@ -41,33 +41,34 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
       const now = new Date();
       const timeMin = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
       const timeMax = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
+      const headers = { Authorization: `Bearer ${token}` };
 
-      const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
-        `timeMin=${encodeURIComponent(timeMin)}&` +
-        `timeMax=${encodeURIComponent(timeMax)}&` +
-        `singleEvents=true&orderBy=startTime&maxResults=500`;
-
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log('[GCal] API response status:', res.status);
-      if (!res.ok) {
-        const errBody = await res.text();
-        console.error('[GCal] API error:', res.status, errBody);
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('bujo-gat');
-          setError('캘린더 권한이 만료되었습니다. 로그아웃 후 다시 로그인해주세요.');
-        } else {
-          setError(`캘린더 로드 실패 (${res.status})`);
-        }
-        setLoading(false);
-        return;
+      // 1. 캘린더 목록 조회
+      const calListRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', { headers });
+      let calendarIds = ['primary'];
+      if (calListRes.ok) {
+        const calListData = await calListRes.json();
+        calendarIds = (calListData.items || []).map((c: any) => c.id);
+        console.log('[GCal] Found', calendarIds.length, 'calendars');
       }
 
-      const data = await res.json();
-      console.log('[GCal] Fetched', data.items?.length || 0, 'events');
-      const parsed: GoogleCalendarEvent[] = (data.items || []).map((item: any) => {
+      // 2. 모든 캘린더에서 이벤트 가져오기
+      const allItems: any[] = [];
+      for (const calId of calendarIds) {
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?` +
+          `timeMin=${encodeURIComponent(timeMin)}&` +
+          `timeMax=${encodeURIComponent(timeMax)}&` +
+          `singleEvents=true&orderBy=startTime&maxResults=200`;
+        try {
+          const res = await fetch(url, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            allItems.push(...(data.items || []));
+          }
+        } catch {}
+      }
+      console.log('[GCal] Fetched', allItems.length, 'events from', calendarIds.length, 'calendars');
+      const parsed: GoogleCalendarEvent[] = allItems.map((item: any) => {
         const allDay = !!item.start?.date;
         const startStr = item.start?.dateTime || item.start?.date || '';
         const endStr = item.end?.dateTime || item.end?.date || '';
@@ -100,10 +101,13 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
         };
       });
 
-      setEvents(parsed);
+      // 중복 제거 (여러 캘린더에서 같은 이벤트가 올 수 있음) + 날짜순 정렬
+      const unique = Array.from(new Map(parsed.map(e => [e.id, e])).values())
+        .sort((a, b) => a.date.localeCompare(b.date));
+      setEvents(unique);
       // 캐시 저장
       try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: parsed, timestamp: Date.now() }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: unique, timestamp: Date.now() }));
       } catch {}
     } catch (err) {
       setError('캘린더 연결 실패');
