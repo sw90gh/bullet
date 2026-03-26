@@ -72,9 +72,10 @@ export const TYPE_COLORS: Record<string, { light: string; dark: string }> = {
 };
 
 export const PRIORITY = {
-  none:      { symbol: '',  label: '없음' },
-  important: { symbol: '★', label: '중요' },
-  urgent:    { symbol: '!',  label: '긴급' },
+  none:             { symbol: '',   label: '없음' },
+  important:        { symbol: '★',  label: '중요' },
+  urgent:           { symbol: '!',  label: '긴급' },
+  'urgent-important': { symbol: '★!', label: '중요+긴급' },
 } as const;
 
 export const DAYS_KR = ['일', '월', '화', '수', '목', '금', '토'];

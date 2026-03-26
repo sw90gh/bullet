@@ -32,7 +32,7 @@ export function MonthlyScreen({
   const monthKey = `${year}-${pad(month + 1)}`;
   const allMonthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly')
     .sort((a, b) => {
-      const po: Record<string, number> = { urgent: 0, important: 1, none: 2 };
+      const po: Record<string, number> = { 'urgent-important': 0, urgent: 1, important: 2, none: 3 };
       if (po[a.priority || 'none'] !== po[b.priority || 'none'])
         return po[a.priority || 'none'] - po[b.priority || 'none'];
       return (a.createdAt || 0) - (b.createdAt || 0);

@@ -137,7 +137,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const priorityBtnStyle = (key: string, active: boolean): React.CSSProperties => ({
     flex: 1, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
     fontFamily: '-apple-system, sans-serif',
-    background: active ? C.primary : key === 'urgent' ? C.accent : key === 'important' ? C.amber : C.textMuted,
+    background: active ? C.primary : key === 'urgent-important' ? '#8b1a1a' : key === 'urgent' ? C.accent : key === 'important' ? C.amber : C.textMuted,
     color: isDark ? '#1a1a1a' : 'white',
   });
 
@@ -147,12 +147,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       {/* 좌측: 우선순위 버튼 (좌→우 스와이프) */}
       {onChangePriority && (
         <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0, width: 160,
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: 220,
           display: 'flex', transition: 'opacity 0.2s',
           opacity: swipeDir === 'right' ? 1 : 0,
           pointerEvents: swipeDir === 'right' ? 'auto' : 'none',
         }}>
-          {(['none', 'important', 'urgent'] as EntryPriority[]).map(key => {
+          {(['none', 'important', 'urgent', 'urgent-important'] as EntryPriority[]).map(key => {
             const p = PRIORITY[key];
             return (
               <button key={key}
@@ -202,12 +202,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         {swipeButtons}
         <div style={{
           ...styles.weekEntry as React.CSSProperties,
-          transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(160px)' : 'translateX(0)',
+          transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(220px)' : 'translateX(0)',
           transition: 'transform 0.25s ease',
           userSelect: 'none',
         }}
         >
-          {pr.symbol ? <span style={{ color: C.accent, fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
+          {pr.symbol ? <span style={{ color: entry.priority === 'urgent-important' ? '#8b1a1a' : entry.priority === 'urgent' ? C.accent : C.amber, fontSize: 11, marginRight: 2 }}>{pr.symbol}</span> : null}
           {entry.type === 'event' ? (
             <span style={{ color: C.accent, fontSize: 12, marginRight: 6 }}>○</span>
           ) : entry.type === 'goal-yearly' ? (
@@ -239,12 +239,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
       {/* 메인 콘텐츠 */}
       <div style={{
         ...styles.entryRow as React.CSSProperties,
-        transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(160px)' : 'translateX(0)',
+        transform: swipeDir === 'left' ? 'translateX(-200px)' : swipeDir === 'right' ? 'translateX(220px)' : 'translateX(0)',
         transition: 'transform 0.25s ease',
         userSelect: 'none',
       }}
       >
-        {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent' ? C.accent : C.amber }}>{pr.symbol}</span> : null}
+        {pr.symbol ? <span style={{ ...styles.prMark, color: entry.priority === 'urgent-important' ? '#8b1a1a' : entry.priority === 'urgent' ? C.accent : C.amber }}>{pr.symbol}</span> : null}
         {entry.type === 'event' ? (
           <span style={{ ...styles.entrySym, color: C.accent, fontSize: 18 }}>○</span>
         ) : entry.type === 'goal-yearly' ? (

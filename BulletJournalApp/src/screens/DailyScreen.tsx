@@ -57,7 +57,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     .filter(e => e.date === dateStr)
     .sort((a, b) => {
       // 우선순위 정렬 (긴급→중요→없음), 같으면 생성순
-      const po: Record<string, number> = { urgent: 0, important: 1, none: 2 };
+      const po: Record<string, number> = { 'urgent-important': 0, urgent: 1, important: 2, none: 3 };
       if (po[a.priority || 'none'] !== po[b.priority || 'none'])
         return po[a.priority || 'none'] - po[b.priority || 'none'];
       return (a.createdAt || 0) - (b.createdAt || 0);
