@@ -21,18 +21,20 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
   const [error, setError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async (token: string) => {
-    // 캐시 확인
+    // 캐시 확인 (빈 배열은 캐시 무시)
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL) {
+        if (Date.now() - timestamp < CACHE_TTL && Array.isArray(data) && data.length > 0) {
+          console.log('[GCal] Using cache:', data.length, 'events');
           setEvents(data);
           return;
         }
       }
     } catch {}
 
+    console.log('[GCal] Fetching from API...');
     setLoading(true);
     setError(null);
     try {
@@ -49,7 +51,10 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log('[GCal] API response status:', res.status);
       if (!res.ok) {
+        const errBody = await res.text();
+        console.error('[GCal] API error:', res.status, errBody);
         if (res.status === 401 || res.status === 403) {
           localStorage.removeItem('bujo-gat');
           setError('캘린더 권한이 만료되었습니다. 로그아웃 후 다시 로그인해주세요.');
@@ -61,6 +66,7 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
       }
 
       const data = await res.json();
+      console.log('[GCal] Fetched', data.items?.length || 0, 'events');
       const parsed: GoogleCalendarEvent[] = (data.items || []).map((item: any) => {
         const allDay = !!item.start?.date;
         const startStr = item.start?.dateTime || item.start?.date || '';
@@ -105,6 +111,7 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
 
   const refresh = useCallback(() => {
     localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem('bujo-gcal-cache'); // 혹시 다른 키로 저장된 캐시도 정리
     if (accessToken && enabled) fetchEvents(accessToken);
   }, [accessToken, enabled, fetchEvents]);
 
