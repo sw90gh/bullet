@@ -497,6 +497,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
           background: viewMode === 'timeline' ? C.primary : C.bgWhite,
           color: viewMode === 'timeline' ? C.headerText : C.textSecondary,
         }} onClick={() => setViewMode('timeline')}>시간표</button>
+        {gcalEvents.length > 0 && (
+          <span style={{ fontSize: 9, color: '#4285f4', marginLeft: 4 }}>
+            G:{gcalEvents.filter(e => e.date === dateStr).length}/{gcalEvents.length}
+          </span>
+        )}
       </div>
 
       {/* 밀린 항목 */}

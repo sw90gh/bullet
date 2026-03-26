@@ -114,10 +114,12 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
 
   useEffect(() => {
     console.log('[GCal] enabled:', enabled, 'hasToken:', !!accessToken);
-    if (!enabled || !accessToken) {
+    if (!enabled) {
       setEvents([]);
       return;
     }
+    // 토큰 없으면 fetch만 스킵 (기존 캐시 데이터는 유지)
+    if (!accessToken) return;
     fetchEvents(accessToken);
   }, [accessToken, enabled, fetchEvents]);
 
