@@ -12,7 +12,7 @@ export interface GoogleCalendarEvent {
   htmlLink?: string;
 }
 
-const CACHE_KEY = 'bujo-gcal-cache';
+const CACHE_KEY = 'bujo-gcal-cache-v2'; // v2: Date 기반 파싱
 const CACHE_TTL = 5 * 60 * 1000; // 5분
 
 export function useGoogleCalendar(accessToken: string | null, enabled: boolean) {
@@ -71,9 +71,21 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
         const allDay = !!item.start?.date;
         const startStr = item.start?.dateTime || item.start?.date || '';
         const endStr = item.end?.dateTime || item.end?.date || '';
-        const startDate = allDay ? startStr : startStr.slice(0, 10);
-        const startTime = allDay ? undefined : startStr.slice(11, 16);
-        const endTime = allDay ? undefined : endStr.slice(11, 16);
+
+        // Date 객체로 파싱하여 로컬 시간 기준으로 변환
+        let startDate: string, startTime: string | undefined, endTime: string | undefined;
+        if (allDay) {
+          startDate = startStr; // YYYY-MM-DD
+          startTime = undefined;
+          endTime = undefined;
+        } else {
+          const startDt = new Date(startStr);
+          const endDt = new Date(endStr);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          startDate = `${startDt.getFullYear()}-${pad(startDt.getMonth() + 1)}-${pad(startDt.getDate())}`;
+          startTime = `${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+          endTime = `${pad(endDt.getHours())}:${pad(endDt.getMinutes())}`;
+        }
 
         return {
           id: item.id,

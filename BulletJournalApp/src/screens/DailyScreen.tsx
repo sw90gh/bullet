@@ -575,6 +575,35 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 onChangePriority={onChangePriority}
               />
             ))}
+            {/* 구글 캘린더 일정 (목록 모드) */}
+            {gcalEvents.filter(e => e.date === dateStr).length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, color: '#4285f4',
+                  padding: '6px 2px 4px', borderBottom: '1px solid #4285f430',
+                  marginBottom: 4,
+                }}>
+                  Google Calendar ({gcalEvents.filter(e => e.date === dateStr).length}건)
+                </div>
+                {gcalEvents.filter(e => e.date === dateStr).map(ge => (
+                  <div key={`gcal-${ge.id}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                    cursor: ge.htmlLink ? 'pointer' : 'default',
+                  }} onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                    <span style={{ fontSize: 10, color: '#4285f4', fontWeight: 700, width: 16, textAlign: 'center' }}>G</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {ge.summary}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#4285f488' }}>
+                        {ge.allDay ? '종일' : `${ge.startTime}${ge.endTime ? ` - ${ge.endTime}` : ''}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
       ) : (
