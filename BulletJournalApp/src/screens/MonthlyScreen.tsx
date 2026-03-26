@@ -4,6 +4,7 @@ import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
 import { getDaysInMonth, pad, getTodayStr } from '../utils/date';
 import { Entry, EntryPriority } from '../types';
+import { GoogleCalendarEvent } from '../hooks/useGoogleCalendar';
 
 interface MonthlyScreenProps {
   year: number;
@@ -18,11 +19,12 @@ interface MonthlyScreenProps {
   onChangePriority?: (id: string, priority: EntryPriority) => void;
   onDayTap: (d: number) => void;
   onToggleGoalDone: (id: string) => void;
+  gcalEvents?: GoogleCalendarEvent[];
 }
 
 export function MonthlyScreen({
   year, month, entries, cycleStatus,
-  onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone
+  onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone, gcalEvents = []
 }: MonthlyScreenProps) {
   const { styles, C } = useTheme();
   const [showAll, setShowAll] = useState(false);
@@ -79,6 +81,8 @@ export function MonthlyScreen({
             if (!d) return <div key={i} style={styles.miniCalCell as React.CSSProperties} />;
             const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
             const dayItems = monthEntries.filter(e => e.date === dateStr);
+            const dayGcal = gcalEvents.filter(e => e.date?.trim().startsWith(dateStr));
+            const totalCount = dayItems.length + dayGcal.length;
             const isT = dateStr === todayStr;
             return (
               <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, cursor: 'pointer', padding: '4px 1px' }}
@@ -87,15 +91,15 @@ export function MonthlyScreen({
                   ...styles.miniCalNum,
                   ...(isT ? styles.miniCalToday : {}),
                 } as React.CSSProperties}>{d}</span>
-                {dayItems.length > 0 && (
+                {totalCount > 0 && (
                   <div style={{ marginTop: 1 }}>
                     <div style={{
-                      fontSize: 7, color: C.textMuted, lineHeight: 1.2,
+                      fontSize: 7, color: dayGcal.length > 0 && dayItems.length === 0 ? '#4285f4' : C.textMuted, lineHeight: 1.2,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       maxWidth: '100%', padding: '0 1px',
-                    }}>{dayItems[0].text.slice(0, 4)}</div>
-                    {dayItems.length > 1 && (
-                      <div style={{ fontSize: 6, color: C.blue }}>+{dayItems.length - 1}</div>
+                    }}>{dayItems.length > 0 ? dayItems[0].text.slice(0, 4) : dayGcal[0]?.summary.slice(0, 4)}</div>
+                    {totalCount > 1 && (
+                      <div style={{ fontSize: 6, color: C.blue }}>+{totalCount - 1}</div>
                     )}
                   </div>
                 )}
@@ -204,6 +208,24 @@ export function MonthlyScreen({
                       onChangePriority={onChangePriority} />
                   ))
                 )}
+                {/* 구글 캘린더 일정 */}
+                {gcalEvents.filter(ge => ge.date?.trim().startsWith(dayStr)).map(ge => (
+                  <div key={`gcal-${ge.id}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                    cursor: ge.htmlLink ? 'pointer' : 'default',
+                  }} onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                    <span style={{ fontSize: 10, color: '#4285f4', fontWeight: 700, width: 16, textAlign: 'center' }}>G</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: '#4285f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {ge.summary}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#4285f488' }}>
+                        {ge.allDay ? '종일' : `${ge.startTime}${ge.endTime ? ` - ${ge.endTime}` : ''}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 <button style={{
                   width: '100%', marginTop: 8, padding: 10, borderRadius: 10,
                   border: `1.5px solid ${C.border}`, background: 'transparent',

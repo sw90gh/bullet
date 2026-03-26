@@ -364,6 +364,7 @@ export default function App() {
             onUpdateEntry={updateEntry}
             setCurDate={setCurDate}
             setView={(v) => setView(v as ViewType)}
+            gcalEvents={gcalEvents}
           />
         )}
 
@@ -381,6 +382,7 @@ export default function App() {
             onChangePriority={changePriority}
             onDayTap={(d) => { setCurDate(new Date(curY, curM, d)); setView('daily'); }}
             onToggleGoalDone={toggleGoalDone}
+            gcalEvents={gcalEvents}
           />
         )}
 

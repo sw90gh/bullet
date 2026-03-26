@@ -3,13 +3,15 @@ import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPE_COLORS, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { formatDateKey, getTodayStr } from '../utils/date';
 import { Entry } from '../types';
+import { GoogleCalendarEvent } from '../hooks/useGoogleCalendar';
 
 interface WeeklyTimelineProps {
-  dates: Date[];          // 3일 배열
-  entries: Entry[];       // 전체 entries (밀린 항목 포함)
+  dates: Date[];
+  entries: Entry[];
   onEdit: (entry: Entry) => void;
   onUpdateEntry: (id: string, updates: Partial<Entry>) => void;
   cycleStatus: (id: string) => void;
+  gcalEvents?: GoogleCalendarEvent[];
 }
 
 const HOUR_HEIGHT = 44;
@@ -38,7 +40,7 @@ function yToMinutes(y: number): number {
 
 const DAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus }: WeeklyTimelineProps) {
+export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus, gcalEvents = [] }: WeeklyTimelineProps) {
   const { C, isDark, statusColor } = useTheme();
   const todayStr = getTodayStr();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -508,6 +510,31 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
                       {entry.time}{entry.endTime ? `-${entry.endTime}` : ''}
                     </div>
                   )}
+                </div>
+              );
+            })
+          )}
+
+          {/* Google Calendar events */}
+          {dateStrs.map((ds, ci) =>
+            gcalEvents.filter(ge => ge.date?.trim().startsWith(ds) && ge.startTime).map(ge => {
+              const gStart = parseInt(ge.startTime!.split(':')[0]) * 60 + parseInt(ge.startTime!.split(':')[1]);
+              const gEnd = ge.endTime ? parseInt(ge.endTime.split(':')[0]) * 60 + parseInt(ge.endTime.split(':')[1]) : gStart + 60;
+              const gTop = ((gStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+              const gHeight = Math.max(16, ((gEnd - gStart) / 60) * HOUR_HEIGHT - 2);
+              return (
+                <div key={`gcal-${ge.id}-${ci}`} style={{
+                  position: 'absolute', top: gTop,
+                  left: `calc(${TIME_LABEL_WIDTH}px + ${ci} * ${colWidth} + 3px)`,
+                  width: `calc(${colWidth} - 6px)`, height: gHeight,
+                  background: '#4285f415', borderLeft: '3px solid #4285f4',
+                  borderRadius: '0 4px 4px 0', padding: '1px 3px',
+                  overflow: 'hidden', zIndex: 2, opacity: 0.85,
+                  cursor: ge.htmlLink ? 'pointer' : 'default',
+                }} onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                  <div style={{ fontSize: 8, color: '#4285f4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    G {ge.summary}
+                  </div>
                 </div>
               );
             })

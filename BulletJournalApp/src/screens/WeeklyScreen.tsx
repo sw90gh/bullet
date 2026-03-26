@@ -6,6 +6,7 @@ import { WeeklyTimeline } from '../components/WeeklyTimeline';
 import { DAYS_KR } from '../utils/constants';
 import { getWeekDates, formatDateKey, getTodayStr } from '../utils/date';
 import { Entry, EntryPriority } from '../types';
+import { GoogleCalendarEvent } from '../hooks/useGoogleCalendar';
 
 interface WeeklyScreenProps {
   date: Date;
@@ -20,9 +21,10 @@ interface WeeklyScreenProps {
   onUpdateEntry?: (id: string, updates: Partial<Entry>) => void;
   setCurDate: (d: Date) => void;
   setView: (v: string) => void;
+  gcalEvents?: GoogleCalendarEvent[];
 }
 
-export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, setCurDate, setView }: WeeklyScreenProps) {
+export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, setCurDate, setView, gcalEvents = [] }: WeeklyScreenProps) {
   const { styles, C } = useTheme();
   const weekDates = getWeekDates(date.getFullYear(), date.getMonth(), date.getDate());
   const todayStr = getTodayStr();
@@ -158,6 +160,18 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
                       />
                   ))
                 )}
+                {/* 구글 캘린더 일정 */}
+                {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).map(ge => (
+                  <div key={`gcal-${ge.id}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '5px 4px',
+                    cursor: ge.htmlLink ? 'pointer' : 'default',
+                  }} onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                    <span style={{ fontSize: 10, color: '#4285f4', fontWeight: 700, width: 14, textAlign: 'center' }}>G</span>
+                    <span style={{ fontSize: 12, color: '#4285f4', flex: 1,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ge.summary}</span>
+                    <span style={{ fontSize: 9, color: '#4285f488' }}>{ge.allDay ? '종일' : ge.startTime}</span>
+                  </div>
+                ))}
               </div>
             );
           })}
@@ -197,6 +211,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
               onEdit={onEdit}
               onUpdateEntry={onUpdateEntry}
               cycleStatus={cycleStatus}
+              gcalEvents={gcalEvents}
             />
           )}
         </div>
