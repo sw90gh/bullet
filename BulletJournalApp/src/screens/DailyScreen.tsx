@@ -499,8 +499,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         }} onClick={() => setViewMode('timeline')}>시간표</button>
         {gcalEvents.length > 0 && (
           <span style={{ fontSize: 9, color: '#4285f4', marginLeft: 4 }}
-            onClick={() => alert(`dateStr: ${dateStr}\n\nFirst 3 events:\n${gcalEvents.slice(0,3).map(e => `${e.date} | ${e.startTime || 'allday'} | ${e.summary}`).join('\n')}`)}>
-            G:{gcalEvents.filter(e => e.date === dateStr).length}/{gcalEvents.length}
+            onClick={() => alert(`dateStr: [${dateStr}] (${dateStr.length})\n\nFirst 3:\n${gcalEvents.slice(0,3).map(e => `[${e.date}] (${e.date.length}) ${e.date === dateStr ? '=MATCH' : '≠MISS'} | ${e.startTime || 'allday'} | ${e.summary}`).join('\n')}`)}>
+            G:{gcalEvents.filter(e => e.date.trim() === dateStr.trim()).length}/{gcalEvents.length}
           </span>
         )}
       </div>
@@ -582,16 +582,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               />
             ))}
             {/* 구글 캘린더 일정 (목록 모드) */}
-            {gcalEvents.filter(e => e.date === dateStr).length > 0 && (
+            {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <div style={{
                   fontSize: 11, fontWeight: 700, color: '#4285f4',
                   padding: '6px 2px 4px', borderBottom: '1px solid #4285f430',
                   marginBottom: 4,
                 }}>
-                  Google Calendar ({gcalEvents.filter(e => e.date === dateStr).length}건)
+                  Google Calendar ({gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).length}건)
                 </div>
-                {gcalEvents.filter(e => e.date === dateStr).map(ge => (
+                {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).map(ge => (
                   <div key={`gcal-${ge.id}`} style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
@@ -856,7 +856,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               })}
 
             {/* 구글 캘린더 일정 (읽기 전용) */}
-            {gcalEvents.filter(e => e.date === dateStr && e.startTime).map(ge => {
+            {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr) && e.startTime).map(ge => {
               const gStartMin = ge.startTime ? parseInt(ge.startTime.split(':')[0]) * 60 + parseInt(ge.startTime.split(':')[1]) : 0;
               const gEndMin = ge.endTime ? parseInt(ge.endTime.split(':')[0]) * 60 + parseInt(ge.endTime.split(':')[1]) : gStartMin + 60;
               const gTop = ((gStartMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
