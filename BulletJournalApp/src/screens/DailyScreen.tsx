@@ -498,7 +498,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
           color: viewMode === 'timeline' ? C.headerText : C.textSecondary,
         }} onClick={() => setViewMode('timeline')}>시간표</button>
         {gcalEvents.length > 0 && (
-          <span style={{ fontSize: 9, color: '#4285f4', marginLeft: 4 }}>
+          <span style={{ fontSize: 9, color: '#4285f4', marginLeft: 4 }}
+            onClick={() => alert(`dateStr: ${dateStr}\n\nFirst 3 events:\n${gcalEvents.slice(0,3).map(e => `${e.date} | ${e.startTime || 'allday'} | ${e.summary}`).join('\n')}`)}>
             G:{gcalEvents.filter(e => e.date === dateStr).length}/{gcalEvents.length}
           </span>
         )}
