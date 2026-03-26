@@ -121,7 +121,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
     return statusColor(entry.status);
   };
 
-  const [hideInactive, setHideInactive] = useState(false);
+  const [filterMode, setFilterMode] = useState<'all' | 'hide-done' | 'hide-inactive'>('all');
 
   const getBarOpacity = (entry: Entry) => {
     if (entry.status === 'migrated' || entry.status === 'migrated_up') return 0.25;
@@ -130,9 +130,11 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
     return 1;
   };
 
-  const displayEntries = hideInactive
-    ? ganttEntries.filter(e => e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled')
-    : ganttEntries;
+  const displayEntries = filterMode === 'hide-done'
+    ? ganttEntries.filter(e => e.status !== 'done' && e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled')
+    : filterMode === 'hide-inactive'
+      ? ganttEntries.filter(e => e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled')
+      : ganttEntries;
 
   return (
     <div>
@@ -168,13 +170,13 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
           style={{
             marginLeft: 'auto', fontSize: 10, padding: '3px 8px', borderRadius: 6,
             border: `1px solid ${C.border}`, cursor: 'pointer',
-            background: hideInactive ? C.primary : C.bgWhite,
-            color: hideInactive ? C.headerText : C.textSecondary,
+            background: filterMode !== 'all' ? C.primary : C.bgWhite,
+            color: filterMode !== 'all' ? C.headerText : C.textSecondary,
             fontFamily: '-apple-system, sans-serif',
           }}
-          onClick={() => setHideInactive(!hideInactive)}
+          onClick={() => setFilterMode(filterMode === 'all' ? 'hide-inactive' : filterMode === 'hide-inactive' ? 'hide-done' : 'all')}
         >
-          {hideInactive ? '전체 보기' : '이관/취소 숨김'}
+          {filterMode === 'all' ? '이관/취소 숨김' : filterMode === 'hide-inactive' ? '완료도 숨김' : '전체 보기'}
         </button>
       </div>
 
