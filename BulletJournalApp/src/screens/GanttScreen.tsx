@@ -378,12 +378,9 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                 width: scrollThumb.width,
                 height: 6,
                 top: 2,
-                background: 'rgba(0,0,0,0.25)',
+                background: '#c0583f',
                 borderRadius: 3,
-                transition: 'background 0.15s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.45)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.25)')}
               />
             </div>
           )}
