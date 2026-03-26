@@ -54,7 +54,17 @@ export function useAuth() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) saveToken(credential.accessToken);
+      console.log('[Auth] credential:', credential);
+      console.log('[Auth] accessToken:', credential?.accessToken);
+      // credential.accessToken 또는 내부 tokenResponse에서 추출
+      const token = credential?.accessToken
+        || (result as any)._tokenResponse?.oauthAccessToken;
+      if (token) {
+        console.log('[Auth] Google access token obtained');
+        saveToken(token);
+      } else {
+        console.warn('[Auth] No access token in result');
+      }
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       console.error('Login error:', err.code, err.message);

@@ -16,6 +16,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+googleProvider.setCustomParameters({ prompt: 'consent' }); // 매번 동의 화면 → 새 scope 확실히 획득
 
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({

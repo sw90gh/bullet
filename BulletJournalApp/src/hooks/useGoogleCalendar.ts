@@ -95,6 +95,7 @@ export function useGoogleCalendar(accessToken: string | null, enabled: boolean) 
   }, []);
 
   useEffect(() => {
+    console.log('[GCal] enabled:', enabled, 'hasToken:', !!accessToken);
     if (!enabled || !accessToken) {
       setEvents([]);
       return;
