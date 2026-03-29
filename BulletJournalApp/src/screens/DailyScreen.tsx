@@ -850,12 +850,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         </>
                       )}
                     </div>
-                    {height > 30 && (
-                      <div style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>
-                        {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
-                      </div>
-                    )}
-                    {height > 44 && entry.subtasks && entry.subtasks.length > 0 && (
+                    {height > 36 && entry.subtasks && entry.subtasks.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                         <span style={{ fontSize: 9, color: C.textMuted }}>
                           ☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}
