@@ -64,7 +64,7 @@ export function autoBackup(): void {
   try {
     const lastBackup = localStorage.getItem(AUTO_BACKUP_TIME_KEY);
     const now = Date.now();
-    if (lastBackup && now - parseInt(lastBackup) < BACKUP_INTERVAL) return;
+    if (lastBackup && now - parseInt(lastBackup, 10) < BACKUP_INTERVAL) return;
 
     const data = exportAllData();
     localStorage.setItem(AUTO_BACKUP_KEY, data);
@@ -78,7 +78,7 @@ export function getAutoBackup(): { data: string; time: number } | null {
   try {
     const data = localStorage.getItem(AUTO_BACKUP_KEY);
     const time = localStorage.getItem(AUTO_BACKUP_TIME_KEY);
-    if (data && time) return { data, time: parseInt(time) };
+    if (data && time) return { data, time: parseInt(time, 10) };
     return null;
   } catch {
     return null;
@@ -184,7 +184,7 @@ export function markExported(): void {
 
 export function getLastExportTime(): number | null {
   const t = localStorage.getItem(LAST_EXPORT_KEY);
-  return t ? parseInt(t) : null;
+  return t ? parseInt(t, 10) : null;
 }
 
 export function shouldRemindBackup(): boolean {

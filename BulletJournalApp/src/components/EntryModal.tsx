@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY, STATUS_CYCLE_BY_TYPE, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { getTodayStr } from '../utils/date';
@@ -34,6 +34,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const [time, setTime] = useState<string>(existing?.time || modal.defaultTime || '');
   const [endTime, setEndTime] = useState<string>(existing?.endTime || '');
   const [allDay, setAllDay] = useState<boolean>(existing?.allDay || false);
+  const savedTime = useRef<{ time: string; endTime: string }>({ time: '', endTime: '' });
   const [tags, setTags] = useState<string>(existing?.tags?.join(', ') || '');
   const [memo, setMemo] = useState<string>(existing?.memo || '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(existing?.subtasks || []);
@@ -210,7 +211,17 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                 <button style={{
                   width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
                   background: allDay ? C.blue : C.borderLight, position: 'relative', padding: 2,
-                }} onClick={() => { setAllDay(!allDay); if (!allDay) { setTime(''); setEndTime(''); } }}>
+                }} onClick={() => {
+                  if (!allDay) {
+                    savedTime.current = { time, endTime };
+                    setTime('');
+                    setEndTime('');
+                  } else {
+                    setTime(savedTime.current.time);
+                    setEndTime(savedTime.current.endTime);
+                  }
+                  setAllDay(!allDay);
+                }}>
                   <div style={{
                     width: 16, height: 16, borderRadius: '50%', background: 'white',
                     transition: 'transform 0.2s', transform: allDay ? 'translateX(16px)' : 'translateX(0)',

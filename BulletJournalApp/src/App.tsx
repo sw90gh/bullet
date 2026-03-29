@@ -182,7 +182,7 @@ export default function App() {
     autoBackup();
     const interval = setInterval(autoBackup, 1000 * 60 * 60);
     return () => clearInterval(interval);
-  }, [entriesLoaded, entries]);
+  }, [entriesLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!entriesLoaded) {
     return (
