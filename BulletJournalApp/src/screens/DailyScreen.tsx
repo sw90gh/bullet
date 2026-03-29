@@ -399,6 +399,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     const ds = dragStateRef.current;
     if (!ds || !onUpdateEntry) {
       setDragState(null);
+      didDragMove.current = false;
       return;
     }
 
@@ -426,6 +427,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
       }
     }
 
+    didDragMove.current = false;
     setDragState(null);
   };
 
@@ -853,6 +855,19 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''}
                       </div>
                     )}
+                    {height > 44 && entry.subtasks && entry.subtasks.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <span style={{ fontSize: 9, color: C.textMuted }}>
+                          ☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}
+                        </span>
+                        <div style={{ flex: 1, maxWidth: 40, height: 3, borderRadius: 2, background: C.borderLight, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 2, background: C.green,
+                            width: `${(entry.subtasks.filter(s => s.done).length / entry.subtasks.length) * 100}%`,
+                          }} />
+                        </div>
+                      </div>
+                    )}
                     {/* 하단 리사이즈 핸들 */}
                     <div
                       style={{
@@ -944,7 +959,26 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
                         cursor: 'pointer',
                         background: isOverdue ? `${C.accent}06` : 'transparent',
-                      }} onClick={() => {
+                      }}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (onUpdateEntry) {
+                          const endHour = parseInt(placePanel.split(':')[0]) + 1;
+                          const updates: Partial<Entry> = {
+                            time: placePanel,
+                            endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
+                          };
+                          if (entry.date !== dateStr) {
+                            updates.originalDate = entry.originalDate || entry.date;
+                            updates.date = dateStr;
+                          }
+                          onUpdateEntry(entry.id, updates);
+                        }
+                        setPlacePanel(null);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (onUpdateEntry) {
                           const endHour = parseInt(placePanel.split(':')[0]) + 1;
                           const updates: Partial<Entry> = {
@@ -980,9 +1014,19 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     border: `1.5px dashed ${C.border}`, background: 'transparent',
                     color: C.textSecondary, fontSize: 13, cursor: 'pointer',
                     fontFamily: '-apple-system, sans-serif',
-                  }} onClick={() => {
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const time = placePanel;
                     setPlacePanel(null);
-                    if (onAddAtTime) onAddAtTime(placePanel);
+                    if (onAddAtTime) onAddAtTime(time);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const time = placePanel;
+                    setPlacePanel(null);
+                    if (onAddAtTime) onAddAtTime(time);
                   }}>+ 새 항목 추가</button>
                 </div>
               </div>
