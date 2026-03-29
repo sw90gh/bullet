@@ -32,7 +32,7 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   const didLongPress = useRef(false);
   const isDragging = useRef(false);
   const justClosedSwipe = useRef(false);
-  const justCycled = useRef(false);
+  const lastCycledAt = useRef<number>(0); // 마지막 상태 순환 시각 (ms)
   const touchHandled = useRef(false); // 터치 후 합성 마우스 이벤트 무시용
 
   // Close swipe when clicking/tapping outside this entry
@@ -96,10 +96,10 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         // 스와이프 닫기만 — 상태 변경 안 함
         setSwipeDir('none');
       } else {
-        // 스와이프 없는 상태에서 탭 → 상태 순환 (중복 호출 방지)
-        if (!justCycled.current) {
-          justCycled.current = true;
-          setTimeout(() => { justCycled.current = false; }, 400);
+        // 스와이프 없는 상태에서 탭 → 상태 순환 (600ms 내 중복 호출 방지)
+        const now = Date.now();
+        if (now - lastCycledAt.current > 600) {
+          lastCycledAt.current = now;
           cycleStatus(entry.id);
         }
       }
@@ -117,8 +117,8 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     handlePointerEnd(e.changedTouches[0].clientX);
-    // 합성 마우스 이벤트 무시 (500ms)
-    setTimeout(() => { touchHandled.current = false; }, 500);
+    // 합성 마우스 이벤트 무시 (600ms)
+    setTimeout(() => { touchHandled.current = false; }, 600);
   };
 
   // Mouse handlers (합성 마우스 이벤트 필터링)
