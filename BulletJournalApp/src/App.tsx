@@ -238,15 +238,12 @@ export default function App() {
         ))}
       </div>
 
-      {/* Tag Filter */}
+      {/* Tag Filter — 한 줄 + 더보기 팝업 */}
       {allTags.length > 0 && view !== 'annual' && (
-        <div style={{
-          padding: '6px 16px 0',
-        }}>
+        <div style={{ padding: '6px 16px 0' }}>
           <div style={{
-            display: 'flex', gap: 4, flexWrap: 'wrap',
-            overflow: 'hidden',
-            maxHeight: tagBarExpanded ? 'none' : 60,
+            display: 'flex', gap: 4, overflow: 'hidden',
+            maxHeight: 30, alignItems: 'center',
           }}>
             <button
               style={{
@@ -270,18 +267,65 @@ export default function App() {
                 }}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
             ))}
+            {allTags.length > 4 && (
+              <button
+                style={{
+                  padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+                  border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
+                  fontFamily: '-apple-system, sans-serif', flexShrink: 0,
+                  background: isDark ? COLORS_DARK.bgWhite : 'white',
+                  color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
+                }}
+                onClick={() => setTagBarExpanded(true)}>···</button>
+            )}
           </div>
-          {allTags.length > 6 && (
-            <button
-              style={{
-                padding: '2px 0', fontSize: 10, cursor: 'pointer', width: '100%',
-                border: 'none', background: 'transparent', color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
-                fontFamily: '-apple-system, sans-serif', textAlign: 'center',
-              }}
-              onClick={() => setTagBarExpanded(!tagBarExpanded)}>
-              {tagBarExpanded ? '접기 ▲' : '더보기 ▼'}
-            </button>
-          )}
+        </div>
+      )}
+      {/* 태그 선택 팝업 */}
+      {tagBarExpanded && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={() => setTagBarExpanded(false)}>
+          <div style={{
+            background: isDark ? COLORS_DARK.bg : '#fff',
+            borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+            maxHeight: '50vh', overflow: 'auto', padding: '0 20px 24px',
+            paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              padding: '14px 0 10px', borderBottom: `1px solid ${isDark ? COLORS_DARK.borderLight : '#eee'}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: isDark ? COLORS_DARK.textPrimary : '#2c2416' }}>태그 필터</span>
+              <button style={{
+                background: 'none', border: 'none', fontSize: 16,
+                color: isDark ? COLORS_DARK.textMuted : '#b8a99a', cursor: 'pointer', padding: 4,
+              }} onClick={() => setTagBarExpanded(false)}>✕</button>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '12px 0' }}>
+              <button
+                style={{
+                  padding: '6px 14px', borderRadius: 14, fontSize: 12, cursor: 'pointer',
+                  border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`,
+                  fontFamily: '-apple-system, sans-serif',
+                  background: selectedTag === null ? (isDark ? COLORS_DARK.primary : '#2c2416') : (isDark ? COLORS_DARK.bgWhite : 'white'),
+                  color: selectedTag === null ? (isDark ? '#1a1a1a' : 'white') : (isDark ? COLORS_DARK.textSecondary : '#6b5d4d'),
+                }}
+                onClick={() => { setSelectedTag(null); setTagBarExpanded(false); }}>전체</button>
+              {allTags.map(tag => (
+                <button key={tag}
+                  style={{
+                    padding: '6px 14px', borderRadius: 14, fontSize: 12, cursor: 'pointer',
+                    border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`,
+                    fontFamily: '-apple-system, sans-serif',
+                    background: selectedTag === tag ? (isDark ? COLORS_DARK.blue : '#3a7ca5') : (isDark ? COLORS_DARK.bgWhite : 'white'),
+                    color: selectedTag === tag ? 'white' : (isDark ? COLORS_DARK.blue : '#3a7ca5'),
+                  }}
+                  onClick={() => { setSelectedTag(selectedTag === tag ? null : tag); setTagBarExpanded(false); }}>#{tag}</button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
       </div>{/* end stickyTop */}
