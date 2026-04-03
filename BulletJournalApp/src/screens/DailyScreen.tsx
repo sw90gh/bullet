@@ -137,7 +137,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
 
   // === Drag state ===
   const timelineWrapperRef = useRef<HTMLDivElement>(null);
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const [timelineHeight, setTimelineHeight] = useState<number>(0);
   const didDragMove = useRef(false);
   const autoScrollRAF = useRef<number>(0);
   const autoScrollSpeed = useRef(0);
@@ -162,15 +164,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   // Keep ref in sync with state so rAF loop can read latest values
   dragStateRef.current = dragState;
 
-  // Find the scrollable parent (<main>) once
+  // Find the scrollable parent (timeline scroll container)
   const getScrollParent = useCallback((): HTMLElement | null => {
-    let el = timelineRef.current?.parentElement;
-    while (el) {
-      const style = getComputedStyle(el);
-      if (style.overflowY === 'auto' || style.overflowY === 'scroll') return el;
-      el = el.parentElement;
-    }
-    return null;
+    return timelineScrollRef.current || null;
   }, []);
 
   // Calculate ghost position from finger's clientY (works for all drag types)
@@ -467,17 +463,29 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     };
   }, [dragState, updateGhostFromClientY]);
 
+  // Measure available height for timeline scroll area
+  useEffect(() => {
+    if (viewMode !== 'timeline') return;
+    const measure = () => {
+      const wrapper = timelineWrapperRef.current;
+      const scrollEl = timelineScrollRef.current;
+      if (!wrapper || !scrollEl) return;
+      // wrapper top → viewport bottom, minus safe area
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const scrollRect = scrollEl.getBoundingClientRect();
+      const available = window.innerHeight - scrollRect.top - 12; // 12px bottom padding
+      setTimelineHeight(Math.max(200, available));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [viewMode]);
+
   // Auto-scroll to current time (today) or 6am (other days) when switching to timeline view
   useEffect(() => {
     if (viewMode !== 'timeline') return;
     const timer = setTimeout(() => {
-      // Find the scrollable ancestor (main with overflowY: auto)
-      let scroller: HTMLElement | null = timelineWrapperRef.current;
-      while (scroller) {
-        const ov = getComputedStyle(scroller).overflowY;
-        if (ov === 'auto' || ov === 'scroll') break;
-        scroller = scroller.parentElement;
-      }
+      const scroller = timelineScrollRef.current;
       if (scroller) {
         const defaultTop = (6 * HOUR_HEIGHT) - 4; // 6시 위치
         const targetTop = isToday ? Math.max(0, nowTop - 100) : defaultTop;
@@ -692,7 +700,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
             </div>
           )}
 
-          {/* 타임라인 그리드 */}
+          {/* 타임라인 그리드 (스크롤 영역) */}
+          <div ref={timelineScrollRef} style={{
+            overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+            height: timelineHeight > 0 ? timelineHeight : '60vh',
+          } as React.CSSProperties}>
           <div ref={timelineRef} style={{ position: 'relative', marginLeft: 44, marginRight: 8 }}>
             {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => {
               const hour = START_HOUR + i;
@@ -926,6 +938,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               );
             })}
           </div>
+          </div>{/* /timelineScrollRef */}
 
           {/* 시간 배치 선택 패널 */}
           {placePanel && (
