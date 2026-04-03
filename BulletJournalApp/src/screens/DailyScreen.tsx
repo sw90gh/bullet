@@ -52,6 +52,7 @@ function yToMinutes(y: number): number {
 export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, gcalEvents = [] }: DailyScreenProps) {
   const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
+  const [untimedOpen, setUntimedOpen] = useState(false);
   const [placePanel, setPlacePanel] = useState<string | null>(null); // 시간 문자열 or null
   const dateStr = formatDateKey(date);
   const todayStr = getTodayStr();
@@ -659,12 +660,19 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
             );
           })()}
 
-          {/* 시간 미지정 항목 - 드래그 가능 */}
+          {/* 시간 미지정 항목 - 접기/펼치기 */}
           {untimedEntries.length > 0 && (
-            <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>
-                시간 미지정 (끌어서 시간표에 배치)
+            <div style={{ borderBottom: `2px solid ${C.borderLight}` }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '6px 12px', cursor: 'pointer',
+              }} onClick={() => setUntimedOpen(!untimedOpen)}>
+                <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 600 }}>
+                  시간 미지정 ({untimedEntries.length}건)
+                </span>
+                <span style={{ fontSize: 10, color: C.textMuted, transition: 'transform 0.2s', display: 'inline-block', transform: untimedOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
               </div>
+              {untimedOpen && <div style={{ padding: '0 12px 8px' }}>
               {untimedEntries.map(entry => {
                 const st = STATUS[entry.status] || STATUS.todo;
                 const isDragging = dragState?.entryId === entry.id;
@@ -697,6 +705,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                   </div>
                 );
               })}
+              </div>}
             </div>
           )}
 
