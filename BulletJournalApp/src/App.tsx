@@ -455,6 +455,10 @@ export default function App() {
             }
             setModal(null);
           }}
+          onRequestMigrate={(entry) => {
+            setModal(null);
+            setMigrateTarget({ entry, type: 'migrated' });
+          }}
           onDelete={(id) => {
             deleteEntry(id);
             setModal(null);

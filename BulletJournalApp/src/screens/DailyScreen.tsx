@@ -24,7 +24,7 @@ interface DailyScreenProps {
 }
 
 const HOUR_HEIGHT = 52;
-const START_HOUR = 6;
+const START_HOUR = 0;
 const END_HOUR = 23;
 const SNAP_MINUTES = 15;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR + 1) * 60;
@@ -467,14 +467,15 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     };
   }, [dragState, updateGhostFromClientY]);
 
-  // Auto-scroll to current time when switching to timeline view
+  // Auto-scroll to current time (today) or 6am (other days) when switching to timeline view
   useEffect(() => {
-    if (viewMode !== 'timeline' || !isToday) return;
+    if (viewMode !== 'timeline') return;
     const timer = setTimeout(() => {
       const scroller = timelineWrapperRef.current?.closest('[style*="overflow"]') as HTMLElement
         || timelineWrapperRef.current?.parentElement?.parentElement;
       if (scroller) {
-        const targetTop = Math.max(0, nowTop - 100);
+        const defaultTop = (6 * HOUR_HEIGHT) - 4; // 6시 위치
+        const targetTop = isToday ? Math.max(0, nowTop - 100) : defaultTop;
         scroller.scrollTop = targetTop;
       }
     }, 50);
@@ -501,8 +502,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
 
-      {/* 밀린 항목 */}
-      {overdueEntries.length > 0 && (
+      {/* 밀린 항목 (목록 모드에서만 표시) */}
+      {viewMode === 'list' && overdueEntries.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{
             fontSize: 12, fontWeight: 700, color: C.accent,
@@ -521,8 +522,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         </div>
       )}
 
-      {/* 마감 임박 */}
-      {urgentEntries.length > 0 && (
+      {/* 마감 임박 (목록 모드에서만 표시) */}
+      {viewMode === 'list' && urgentEntries.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{
             fontSize: 12, fontWeight: 700, color: C.amber,

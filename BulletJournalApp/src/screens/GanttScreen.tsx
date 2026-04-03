@@ -330,13 +330,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
                         onClick={() => onEdit(entry)}
                         title={`${entry.text} (${entry.startDate || entry.date} ~ ${entry.endDate || entry.date})`}
                       >
-                        <span style={{
-                          fontSize: 9, color: C.headerText, padding: '0 3px',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          lineHeight: '20px',
-                        }}>
-                          {width > 30 ? entry.text : ''}
-                        </span>
+                        <span style={{ lineHeight: '20px' }}>{''}</span>
                       </div>
                     </div>
                   );

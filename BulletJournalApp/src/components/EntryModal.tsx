@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { STATUS, TYPES, PRIORITY, STATUS_CYCLE_BY_TYPE, STATUS_LABEL_BY_TYPE } from '../utils/constants';
 import { getTodayStr } from '../utils/date';
@@ -11,6 +11,7 @@ interface EntryModalProps {
   onSaveEntry: (data: Partial<Entry>) => void;
   onDelete?: (id: string) => void;
   onDuplicate?: (data: Partial<Entry>) => void;
+  onRequestMigrate?: (entry: Entry) => void;
   allTags?: string[];
   allEntries?: Entry[];  // 목표 연결용
 }
@@ -21,7 +22,7 @@ const ENTRY_TYPES = {
   note:  TYPES.note,
 };
 
-export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, allTags = [], allEntries = [] }: EntryModalProps) {
+export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, onRequestMigrate, allTags = [], allEntries = [] }: EntryModalProps) {
   const { styles, C } = useTheme();
   const existing = modal.entry;
 
@@ -42,6 +43,91 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const [recurringType, setRecurringType] = useState<string>(existing?.recurring?.type || 'none');
   const [recurringInterval, setRecurringInterval] = useState<number>(existing?.recurring?.interval || 1);
   const [recurringEndDate, setRecurringEndDate] = useState<string>(existing?.recurring?.endDate || '');
+
+  // 체크리스트 드래그 상태
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const dragStartY = useRef(0);
+  const dragItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const handleDragReorder = useCallback((fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    const updated = [...subtasks];
+    const [moved] = updated.splice(fromIdx, 1);
+    updated.splice(toIdx, 0, moved);
+    setSubtasks(updated);
+  }, [subtasks]);
+
+  // 터치 드래그
+  const handleSubtaskTouchStart = useCallback((e: React.TouchEvent, idx: number) => {
+    dragStartY.current = e.touches[0].clientY;
+    setDragIdx(idx);
+    setDragOverIdx(idx);
+  }, []);
+
+  const handleSubtaskTouchMove = useCallback((e: React.TouchEvent) => {
+    if (dragIdx === null) return;
+    const y = e.touches[0].clientY;
+    for (let i = 0; i < dragItemRefs.current.length; i++) {
+      const el = dragItemRefs.current[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (y >= rect.top && y <= rect.bottom) {
+        setDragOverIdx(i);
+        break;
+      }
+    }
+  }, [dragIdx]);
+
+  const handleSubtaskTouchEnd = useCallback(() => {
+    if (dragIdx !== null && dragOverIdx !== null) {
+      handleDragReorder(dragIdx, dragOverIdx);
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+  }, [dragIdx, dragOverIdx, handleDragReorder]);
+
+  // 마우스 드래그
+  const handleSubtaskMouseDown = useCallback((e: React.MouseEvent, idx: number) => {
+    e.preventDefault();
+    dragStartY.current = e.clientY;
+    setDragIdx(idx);
+    setDragOverIdx(idx);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      for (let i = 0; i < dragItemRefs.current.length; i++) {
+        const el = dragItemRefs.current[i];
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+          setDragOverIdx(i);
+          break;
+        }
+      }
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      // use latest values via refs workaround — trigger end via state
+      setDragIdx(prev => {
+        setDragOverIdx(prevOver => {
+          if (prev !== null && prevOver !== null) {
+            setSubtasks(st => {
+              if (prev === prevOver) return st;
+              const updated = [...st];
+              const [moved] = updated.splice(prev, 1);
+              updated.splice(prevOver, 0, moved);
+              return updated;
+            });
+          }
+          return null;
+        });
+        return null;
+      });
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
   const [targetCount, setTargetCount] = useState<number>(existing?.targetCount || 0);
   const [linkedGoalId, setLinkedGoalId] = useState<string>(existing?.linkedGoalId || '');
 
@@ -50,6 +136,13 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
 
   const handleSave = () => {
     if (!text.trim()) return;
+    // 수정 모드에서 이관 상태로 변경 시 → MigrateModal로 위임
+    if (modal.mode === 'edit' && existing && (status === 'migrated' || status === 'migrated_up')
+      && existing.status !== 'migrated' && existing.status !== 'migrated_up' && onRequestMigrate) {
+      onRequestMigrate(existing);
+      onClose();
+      return;
+    }
     const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
     const recurring: RecurringConfig | undefined = recurringType !== 'none'
       ? { type: recurringType as RecurringConfig['type'], interval: recurringInterval, endDate: recurringEndDate || undefined }
@@ -378,7 +471,27 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
           <div style={{ marginTop: 4 }}>
             <label style={labelSmall}>체크리스트</label>
             {subtasks.map((st, idx) => (
-              <div key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+              <div key={st.id}
+                ref={el => { dragItemRefs.current[idx] = el; }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3,
+                  background: dragIdx === idx ? `${C.blue}15` : dragOverIdx === idx && dragIdx !== null && dragIdx !== idx ? `${C.blue}08` : 'transparent',
+                  opacity: dragIdx === idx ? 0.7 : 1,
+                  borderRadius: 6, padding: '1px 0',
+                  borderTop: dragOverIdx === idx && dragIdx !== null && dragIdx > idx ? `2px solid ${C.blue}` : '2px solid transparent',
+                  borderBottom: dragOverIdx === idx && dragIdx !== null && dragIdx < idx ? `2px solid ${C.blue}` : '2px solid transparent',
+                  transition: 'background 0.1s',
+                }}
+                onTouchMove={handleSubtaskTouchMove}
+                onTouchEnd={handleSubtaskTouchEnd}
+              >
+                <span style={{
+                  fontSize: 14, color: C.textMuted, cursor: 'grab', padding: '2px 2px',
+                  flexShrink: 0, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
+                } as React.CSSProperties}
+                  onTouchStart={e => handleSubtaskTouchStart(e, idx)}
+                  onMouseDown={e => handleSubtaskMouseDown(e, idx)}
+                >⠿</span>
                 <input type="checkbox" checked={st.done}
                   style={{ width: 16, height: 16, accentColor: C.green, flexShrink: 0 }}
                   onChange={() => {
