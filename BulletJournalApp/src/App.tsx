@@ -240,10 +240,10 @@ export default function App() {
 
       {/* Tag Filter — 한 줄 + 더보기 팝업 */}
       {allTags.length > 0 && view !== 'annual' && (
-        <div style={{ padding: '6px 16px 0' }}>
+        <div style={{ padding: '6px 16px 0', display: 'flex', gap: 4, alignItems: 'center' }}>
           <div style={{
             display: 'flex', gap: 4, overflow: 'hidden',
-            maxHeight: 30, alignItems: 'center',
+            flex: 1, minWidth: 0, maxHeight: 26, alignItems: 'center',
           }}>
             <button
               style={{
@@ -267,18 +267,16 @@ export default function App() {
                 }}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
             ))}
-            {allTags.length > 4 && (
-              <button
-                style={{
-                  padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
-                  border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
-                  fontFamily: '-apple-system, sans-serif', flexShrink: 0,
-                  background: isDark ? COLORS_DARK.bgWhite : 'white',
-                  color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
-                }}
-                onClick={() => setTagBarExpanded(true)}>···</button>
-            )}
           </div>
+          <button
+            style={{
+              padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+              border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
+              fontFamily: '-apple-system, sans-serif', flexShrink: 0,
+              background: isDark ? COLORS_DARK.bgWhite : 'white',
+              color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
+            }}
+            onClick={() => setTagBarExpanded(true)}>···</button>
         </div>
       )}
       {/* 태그 선택 팝업 */}
