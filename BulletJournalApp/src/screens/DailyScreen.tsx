@@ -471,8 +471,13 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   useEffect(() => {
     if (viewMode !== 'timeline') return;
     const timer = setTimeout(() => {
-      const scroller = timelineWrapperRef.current?.closest('[style*="overflow"]') as HTMLElement
-        || timelineWrapperRef.current?.parentElement?.parentElement;
+      // Find the scrollable ancestor (main with overflowY: auto)
+      let scroller: HTMLElement | null = timelineWrapperRef.current;
+      while (scroller) {
+        const ov = getComputedStyle(scroller).overflowY;
+        if (ov === 'auto' || ov === 'scroll') break;
+        scroller = scroller.parentElement;
+      }
       if (scroller) {
         const defaultTop = (6 * HOUR_HEIGHT) - 4; // 6시 위치
         const targetTop = isToday ? Math.max(0, nowTop - 100) : defaultTop;
