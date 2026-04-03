@@ -70,6 +70,8 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagBarExpanded, setTagBarExpanded] = useState(false);
+  const [visibleTagCount, setVisibleTagCount] = useState<number>(999);
+  const tagBarRef = useRef<HTMLDivElement>(null);
   const [backupDismissed, setBackupDismissed] = useState(false);
 
   const mainRef = useRef<HTMLElement>(null);
@@ -142,6 +144,28 @@ export default function App() {
     });
     if (selectedTag === tag) setSelectedTag(null);
   }, [entries, updateEntry, selectedTag]);
+
+  // 태그바 보이는 개수 측정
+  useEffect(() => {
+    const el = tagBarRef.current;
+    if (!el || allTags.length === 0) return;
+    const measure = () => {
+      const containerWidth = el.clientWidth;
+      const children = el.children;
+      let count = 0;
+      for (let i = 1; i < children.length; i++) { // i=0 is "전체" button
+        const child = children[i] as HTMLElement;
+        if (child.offsetLeft + child.offsetWidth > containerWidth) break;
+        count++;
+      }
+      setVisibleTagCount(Math.max(1, count));
+    };
+    // 렌더 후 측정
+    setVisibleTagCount(999); // 먼저 전부 렌더
+    requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [allTags, view]);
 
   const filteredEntries = useMemo(() => {
     if (!selectedTag) return entries;
@@ -241,7 +265,7 @@ export default function App() {
       {/* Tag Filter — 한 줄 + 더보기 팝업 */}
       {allTags.length > 0 && view !== 'annual' && (
         <div style={{ padding: '6px 16px 0', display: 'flex', gap: 4, alignItems: 'center' }}>
-          <div style={{
+          <div ref={tagBarRef} style={{
             display: 'flex', gap: 4, overflow: 'hidden',
             flex: 1, minWidth: 0, maxHeight: 26, alignItems: 'center',
           }}>
@@ -255,7 +279,7 @@ export default function App() {
                 flexShrink: 0,
               }}
               onClick={() => setSelectedTag(null)}>전체</button>
-            {allTags.map(tag => (
+            {allTags.slice(0, visibleTagCount).map(tag => (
               <button key={tag}
                 style={{
                   padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
@@ -268,15 +292,17 @@ export default function App() {
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}>#{tag}</button>
             ))}
           </div>
-          <button
-            style={{
-              padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
-              border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
-              fontFamily: '-apple-system, sans-serif', flexShrink: 0,
-              background: isDark ? COLORS_DARK.bgWhite : 'white',
-              color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
-            }}
-            onClick={() => setTagBarExpanded(true)}>···</button>
+          {visibleTagCount < allTags.length && (
+            <button
+              style={{
+                padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+                border: `1px solid ${isDark ? COLORS_DARK.border : '#ddd5c9'}`, whiteSpace: 'nowrap',
+                fontFamily: '-apple-system, sans-serif', flexShrink: 0,
+                background: isDark ? COLORS_DARK.bgWhite : 'white',
+                color: isDark ? COLORS_DARK.textMuted : '#b8a99a',
+              }}
+              onClick={() => setTagBarExpanded(true)}>+{allTags.length - visibleTagCount}</button>
+          )}
         </div>
       )}
       {/* 태그 선택 팝업 */}
