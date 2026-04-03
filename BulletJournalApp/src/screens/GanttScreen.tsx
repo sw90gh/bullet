@@ -155,10 +155,25 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
       ? ganttEntries.filter(e => e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled')
       : ganttEntries;
 
+  // Measure available height for gantt body
+  const ganttWrapperRef = useRef<HTMLDivElement>(null);
+  const [ganttHeight, setGanttHeight] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const el = ganttWrapperRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setGanttHeight(Math.max(200, window.innerHeight - rect.top - 12));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [range, filterMode, displayEntries.length]);
+
   return (
     <div>
-      {/* Range selector */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+      {/* Range selector — 상단 고정 */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         {([
           { key: 'week' as GanttRange, label: '주간' },
           { key: 'month' as GanttRange, label: '월간' },
@@ -176,15 +191,11 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
         ))}
       </div>
 
-      {/* Legend + Filter */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        {Object.entries(STATUS).map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: statusColor(k),
-              opacity: k === 'cancelled' || k === 'migrated' || k === 'migrated_up' ? 0.3 : k === 'done' ? 0.7 : 1 }} />
-            <span style={{ color: C.textSecondary }}>{v.label}</span>
-          </div>
-        ))}
+      {/* Filter + 통계 — 상단 고정 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+        <span style={{ fontSize: 10, color: C.textSecondary }}>전체 <strong>{ganttEntries.length}</strong></span>
+        <span style={{ fontSize: 10, color: C.green }}>완료 <strong>{ganttEntries.filter(e => e.status === 'done').length}</strong></span>
+        <span style={{ fontSize: 10, color: C.amber }}>진행 <strong>{ganttEntries.filter(e => e.status === 'progress').length}</strong></span>
         <button
           style={{
             marginLeft: 'auto', fontSize: 10, padding: '3px 8px', borderRadius: 6,
@@ -207,10 +218,10 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
           </p>
         </div>
       ) : (
-        <div style={{
+        <div ref={ganttWrapperRef} style={{
           ...styles.ganttContainer as React.CSSProperties,
           position: 'relative',
-          maxHeight: 'calc(100vh - 240px)',
+          height: ganttHeight > 0 ? ganttHeight : 'calc(100vh - 240px)',
           overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
         } as React.CSSProperties}>
@@ -381,12 +392,7 @@ export function GanttScreen({ year, month, entries, onEdit }: GanttScreenProps) 
         </div>
       )}
 
-      {/* 간결한 통계 */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 8, justifyContent: 'center' }}>
-        <span style={{ fontSize: 11, color: C.textSecondary }}>전체 <strong>{ganttEntries.length}</strong></span>
-        <span style={{ fontSize: 11, color: C.green }}>완료 <strong>{ganttEntries.filter(e => e.status === 'done').length}</strong></span>
-        <span style={{ fontSize: 11, color: C.amber }}>진행 <strong>{ganttEntries.filter(e => e.status === 'progress').length}</strong></span>
-      </div>
+      {/* 간결한 통계 — range selector 옆 */}
     </div>
   );
 }
