@@ -79,6 +79,8 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - `tagBarExpanded` 상태로 토글, 펼치면 `maxHeight: 'none'`
 
 ### Timeline Drag & Drop
+- **시간 범위**: 0시~23시 (24시간 전체), 기본 6시 위치로 자동 스크롤 (오늘은 현재시각)
+- **시간표 모드에서 밀린항목/마감임박 섹션 숨김** (목록 모드에서만 표시)
 - **터치 + 마우스** 이벤트 모두 지원 (touch* + onMouseDown)
 - 15분 단위 스냅
 - 탭(5px 미만 이동) → 수정창, 드래그(5px 이상) → 시간만 변경 (수정창 안뜸)
@@ -110,12 +112,15 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
   - "다일간 항목은 시간 설정이 적용되지 않습니다" 안내 배너 표시
   - 저장 시 `time`, `endTime`을 `undefined`로 처리
 - **클리어 버튼** (`✕`): 종료일, 시작시간, 종료시간 필드에 개별 클리어 버튼 제공
+- **체크리스트 드래그 순서 변경**: `⠿` 핸들로 터치+마우스 드래그 지원, 삽입선 표시
+- **이관 상태 선택 시 MigrateModal 위임**: 수정 모달에서 `migrated`/`migrated_up` 선택 → `onRequestMigrate` 콜백으로 MigrateModal 열어 정식 이관 처리
 
 ### Gantt Chart
 - 주간/월간/분기 범위 전환
 - **날짜 헤더 sticky 고정**: 스크롤해도 상단에 날짜가 항상 보임
 - **유형 심볼 표시**: 라벨 앞에 ·할일, ○일정, ◎목표 등 표시
 - **최소 바 너비**: 단일 날짜 항목도 최소 28px 보장
+- **바 텍스트 미표시**: 좌측 목록에 이름이 나오므로 바에는 텍스트 없음 (hover 툴팁만 유지)
 - 이관/취소 숨김 토글
 - 바 클릭 시 수정 모달 열림
 
@@ -150,7 +155,7 @@ BulletJournalApp/
     components/
       Header.tsx          <- 헤더 + 동기화 상태 점 표시
       EntryRow.tsx        <- 스와이프 (compact/full, 터치+마우스+우클릭)
-      EntryModal.tsx      <- 항목 추가/수정 (목표 타입, 삭제 버튼, 반복, 클리어버튼)
+      EntryModal.tsx      <- 항목 추가/수정 (목표 타입, 삭제 버튼, 반복, 클리어버튼, 체크리스트 드래그, 이관 위임)
       DailySummary.tsx    <- 미니 도넛차트 위젯
       SearchModal.tsx
       MigrateModal.tsx
@@ -188,12 +193,14 @@ vercel.json               <- 루트 Vercel 설정
 - 백업 알림 배너 (3일 경과 시 자동 표시)
 - 공유 백업 (iOS Share API)
 - 다크모드 (시스템/라이트/다크) + STATUS_DARK 전용 색상
-- 시간표 드래그앤드롭 (터치 + 마우스, 자동스크롤)
+- 시간표 드래그앤드롭 (터치 + 마우스, 자동스크롤), 0시~23시 전체 + 6시 자동 스크롤
+- 체크리스트 드래그 순서 변경 (터치 + 마우스)
 - PC 지원 (마우스 스와이프, 우클릭 수정, 타임라인 마우스 드래그)
 - 검색
 - 데이터 내보내기/가져오기
 - 명언 표시 (500개, 일별 순환)
 - 수정 모달에서 삭제 가능
+- 수정 모달에서 이관 상태 선택 시 정식 이관 (MigrateModal 위임)
 
 ## Common Pitfalls
 1. Vercel serverless는 `BulletJournalApp/api/`에 있어야 함 (루트 `api/` 아님)
