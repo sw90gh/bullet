@@ -141,6 +141,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   const timelineScrollRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const [timelineHeight, setTimelineHeight] = useState<number>(0);
+  const [listHeight, setListHeight] = useState<number>(0);
+  const listScrollRef = useRef<HTMLDivElement>(null);
   const didDragMove = useRef(false);
   const autoScrollRAF = useRef<number>(0);
   const autoScrollSpeed = useRef(0);
@@ -482,6 +484,20 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
   }, [viewMode]);
 
+  // Measure available height for list scroll area
+  useEffect(() => {
+    if (viewMode !== 'list') return;
+    const measure = () => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setListHeight(Math.max(200, window.innerHeight - rect.top - 12));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [viewMode]);
+
   // Auto-scroll to current time (today) or 6am (other days) when switching to timeline view
   useEffect(() => {
     if (viewMode !== 'timeline') return;
@@ -501,23 +517,25 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
       <DailySummary entries={allEntries} label={isToday ? '오늘' : `${date.getMonth() + 1}/${date.getDate()}`} filterFn={(e) => e.date === dateStr && e.type !== 'goal-yearly' && e.type !== 'goal-monthly'} />
 
       {/* 뷰 모드 토글 */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
         <button style={{
-          flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-          border: `1px solid ${C.border}`, fontFamily: '-apple-system, sans-serif',
-          background: viewMode === 'list' ? C.primary : C.bgWhite,
-          color: viewMode === 'list' ? C.headerText : C.textSecondary,
+          ...styles.chip, flex: 1, textAlign: 'center',
+          ...(viewMode === 'list' ? styles.chipActive : {}),
         }} onClick={() => setViewMode('list')}>목록</button>
         <button style={{
-          flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-          border: `1px solid ${C.border}`, fontFamily: '-apple-system, sans-serif',
-          background: viewMode === 'timeline' ? C.primary : C.bgWhite,
-          color: viewMode === 'timeline' ? C.headerText : C.textSecondary,
+          ...styles.chip, flex: 1, textAlign: 'center',
+          ...(viewMode === 'timeline' ? styles.chipActive : {}),
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
 
+      {viewMode === 'list' && (
+      <div ref={listScrollRef} style={{
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        height: listHeight > 0 ? listHeight : '60vh',
+      } as React.CSSProperties}>
+
       {/* 밀린 항목 (목록 모드에서만 표시) */}
-      {viewMode === 'list' && overdueEntries.length > 0 && (
+      {overdueEntries.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{
             fontSize: 12, fontWeight: 700, color: C.accent,
@@ -536,8 +554,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         </div>
       )}
 
-      {/* 마감 임박 (목록 모드에서만 표시) */}
-      {viewMode === 'list' && urgentEntries.length > 0 && (
+      {/* 마감 임박 */}
+      {urgentEntries.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{
             fontSize: 12, fontWeight: 700, color: C.amber,
@@ -571,59 +589,61 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
         </div>
       )}
 
-      {viewMode === 'list' ? (
-        dayEntries.length === 0 ? (
-          <div style={styles.emptyState as React.CSSProperties}>
-            <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>·</div>
-            <p style={{ color: C.textMuted, fontSize: 14 }}>기록이 없습니다</p>
-            <button style={styles.emptyAdd} onClick={onAdd}>+ 새 항목 추가</button>
-          </div>
-        ) : (
-          <div>
-            {dayEntries.map(entry => (
-              <EntryRow
-                key={entry.id}
-                entry={entry}
-                cycleStatus={cycleStatus}
-                onEdit={() => onEdit(entry)}
-                onDelete={() => onDelete(entry.id)}
-                onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-                onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-                onChangePriority={onChangePriority}
-              />
-            ))}
-            {/* 구글 캘린더 일정 (목록 모드) */}
-            {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{
-                  fontSize: 11, fontWeight: 700, color: '#4285f4',
-                  padding: '6px 2px 4px', borderBottom: '1px solid #4285f430',
-                  marginBottom: 4,
-                }}>
-                  Google Calendar ({gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).length}건)
-                </div>
-                {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).map(ge => (
-                  <div key={`gcal-${ge.id}`} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
-                    cursor: ge.htmlLink ? 'pointer' : 'default',
-                  }} onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
-                    <span style={{ fontSize: 10, color: '#4285f4', fontWeight: 700, width: 16, textAlign: 'center' }}>G</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {ge.summary}
-                      </div>
-                      <div style={{ fontSize: 10, color: '#4285f488' }}>
-                        {ge.allDay ? '종일' : `${ge.startTime}${ge.endTime ? ` - ${ge.endTime}` : ''}`}
-                      </div>
+      {dayEntries.length === 0 && overdueEntries.length === 0 && urgentEntries.length === 0 ? (
+        <div style={styles.emptyState as React.CSSProperties}>
+          <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.3 }}>·</div>
+          <p style={{ color: C.textMuted, fontSize: 14 }}>기록이 없습니다</p>
+          <button style={styles.emptyAdd} onClick={onAdd}>+ 새 항목 추가</button>
+        </div>
+      ) : (
+        <>
+          {dayEntries.map(entry => (
+            <EntryRow
+              key={entry.id}
+              entry={entry}
+              cycleStatus={cycleStatus}
+              onEdit={() => onEdit(entry)}
+              onDelete={() => onDelete(entry.id)}
+              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+              onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
+              onChangePriority={onChangePriority}
+            />
+          ))}
+          {/* 구글 캘린더 일정 (목록 모드) */}
+          {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: '#4285f4',
+                padding: '6px 2px 4px', borderBottom: '1px solid #4285f430',
+                marginBottom: 4,
+              }}>
+                Google Calendar ({gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).length}건)
+              </div>
+              {gcalEvents.filter(e => e.date?.trim().startsWith(dateStr)).map(ge => (
+                <div key={`gcal-${ge.id}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                  cursor: ge.htmlLink ? 'pointer' : 'default',
+                }} onClick={() => { if (ge.htmlLink) window.open(ge.htmlLink, '_blank'); }}>
+                  <span style={{ fontSize: 10, color: '#4285f4', fontWeight: 700, width: 16, textAlign: 'center' }}>G</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ge.summary}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#4285f488' }}>
+                      {ge.allDay ? '종일' : `${ge.startTime}${ge.endTime ? ` - ${ge.endTime}` : ''}`}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      ) : (
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      </div>/* /listScrollRef */
+      )}
+
+      {viewMode === 'timeline' && (
         /* 타임라인 모드 */
         <div ref={timelineWrapperRef} style={{
           background: C.bgWhite, borderRadius: 14, overflow: 'hidden',
