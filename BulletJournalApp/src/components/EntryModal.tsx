@@ -254,7 +254,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
               <textarea
                 style={{
                   ...styles.input, padding: '10px 14px', fontSize: 13,
-                  minHeight: 120, resize: 'vertical', lineHeight: 1.6,
+                  minHeight: 200, resize: 'vertical', lineHeight: 1.6,
                   display: 'block', width: '100%', boxSizing: 'border-box',
                   fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
                 }}

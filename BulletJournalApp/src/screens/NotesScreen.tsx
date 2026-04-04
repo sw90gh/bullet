@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
+import { PRIORITY } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
 
 interface NotesScreenProps {
@@ -15,6 +16,7 @@ interface NotesScreenProps {
 export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onChangePriority }: NotesScreenProps) {
   const { styles, C } = useTheme();
   const [search, setSearch] = useState('');
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const notes = useMemo(() => {
     let list = entries
@@ -31,6 +33,9 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
     return list;
   }, [entries, search]);
 
+  // Live entry from entries prop (always fresh)
+  const viewingEntry = viewingId ? entries.find(e => e.id === viewingId) : null;
+
   const grouped = useMemo(() => {
     const map = new Map<string, Entry[]>();
     for (const e of notes) {
@@ -40,6 +45,11 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
     }
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [notes]);
+
+  const fmtDate = (ts: number) => {
+    const d = new Date(ts);
+    return `${d.getFullYear()}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  };
 
   return (
     <div>
@@ -90,7 +100,7 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
                 <EntryRow
                   entry={entry}
                   cycleStatus={cycleStatus}
-                  onEdit={() => onEdit(entry)}
+                  onEdit={() => setViewingId(entry.id)}
                   onDelete={() => onDelete(entry.id)}
                   onChangePriority={onChangePriority}
                 />
@@ -102,7 +112,7 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
                     overflow: 'hidden', display: '-webkit-box',
                     WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
                   } as React.CSSProperties}
-                    onClick={() => onEdit(entry)}
+                    onClick={() => setViewingId(entry.id)}
                   >{entry.memo}</div>
                 )}
               </div>
@@ -111,6 +121,100 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
         ))
       )}
       <div style={{ height: 70 }} />
+
+      {/* 메모 뷰어 */}
+      {viewingEntry && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={() => setViewingId(null)}>
+          <div style={{
+            background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+            maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+          }} onClick={e => e.stopPropagation()}>
+            {/* 뷰어 헤더 */}
+            <div style={{
+              padding: '14px 20px 10px', borderBottom: `1px solid ${C.borderLight}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              flexShrink: 0,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, margin: 0,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {viewingEntry.text}
+                </h3>
+                <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4, display: 'flex', gap: 10 }}>
+                  <span>등록 {fmtDate(viewingEntry.createdAt)}</span>
+                  {viewingEntry.updatedAt && <span>수정 {fmtDate(viewingEntry.updatedAt)}</span>}
+                </div>
+              </div>
+              <button style={{
+                background: 'none', border: 'none', fontSize: 18, color: C.textMuted,
+                cursor: 'pointer', padding: '4px 8px', flexShrink: 0,
+              }} onClick={() => setViewingId(null)}>✕</button>
+            </div>
+
+            {/* 뷰어 본문 */}
+            <div style={{
+              flex: 1, overflowY: 'auto', padding: '16px 20px',
+              WebkitOverflowScrolling: 'touch',
+            } as React.CSSProperties}>
+              {viewingEntry.memo ? (
+                <div style={{
+                  fontSize: 14, color: C.textPrimary, lineHeight: 1.8,
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                }}>{viewingEntry.memo}</div>
+              ) : (
+                <p style={{ fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>내용이 없습니다</p>
+              )}
+
+              {/* 태그 */}
+              {viewingEntry.tags && viewingEntry.tags.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  {viewingEntry.tags.map((tag, i) => (
+                    <span key={i} style={{
+                      fontSize: 11, color: C.blue, background: `${C.blue}10`,
+                      padding: '2px 8px', borderRadius: 6, marginRight: 4,
+                    }}>#{tag}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* 우선순위 */}
+              {viewingEntry.priority && viewingEntry.priority !== 'none' && (
+                <div style={{ marginTop: 8, fontSize: 11, color: C.textSecondary }}>
+                  우선순위: {PRIORITY[viewingEntry.priority]?.symbol} {PRIORITY[viewingEntry.priority]?.label}
+                </div>
+              )}
+            </div>
+
+            {/* 하단 버튼 */}
+            <div style={{
+              padding: '12px 20px', paddingBottom: 'env(safe-area-inset-bottom, 12px)',
+              borderTop: `1px solid ${C.borderLight}`, flexShrink: 0,
+              display: 'flex', gap: 8,
+            }}>
+              <button style={{
+                flex: 1, padding: 12, borderRadius: 10,
+                background: C.primary, color: C.headerText,
+                border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+              }} onClick={() => { const e = viewingEntry; setViewingId(null); onEdit(e); }}>수정</button>
+              <button style={{
+                padding: 12, borderRadius: 10,
+                border: `1.5px solid ${C.accent}`, background: 'transparent',
+                color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+              }} onClick={() => {
+                if (confirm('이 메모를 삭제하시겠습니까?')) {
+                  onDelete(viewingEntry.id);
+                  setViewingId(null);
+                }
+              }}>삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
