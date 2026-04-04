@@ -103,6 +103,7 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
       <div ref={contentRef} style={{
         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         height: contentHeight > 0 ? contentHeight : '60vh',
+        paddingBottom: 70,
       } as React.CSSProperties}>
 
       {/* 밀린 항목 */}

@@ -93,6 +93,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
       <div ref={contentScrollRef} style={{
         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         height: contentHeight > 0 ? contentHeight : '60vh',
+        paddingBottom: 70,
       } as React.CSSProperties}>
 
       {/* 밀린 항목 (목록 모드에서만) */}

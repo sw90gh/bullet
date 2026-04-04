@@ -532,6 +532,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
       <div ref={listScrollRef} style={{
         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
         height: listHeight > 0 ? listHeight : '60vh',
+        paddingBottom: 70,
       } as React.CSSProperties}>
 
       {/* 밀린 항목 (목록 모드에서만 표시) */}

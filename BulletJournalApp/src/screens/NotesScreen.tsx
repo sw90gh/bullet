@@ -110,6 +110,7 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
           </div>
         ))
       )}
+      <div style={{ height: 70 }} />
     </div>
   );
 }
