@@ -95,8 +95,8 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
         height: contentHeight > 0 ? contentHeight : '60vh',
       } as React.CSSProperties}>
 
-      {/* 밀린 항목 */}
-      {(() => {
+      {/* 밀린 항목 (목록 모드에서만) */}
+      {viewMode === 'list' && (() => {
         const overdue = entries.filter(e => {
           if (!e.date || e.date >= todayStr) return false;
           if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
@@ -232,6 +232,8 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
               onUpdateEntry={onUpdateEntry}
               cycleStatus={cycleStatus}
               gcalEvents={gcalEvents}
+              onSwipeLeft={() => setTimelineOffset(Math.min(4, timelineOffset + 1))}
+              onSwipeRight={() => setTimelineOffset(Math.max(0, timelineOffset - 1))}
             />
           )}
         </div>

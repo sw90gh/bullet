@@ -12,10 +12,12 @@ interface WeeklyTimelineProps {
   onUpdateEntry: (id: string, updates: Partial<Entry>) => void;
   cycleStatus: (id: string) => void;
   gcalEvents?: GoogleCalendarEvent[];
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
 }
 
 const HOUR_HEIGHT = 44;
-const START_HOUR = 6;
+const START_HOUR = 0;
 const END_HOUR = 23;
 const SNAP_MINUTES = 15;
 const HEADER_HEIGHT = 36;
@@ -40,11 +42,14 @@ function yToMinutes(y: number): number {
 
 const DAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus, gcalEvents = [] }: WeeklyTimelineProps) {
+export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus, gcalEvents = [], onSwipeLeft, onSwipeRight }: WeeklyTimelineProps) {
   const { C, isDark, statusColor } = useTheme();
   const todayStr = getTodayStr();
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const [untimedOpen, setUntimedOpen] = useState(false);
+  const [gridHeight, setGridHeight] = useState(0);
 
   const dateStrs = useMemo(() => dates.map(d => formatDateKey(d)), [dates]);
   const firstDateStr = dateStrs[0] || todayStr;
@@ -108,6 +113,28 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
 
   const didDragMove = useRef(false);
   const DRAG_THRESHOLD = 10;
+
+  // Horizontal swipe detection for 3-day navigation
+  const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const swipeHandled = useRef(false);
+
+  const handleSwipeTouchStart = useCallback((e: React.TouchEvent) => {
+    swipeStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    swipeHandled.current = false;
+  }, []);
+
+  const handleSwipeTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (swipeHandled.current || !swipeStartRef.current || dragStateRef.current || didDragMove.current) return;
+    const dx = e.changedTouches[0].clientX - swipeStartRef.current.x;
+    const dy = Math.abs(e.changedTouches[0].clientY - swipeStartRef.current.y);
+    const dt = Date.now() - swipeStartRef.current.t;
+    if (dt < 500 && Math.abs(dx) > 60 && Math.abs(dx) > dy * 1.5) {
+      swipeHandled.current = true;
+      if (dx < 0 && onSwipeLeft) onSwipeLeft();
+      if (dx > 0 && onSwipeRight) onSwipeRight();
+    }
+    swipeStartRef.current = null;
+  }, [onSwipeLeft, onSwipeRight]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     didDragMove.current = false;
@@ -278,15 +305,30 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const nowTop = ((nowMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
 
+  // Measure grid scroll height
   useEffect(() => {
-    if (!dateStrs.includes(todayStr)) return;
+    const measure = () => {
+      const el = gridScrollRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setGridHeight(Math.max(200, window.innerHeight - rect.top - 12));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [untimedOpen]);
+
+  // Auto-scroll to 6am or current time
+  useEffect(() => {
     const timer = setTimeout(() => {
-      const scroller = containerRef.current?.closest('[style*="overflow"]') as HTMLElement
-        || containerRef.current?.parentElement?.parentElement;
-      if (scroller) scroller.scrollTop = Math.max(0, nowTop - 80);
-    }, 50);
+      const scroller = gridScrollRef.current;
+      if (!scroller) return;
+      const defaultTop = (6 * HOUR_HEIGHT) - 4;
+      const targetTop = dateStrs.includes(todayStr) ? Math.max(0, nowTop - 80) : defaultTop;
+      scroller.scrollTop = targetTop;
+    }, 80);
     return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dateStrs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✕ 해제 핸들러
   const handleUnassign = useCallback((entry: Entry) => {
@@ -333,12 +375,19 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
         );
       })()}
 
-      {/* 미배치 항목 (밀린 항목 포함) */}
+      {/* 미배치 항목 — 접기/펼치기 */}
       {untimedEntries.length > 0 && (
-        <div style={{ padding: '8px 12px', borderBottom: `2px solid ${C.borderLight}` }}>
-          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>
-            미배치 ({untimedEntries.length}건 · 끌어서 배치)
+        <div style={{ borderBottom: `2px solid ${C.borderLight}` }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '6px 12px', cursor: 'pointer',
+          }} onClick={() => setUntimedOpen(!untimedOpen)}>
+            <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 600 }}>
+              미배치 ({untimedEntries.length}건)
+            </span>
+            <span style={{ fontSize: 10, color: C.textMuted, transition: 'transform 0.2s', display: 'inline-block', transform: untimedOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
           </div>
+          {untimedOpen && <div style={{ padding: '0 12px 8px' }}>
           {untimedEntries.map(entry => {
             const st = STATUS[entry.status] || STATUS.todo;
             const isOverdue = entry.date < todayStr;
@@ -366,6 +415,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
               </div>
             );
           })}
+          </div>}
         </div>
       )}
 
@@ -405,7 +455,14 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
           })}
         </div>
 
-        {/* Time grid */}
+        {/* Time grid — scrollable + horizontal swipe */}
+        <div ref={gridScrollRef} style={{
+          overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          height: gridHeight > 0 ? gridHeight : '60vh',
+        } as React.CSSProperties}
+          onTouchStart={handleSwipeTouchStart}
+          onTouchEnd={handleSwipeTouchEnd}
+        >
         <div style={{ position: 'relative', marginLeft: 0 }}>
           {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => {
             const hour = START_HOUR + i;
@@ -587,6 +644,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
             </div>
           )}
         </div>
+        </div>{/* /gridScrollRef */}
       </div>
 
       {/* 배치 선택 패널 */}
