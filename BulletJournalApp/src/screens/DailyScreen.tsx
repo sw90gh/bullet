@@ -820,16 +820,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 const statusLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
                 const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
-                const leftPct = col * 12;
-                const widthPct = 100 - leftPct;
+                const colWidthPct = totalCols > 1 ? 100 / totalCols : 100;
+                const leftPct = col * colWidthPct;
 
                 return (
                   <div key={entry.id}
                     style={{
                       position: 'absolute',
                       left: totalCols > 1 ? `calc(4px + ${leftPct}%)` : 4,
-                      right: 4,
-                      width: totalCols > 1 ? `calc(${widthPct}% - 8px)` : undefined,
+                      right: totalCols > 1 ? undefined : 4,
+                      width: totalCols > 1 ? `calc(${colWidthPct}% - 8px)` : undefined,
                       top, height,
                       background: isDraggingThis ? `${typeColor}40` : typeColor + '15',
                       borderLeft: `3px solid ${typeColor}`,

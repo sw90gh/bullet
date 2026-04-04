@@ -85,10 +85,32 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
     });
   }, [entries, dateStrs, todayStr, todayInView]);
 
+  // 겹침 그룹 계산: 각 칼럼별로 겹치는 항목을 그룹화, 대표 1건만 표시
+  const overlapGroups = useMemo(() => {
+    return columns.map(colEntries => {
+      const groups: { entries: Entry[]; startMin: number; endMin: number }[] = [];
+      colEntries.forEach(entry => {
+        const startMin = timeToMinutes(entry.time!);
+        const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+        // 기존 그룹과 겹치는지 확인
+        const existing = groups.find(g => startMin < g.endMin && endMin > g.startMin);
+        if (existing) {
+          existing.entries.push(entry);
+          existing.startMin = Math.min(existing.startMin, startMin);
+          existing.endMin = Math.max(existing.endMin, endMin);
+        } else {
+          groups.push({ entries: [entry], startMin, endMin });
+        }
+      });
+      return groups;
+    });
+  }, [columns]);
+
   const colWidth = `calc((100% - ${TIME_LABEL_WIDTH}px) / 3)`;
 
   // Place panel state
   const [placePanel, setPlacePanel] = useState<{ time: string; colIdx: number } | null>(null);
+  const [overlapPopup, setOverlapPopup] = useState<{ entries: Entry[]; colIdx: number; time: string } | null>(null);
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -516,9 +538,11 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
             );
           })()}
 
-          {/* Entry blocks */}
-          {columns.map((colEntries, ci) =>
-            colEntries.map(entry => {
+          {/* Entry blocks — 겹침 그룹: 대표 1건 + +N 뱃지 */}
+          {overlapGroups.map((groups, ci) =>
+            groups.map((group, gi) => {
+              const entry = group.entries[0];
+              const extraCount = group.entries.length - 1;
               const startMin = timeToMinutes(entry.time!);
               const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
               const isDraggingThis = dragState?.entryId === entry.id;
@@ -533,7 +557,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
               const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
               return (
-                <div key={entry.id}
+                <div key={`g-${ci}-${gi}`}
                   style={{
                     position: 'absolute', top,
                     left: `calc(${TIME_LABEL_WIDTH}px + ${colIdx} * ${colWidth} + 3px)`,
@@ -547,9 +571,17 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
                     transition: isDraggingThis ? 'none' : 'top 0.2s, left 0.2s',
                     touchAction: 'none',
                   }}
-                  onTouchStart={e => handleTouchStart(e, entry)}
-                  onMouseDown={e => handleMouseDown(e, entry)}
-                  onClick={() => { if (!didDragMove.current) onEdit(entry); }}
+                  onTouchStart={e => extraCount === 0 ? handleTouchStart(e, entry) : undefined}
+                  onMouseDown={e => extraCount === 0 ? handleMouseDown(e, entry) : undefined}
+                  onClick={() => {
+                    if (!didDragMove.current) {
+                      if (extraCount > 0) {
+                        setOverlapPopup({ entries: group.entries, colIdx: ci, time: entry.time! });
+                      } else {
+                        onEdit(entry);
+                      }
+                    }
+                  }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     {height > 22 && (
@@ -564,8 +596,14 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
                       textDecoration: isEntryDone ? 'line-through' : 'none',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{entry.text}</div>
-                    {/* ↻ 상태 순환 + ✕ 시간 해제 */}
-                    {!isDraggingThis && (
+                    {extraCount > 0 && (
+                      <span style={{
+                        fontSize: 8, fontWeight: 700, color: 'white', background: C.blue,
+                        borderRadius: 6, padding: '1px 4px', flexShrink: 0, lineHeight: 1.2,
+                      }}>+{extraCount}</span>
+                    )}
+                    {/* ↻ 상태 순환 + ✕ 시간 해제 (단일 항목만) */}
+                    {extraCount === 0 && !isDraggingThis && (
                       <>
                       <button style={{
                         background: `${stColor}18`, border: 'none', fontSize: 9, color: stColor,
@@ -592,7 +630,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
                       </>
                     )}
                   </div>
-                  {height > 24 && (
+                  {height > 24 && extraCount === 0 && (
                     <div style={{ fontSize: 8, color: C.textMuted }}>
                       {entry.time}{entry.endTime ? `-${entry.endTime}` : ''}
                     </div>
@@ -704,6 +742,58 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
                       <span style={{ fontSize: 9, color: C.accent, background: `${C.accent}15`,
                         padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>밀림 {entry.date.slice(5)}</span>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 겹침 항목 팝업 */}
+      {overlapPopup && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={() => setOverlapPopup(null)}>
+          <div style={{
+            background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+            maxHeight: '50vh', overflow: 'auto', padding: '0 20px 24px',
+            paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              padding: '14px 0 10px', borderBottom: `1px solid ${C.borderLight}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary }}>
+                {dateStrs[overlapPopup.colIdx]?.slice(5)} {overlapPopup.time} 항목 ({overlapPopup.entries.length}건)
+              </span>
+              <button style={{
+                background: 'none', border: 'none', fontSize: 16, color: C.textMuted,
+                cursor: 'pointer', padding: 4,
+              }} onClick={() => setOverlapPopup(null)}>✕</button>
+            </div>
+            <div style={{ padding: '8px 0' }}>
+              {overlapPopup.entries.map(entry => {
+                const st = STATUS[entry.status] || STATUS.todo;
+                const stLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
+                return (
+                  <div key={entry.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                    cursor: 'pointer',
+                  }} onClick={() => { setOverlapPopup(null); onEdit(entry); }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(entry.status), width: 18, textAlign: 'center' }}>
+                      {st.symbol}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {entry.text}
+                      </div>
+                      <div style={{ fontSize: 10, color: C.textMuted }}>
+                        {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''} · {stLabel}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
