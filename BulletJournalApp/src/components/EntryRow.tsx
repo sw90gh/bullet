@@ -96,11 +96,17 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         // 스와이프 닫기만 — 상태 변경 안 함
         setSwipeDir('none');
       } else {
-        // 스와이프 없는 상태에서 탭 → 상태 순환 (600ms 내 중복 호출 방지)
-        const now = Date.now();
-        if (now - lastCycledAt.current > 600) {
-          lastCycledAt.current = now;
-          cycleStatus(entry.id);
+        // 스와이프 없는 상태에서 탭
+        if (entry.type === 'note') {
+          // 메모는 바로 수정 모달 열기
+          onEdit();
+        } else {
+          // 상태 순환 (600ms 내 중복 호출 방지)
+          const now = Date.now();
+          if (now - lastCycledAt.current > 600) {
+            lastCycledAt.current = now;
+            cycleStatus(entry.id);
+          }
         }
       }
     }
