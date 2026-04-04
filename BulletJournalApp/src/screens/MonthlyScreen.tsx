@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
 import { getDaysInMonth, pad, getTodayStr } from '../utils/date';
 import { Entry, EntryPriority } from '../types';
+import { STATUS } from '../utils/constants';
 import { GoogleCalendarEvent } from '../hooks/useGoogleCalendar';
 
 interface MonthlyScreenProps {
@@ -29,20 +30,6 @@ export function MonthlyScreen({
   const { styles, C } = useTheme();
   const [showAll, setShowAll] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState(0);
-
-  useEffect(() => {
-    const measure = () => {
-      const el = contentRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      setContentHeight(Math.max(200, window.innerHeight - rect.top - 12));
-    };
-    const timer = setTimeout(measure, 30);
-    window.addEventListener('resize', measure);
-    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
-  }, [showAll]);
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
@@ -83,8 +70,8 @@ export function MonthlyScreen({
         </button>
       </div>
 
-      {/* Mini Calendar */}
-      <div style={styles.miniCal}>
+      {/* Calendar */}
+      <div style={{ ...styles.miniCal, marginBottom: 0 }}>
         <div style={styles.miniCalHeader as React.CSSProperties}>
           {['일', '월', '화', '수', '목', '금', '토'].map(d => (
             <div key={d} style={{ ...styles.miniCalDow, color: d === '일' || d === '토' ? C.accent : C.textSecondary }}>{d}</div>
@@ -92,28 +79,37 @@ export function MonthlyScreen({
         </div>
         <div style={styles.miniCalGrid as React.CSSProperties}>
           {cells.map((d, i) => {
-            if (!d) return <div key={i} style={styles.miniCalCell as React.CSSProperties} />;
+            if (!d) return <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, padding: '6px 1px' }} />;
             const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
             const dayItems = monthEntries.filter(e => e.date === dateStr);
             const dayGcal = gcalEvents.filter(e => e.date?.trim().startsWith(dateStr));
-            const totalCount = dayItems.length + dayGcal.length;
+            const allItems: { text: string; color: string }[] = [
+              ...dayItems.map(e => ({
+                text: e.text,
+                color: (STATUS[e.status] || STATUS.todo).color,
+              })),
+              ...dayGcal.map(ge => ({ text: ge.summary, color: '#4285f4' })),
+            ];
             const isT = dateStr === todayStr;
+            const MAX_SHOW = 3;
             return (
-              <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, cursor: 'pointer', padding: '4px 1px' }}
+              <div key={i} style={{ ...styles.miniCalCell as React.CSSProperties, cursor: 'pointer', padding: '6px 1px' }}
                 onClick={() => setSelectedDay(d)}>
                 <span style={{
-                  ...styles.miniCalNum,
+                  ...styles.miniCalNum, fontSize: 14,
                   ...(isT ? styles.miniCalToday : {}),
                 } as React.CSSProperties}>{d}</span>
-                {totalCount > 0 && (
-                  <div style={{ marginTop: 1 }}>
-                    <div style={{
-                      fontSize: 7, color: dayGcal.length > 0 && dayItems.length === 0 ? '#4285f4' : C.textMuted, lineHeight: 1.2,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      maxWidth: '100%', padding: '0 1px',
-                    }}>{dayItems.length > 0 ? dayItems[0].text.slice(0, 4) : dayGcal[0]?.summary.slice(0, 4)}</div>
-                    {totalCount > 1 && (
-                      <div style={{ fontSize: 6, color: C.blue }}>+{totalCount - 1}</div>
+                {allItems.length > 0 && (
+                  <div style={{ marginTop: 2 }}>
+                    {allItems.slice(0, MAX_SHOW).map((item, j) => (
+                      <div key={j} style={{
+                        fontSize: 8, color: item.color, lineHeight: 1.3,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        maxWidth: '100%', padding: '0 1px',
+                      }}>{item.text.slice(0, 5)}</div>
+                    ))}
+                    {allItems.length > MAX_SHOW && (
+                      <div style={{ fontSize: 7, color: C.blue }}>+{allItems.length - MAX_SHOW}</div>
                     )}
                   </div>
                 )}
@@ -123,68 +119,12 @@ export function MonthlyScreen({
         </div>
       </div>
 
-      <div ref={contentRef} style={{
-        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-        height: contentHeight > 0 ? contentHeight : '60vh',
-      } as React.CSSProperties}>
-
-      {/* 밀린 항목 */}
-      {(() => {
-        const overdue = entries.filter(e => {
-          if (!e.date || e.date >= todayStr) return false;
-          if (e.type === 'goal-yearly' || e.type === 'goal-monthly') return false;
-          if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
-          return true;
-        }).sort((a, b) => {
-          const mc = (b.migrateCount || 0) - (a.migrateCount || 0);
-          if (mc !== 0) return mc;
-          return a.date.localeCompare(b.date);
-        });
-        if (overdue.length === 0) return null;
-        return (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{
-              fontSize: 12, fontWeight: 700, color: C.accent,
-              padding: '6px 2px 4px', borderBottom: `1px solid ${C.accent}40`,
-              marginBottom: 4,
-            }}>
-              밀린 항목 ({overdue.length}건)
-            </div>
-            {overdue.map(entry => (
-              <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
-                onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
-                onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-                onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-                onChangePriority={onChangePriority} />
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* Monthly Tasks */}
-      <div style={styles.sectionHeader as React.CSSProperties}>
-        <span style={styles.sectionTitle}>이번 달 할 일</span>
-        <button style={styles.sectionAdd as React.CSSProperties} onClick={onAddEntry}>+</button>
-      </div>
-      {monthEntries.length === 0 ? (
-        <p style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: 20 }}>등록된 항목이 없습니다</p>
-      ) : (
-        monthEntries.slice(0, 30).map(entry => (
-          <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
-            onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
-            onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-            onMigrateUp={onMigrateUp ? () => onMigrateUp(entry) : undefined}
-            onChangePriority={onChangePriority} />
-        ))
-      )}
-      </div>{/* /contentRef */}
-
       {/* 날짜 팝업 */}
       {selectedDay && (() => {
         const dayStr = `${year}-${pad(month + 1)}-${pad(selectedDay)}`;
         const dayDate = new Date(year, month, selectedDay);
         const days = ['일', '월', '화', '수', '목', '금', '토'];
-        const dayItems = allMonthEntries.filter(e => e.date === dayStr);
+        const dayItems = monthEntries.filter(e => e.date === dayStr);
         const isT = dayStr === todayStr;
         return (
           <div style={{
