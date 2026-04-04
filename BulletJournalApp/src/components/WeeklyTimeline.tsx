@@ -383,7 +383,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
             padding: '6px 12px', cursor: 'pointer',
           }} onClick={() => setUntimedOpen(!untimedOpen)}>
             <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 600 }}>
-              미배치 ({untimedEntries.length}건)
+              시간 미지정 ({untimedEntries.length}건)
             </span>
             <span style={{ fontSize: 10, color: C.textMuted, transition: 'transform 0.2s', display: 'inline-block', transform: untimedOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
           </div>

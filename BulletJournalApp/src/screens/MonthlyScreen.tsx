@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -29,6 +29,20 @@ export function MonthlyScreen({
   const { styles, C } = useTheme();
   const [showAll, setShowAll] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = contentRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setContentHeight(Math.max(200, window.innerHeight - rect.top - 12));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [showAll]);
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
@@ -109,6 +123,11 @@ export function MonthlyScreen({
         </div>
       </div>
 
+      <div ref={contentRef} style={{
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        height: contentHeight > 0 ? contentHeight : '60vh',
+      } as React.CSSProperties}>
+
       {/* 밀린 항목 */}
       {(() => {
         const overdue = entries.filter(e => {
@@ -158,6 +177,7 @@ export function MonthlyScreen({
             onChangePriority={onChangePriority} />
         ))
       )}
+      </div>{/* /contentRef */}
 
       {/* 날짜 팝업 */}
       {selectedDay && (() => {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -19,6 +19,20 @@ interface AllScreenProps {
 export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority }: AllScreenProps) {
   const { styles, C } = useTheme();
   const [showAll, setShowAll] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = contentRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setContentHeight(Math.max(200, window.innerHeight - rect.top - 12));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [showAll]);
 
   const filtered = useMemo(() => {
     if (showAll) return entries;
@@ -85,6 +99,11 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
           전체 ({entries.length})
         </button>
       </div>
+
+      <div ref={contentRef} style={{
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        height: contentHeight > 0 ? contentHeight : '60vh',
+      } as React.CSSProperties}>
 
       {/* 밀린 항목 */}
       {(() => {
@@ -155,6 +174,7 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
           </div>
         ))
       )}
+      </div>{/* /contentRef */}
     </div>
   );
 }
