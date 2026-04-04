@@ -86,27 +86,41 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     ? [...untimedToday, ...overdueEntries]
     : untimedToday;
 
-  // Overlap group calculation: group overlapping entries, show first + +N badge
-  const overlapGroups = useMemo(() => {
+  // Column-based overlap layout: each entry gets col/totalCols for offset stacking
+  const timedLayout = useMemo(() => {
     const sorted = [...timedEntries].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
-    const groups: { entries: Entry[]; startMin: number; endMin: number }[] = [];
+    const layout: { entry: Entry; col: number; totalCols: number }[] = [];
+    const active: { entry: Entry; endMin: number; col: number }[] = [];
+
     sorted.forEach(entry => {
       const startMin = timeToMinutes(entry.time!);
       const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-      const existing = groups.find(g => startMin < g.endMin && endMin > g.startMin);
-      if (existing) {
-        existing.entries.push(entry);
-        existing.startMin = Math.min(existing.startMin, startMin);
-        existing.endMin = Math.max(existing.endMin, endMin);
-      } else {
-        groups.push({ entries: [entry], startMin, endMin });
-      }
+      const overlapping = active.filter(a => a.endMin > startMin);
+      const usedCols = new Set(overlapping.map(a => a.col));
+      let col = 0;
+      while (usedCols.has(col)) col++;
+      active.push({ entry, endMin, col });
+      layout.push({ entry, col, totalCols: 0 });
     });
-    return groups;
+
+    layout.forEach(item => {
+      const startMin = timeToMinutes(item.entry.time!);
+      const endMin = item.entry.endTime ? timeToMinutes(item.entry.endTime) : startMin + 60;
+      let maxCol = item.col;
+      layout.forEach(other => {
+        const otherStart = timeToMinutes(other.entry.time!);
+        const otherEnd = other.entry.endTime ? timeToMinutes(other.entry.endTime) : otherStart + 60;
+        if (otherStart < endMin && otherEnd > startMin) {
+          maxCol = Math.max(maxCol, other.col);
+        }
+      });
+      item.totalCols = maxCol + 1;
+    });
+
+    return layout;
   }, [timedEntries]);
 
-  const [overlapPopup, setOverlapPopup] = useState<{ entries: Entry[]; time: string } | null>(null);
-  useEffect(() => { onPopupChange?.(overlapPopup !== null || placePanel !== null); }, [overlapPopup, placePanel, onPopupChange]);
+  useEffect(() => { onPopupChange?.(placePanel !== null); }, [placePanel, onPopupChange]);
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -792,10 +806,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               </div>
             )}
 
-            {/* 시간 지정 항목 블록 — 대표 1건 + +N 뱃지 */}
-            {overlapGroups.map((group, gi) => {
-                const entry = group.entries[0];
-                const extraCount = group.entries.length - 1;
+            {/* 시간 지정 항목 블록 — 오프셋 스택 */}
+            {timedLayout.map(({ entry, col, totalCols }) => {
                 const startMin = timeToMinutes(entry.time!);
                 const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
                 const isDraggingThis = dragState?.entryId === entry.id;
@@ -810,57 +822,53 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 const st = STATUS[entry.status] || STATUS.todo;
                 const statusLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
                 const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
+                const isStacked = totalCols > 1;
+                const leftPct = col * 15;
+                const widthPct = 100 - leftPct;
 
                 return (
-                  <div key={`og-${gi}`}
+                  <div key={entry.id}
                     style={{
                       position: 'absolute',
-                      left: 4, right: 4,
+                      left: isStacked ? `calc(4px + ${leftPct}%)` : 4,
+                      right: isStacked ? undefined : 4,
+                      width: isStacked ? `calc(${widthPct}% - 8px)` : undefined,
                       top, height,
-                      background: isDraggingThis ? `${typeColor}40` : typeColor + '15',
+                      background: isDraggingThis ? `${typeColor}40`
+                        : isStacked ? typeColor + 'DD' : typeColor + '15',
                       borderLeft: `3px solid ${typeColor}`,
                       borderRadius: '0 6px 6px 0',
                       padding: '3px 6px',
                       cursor: 'grab',
                       overflow: 'hidden',
-                      zIndex: isDraggingThis ? 15 : 5,
+                      zIndex: isDraggingThis ? 15 : 5 + col,
                       opacity: isEntryDone ? 0.6 : 1,
                       transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
                       touchAction: isDraggingThis ? 'none' : 'auto',
+                      boxShadow: isStacked ? '0 1px 3px rgba(0,0,0,0.2)' : undefined,
                     }}
-                    onTouchStart={extraCount === 0 ? e => handleEntryTouchStart(e, entry, 'move') : undefined}
-                    onMouseDown={extraCount === 0 ? e => handleEntryMouseDown(e, entry, 'move') : undefined}
-                    onClick={() => {
-                      if (!dragState && !didDragMove.current) {
-                        if (extraCount > 0) {
-                          setOverlapPopup({ entries: group.entries, time: entry.time! });
-                        } else {
-                          onEdit(entry);
-                        }
-                      }
-                    }}
+                    onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
+                    onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
+                    onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <span style={{
                         fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
-                        background: stColor + '18', color: stColor,
+                        background: isStacked ? 'rgba(255,255,255,0.9)' : stColor + '18',
+                        color: stColor,
                       }}>{statusLabel}</span>
                       <div style={{
-                        fontSize: 11, fontWeight: 600, flex: 1, minWidth: 0,
-                        color: isEntryDone ? C.textMuted : C.textPrimary,
+                        fontSize: isStacked ? 10 : 11, fontWeight: 600, flex: 1, minWidth: 0,
+                        color: isStacked ? 'white' : (isEntryDone ? C.textMuted : C.textPrimary),
                         textDecoration: isEntryDone ? 'line-through' : 'none',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        textShadow: isStacked ? '0 0 2px rgba(0,0,0,0.3)' : undefined,
                       }}>{entry.text}</div>
-                      {extraCount > 0 && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, color: 'white', background: C.blue,
-                          borderRadius: 8, padding: '1px 6px', flexShrink: 0, lineHeight: 1.3,
-                        }}>+{extraCount}</span>
-                      )}
-                      {extraCount === 0 && !isDraggingThis && (
+                      {!isDraggingThis && (
                         <>
                         <button style={{
-                          background: `${stColor}18`, border: 'none', fontSize: 11, color: stColor,
+                          background: isStacked ? 'rgba(255,255,255,0.3)' : `${stColor}18`,
+                          border: 'none', fontSize: 11, color: isStacked ? 'white' : stColor,
                           cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
                           minWidth: 24, minHeight: 24, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -872,7 +880,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         >↻</button>
                         {onUpdateEntry && (
                         <button style={{
-                          background: `${C.textMuted}18`, border: 'none', fontSize: 12, color: C.textMuted,
+                          background: isStacked ? 'rgba(255,255,255,0.3)' : `${C.textMuted}18`,
+                          border: 'none', fontSize: 12, color: isStacked ? 'white' : C.textMuted,
                           cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
                           minWidth: 24, minHeight: 24, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -896,21 +905,20 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         </>
                       )}
                     </div>
-                    {height > 36 && extraCount === 0 && entry.subtasks && entry.subtasks.length > 0 && (
+                    {height > 36 && entry.subtasks && entry.subtasks.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                        <span style={{ fontSize: 9, color: C.textMuted }}>
+                        <span style={{ fontSize: 9, color: isStacked ? 'rgba(255,255,255,0.8)' : C.textMuted }}>
                           ☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}
                         </span>
-                        <div style={{ flex: 1, maxWidth: 40, height: 3, borderRadius: 2, background: C.borderLight, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, maxWidth: 40, height: 3, borderRadius: 2, background: isStacked ? 'rgba(255,255,255,0.3)' : C.borderLight, overflow: 'hidden' }}>
                           <div style={{
-                            height: '100%', borderRadius: 2, background: C.green,
+                            height: '100%', borderRadius: 2, background: isStacked ? 'rgba(255,255,255,0.8)' : C.green,
                             width: `${(entry.subtasks.filter(s => s.done).length / entry.subtasks.length) * 100}%`,
                           }} />
                         </div>
                       </div>
                     )}
-                    {/* 하단 리사이즈 핸들 (단일 항목만) */}
-                    {extraCount === 0 && (
+                    {/* 하단 리사이즈 핸들 */}
                     <div
                       style={{
                         position: 'absolute', left: 0, right: 0, bottom: 0, height: 12,
@@ -928,10 +936,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     >
                       <div style={{
                         width: 24, height: 3, borderRadius: 2,
-                        background: C.textMuted, opacity: 0.4,
+                        background: isStacked ? 'rgba(255,255,255,0.4)' : C.textMuted, opacity: 0.4,
                       }} />
                     </div>
-                    )}
                   </div>
                 );
               })}
@@ -1077,57 +1084,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
             </div>
           )}
 
-          {/* 겹침 항목 팝업 */}
-          {overlapPopup && (
-            <div style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-              zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            }} onClick={() => setOverlapPopup(null)}>
-              <div style={{
-                background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
-                maxHeight: '50vh', overflow: 'auto', padding: '0 20px 24px',
-                paddingBottom: 'env(safe-area-inset-bottom, 24px)',
-              }} onClick={e => e.stopPropagation()}>
-                <div style={{
-                  padding: '14px 0 10px', borderBottom: `1px solid ${C.borderLight}`,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary }}>
-                    {overlapPopup.time} 항목 ({overlapPopup.entries.length}건)
-                  </span>
-                  <button style={{
-                    background: 'none', border: 'none', fontSize: 16, color: C.textMuted,
-                    cursor: 'pointer', padding: 4,
-                  }} onClick={() => setOverlapPopup(null)}>✕</button>
-                </div>
-                <div style={{ padding: '8px 0' }}>
-                  {overlapPopup.entries.map(entry => {
-                    const st = STATUS[entry.status] || STATUS.todo;
-                    const stLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
-                    return (
-                      <div key={entry.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
-                        cursor: 'pointer',
-                      }} onClick={() => { setOverlapPopup(null); onEdit(entry); }}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(entry.status), width: 18, textAlign: 'center' }}>
-                          {st.symbol}
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {entry.text}
-                          </div>
-                          <div style={{ fontSize: 10, color: C.textMuted }}>
-                            {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''} · {stLabel}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
