@@ -86,14 +86,17 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - 탭(5px 미만 이동) → 수정창, 드래그(5px 이상) → 시간만 변경 (수정창 안뜸)
 - 두 가지 드래그 모드: `'move'` (블록 이동), `'resize'` (하단 리사이즈)
 - 미배정 항목도 타임라인으로 드래그 가능 (`handleUntimedMouseDown`)
-- 겹치는 항목: 먼저 시작 → 뒤쪽, 나중 시작 → 12% 오른쪽 shift + 앞쪽 zIndex
+- **겹치는 항목 (일간)**: 15%씩 오프셋 스택, 파스텔 톤 배경(`typeColor+'45'`), boxShadow로 레이어 구분. 모든 항목 개별 드래그 가능
+- **겹치는 항목 (주간)**: 대표 1건 + `+N` 뱃지, 탭 시 팝업으로 전체 목록 표시
+- **시간 미지정 항목**: 접기/펼치기 토글 (기본 닫힘)
 - **자동 스크롤**: 드래그 중 뷰포트 상/하단 60px 영역 진입 시 자동 스크롤
   - `requestAnimationFrame` 루프로 매 프레임 스크롤 + 고스트 위치 업데이트
   - `lastTouchY` 추적으로 터치/마우스 모두 동작
 
 ### Swipe Actions (EntryRow)
 - 좌→우: 우선순위 변경 (없음/중요/긴급)
-- 우→좌: 이관/상위/수정/삭제
+- 우→좌: 이관/상위/수정/삭제 (메모 타입은 이관/상위 숨김, 수정/삭제만)
+- **메모 탭 시 수정 모달 대신 바로 수정 모달** (상태 순환 없음)
 - **compact 모드에서도 스와이프 동작** (주간 뷰)
 - **일간/주간/월간 모든 화면에서 동일한 스와이프** 지원
 - **터치 + 마우스** 모두 지원 (`onTouchStart` + `onMouseDown`)
@@ -114,6 +117,16 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - **클리어 버튼** (`✕`): 종료일, 시작시간, 종료시간 필드에 개별 클리어 버튼 제공
 - **체크리스트 드래그 순서 변경**: `⠿` 핸들로 터치+마우스 드래그 지원, 삽입선 표시
 - **이관 상태 선택 시 MigrateModal 위임**: 수정 모달에서 `migrated`/`migrated_up` 선택 → `onRequestMigrate` 콜백으로 MigrateModal 열어 정식 이관 처리
+- **메모 전용 UI**: type='note'일 때 제목+textarea 본문+태그만 표시, 등록일/수정일 자동 표시, 수정 이력 보기(접기/펼치기, 개별/전체 삭제), 수정 시 이전 내용 `editHistory`에 자동 기록
+
+### Notes (메모)
+- **메모 뷰어**: 메모 탭에서 탭 시 읽기 전용 뷰어 열림 (제목, 본문, 태그, 등록/수정일)
+  - 수정 버튼 → 수정 모달, 삭제 버튼 → 삭제
+  - `entries` prop에서 실시간 조회하여 저장 후 즉시 반영
+- **검색**: 제목+본문+태그 검색
+- **스와이프**: EntryRow 사용, 좌→우 우선순위, 우→좌 수정/삭제 (이관/상위 없음)
+- **상태**: `STATUS_CYCLE_BY_TYPE`에서 note는 빈 배열 → 상태 순환 없음, `STATUS_LABEL_BY_TYPE`에서 todo→'메모'
+- **필터**: 미완료 필터에서 메모는 항상 표시 (`e.type === 'note'` 조건 추가)
 
 ### Gantt Chart
 - 주간/월간/분기 범위 전환
@@ -121,6 +134,8 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - **유형 심볼 표시**: 라벨 앞에 ·할일, ○일정, ◎목표 등 표시
 - **최소 바 너비**: 단일 날짜 항목도 최소 28px 보장
 - **바 텍스트 미표시**: 좌측 목록에 이름이 나오므로 바에는 텍스트 없음 (hover 툴팁만 유지)
+- **상단 고정**: 주간/월간/분기 버튼 + 필터/통계가 스크롤되지 않음
+- **뷰포트 높이 맞춤**: 간트 본문 영역을 동적 높이로 측정
 - 이관/취소 숨김 토글
 - 바 클릭 시 수정 모달 열림
 
@@ -149,7 +164,7 @@ BulletJournalApp/
       MonthlyScreen.tsx   <- 월간 뷰 (미니캘린더 + 할일 + 월간목표)
       AnnualScreen.tsx    <- 연간 뷰 (연간목표 + 월별 요약 그리드)
       GanttScreen.tsx     <- 간트차트 (sticky 헤더, 유형 심볼, 최소 바 너비)
-      NotesScreen.tsx
+      NotesScreen.tsx     <- 메모 모아보기 (검색, 뷰어, EntryRow 스와이프)
       StatsScreen.tsx     <- 통계 (도넛차트, 주간완료율, 월별트렌드, 목표달성률)
       SettingsScreen.tsx  <- 설정, 백업/복원, 공유 백업, Google 로그인, 알림 토글
     components/
@@ -180,7 +195,7 @@ vercel.json               <- 루트 Vercel 설정
 - 전체/일간/주간/월간/연간/간트/메모/통계 8개 뷰
 - 상태 순환 (할일→진행→완료→취소)
 - 우선순위 (없음/중요/긴급) - 스와이프로 변경
-- 태그 필터링 (2줄 접기/펼치기)
+- 태그 필터링 (한 줄 + 더보기 팝업, 넘치는 태그 자동 측정)
 - 마감일 D-day 표시 + 마감 임박 섹션 (D-3 이내)
 - 반복 항목 (매일/매주/매월)
 - 다일간 항목 지원 (종료일 설정, 시간 자동 숨김)
@@ -201,6 +216,11 @@ vercel.json               <- 루트 Vercel 설정
 - 명언 표시 (500개, 일별 순환)
 - 수정 모달에서 삭제 가능
 - 수정 모달에서 이관 상태 선택 시 정식 이관 (MigrateModal 위임)
+- 메모 전용 UI (제목+본문 textarea+태그, 수정 이력 관리, 뷰어 모드)
+- 메모 필터 독립 (미완료 필터에서도 항상 표시)
+- 상단 고정 레이아웃 (전체/일간/주간/월간/간트 모두 토글 버튼 고정, 콘텐츠만 스크롤)
+- FAB 팝업 충돌 방지 (태그/월간/주간/일간/메모 팝업 시 FAB 숨김)
+- 월간 달력 확대 (셀당 최대 3건, 필터 연동, 하단 섹션 제거)
 
 ## Common Pitfalls
 1. Vercel serverless는 `BulletJournalApp/api/`에 있어야 함 (루트 `api/` 아님)
@@ -217,3 +237,7 @@ vercel.json               <- 루트 Vercel 설정
 12. Goal은 Entry로 통합됨 → `useGoals` 사용 금지, entries에서 `type === 'goal-yearly'/'goal-monthly'`로 필터
 13. 삭제 시 `trackDeletedEntry()` + `setEntries` 순서 중요 → localStorage 먼저 기록해야 onSnapshot 부활 방지
 14. FAB(+) 버튼은 화면 중앙 하단 (`left: 50%, transform: translateX(-50%)`) — 스와이프 메뉴와 겹침 방지
+15. FAB는 팝업(태그/월간/주간/일간/메모 뷰어) 열릴 때 숨겨야 함 → `!tagBarExpanded && !monthlyPopupOpen && !weeklyPopupOpen && !dailyPopupOpen && !notesPopupOpen`
+16. 메모(note) 타입은 상태 순환 없음 (`STATUS_CYCLE_BY_TYPE.note = []`), 탭 시 `onEdit` 호출, 스와이프에서 이관/상위 숨김 (`entry.type !== 'note'`)
+17. `Entry.editHistory`는 메모 수정 시 이전 text/memo를 기록, Firestore에도 동기화됨
+18. 각 화면의 스크롤 컨테이너(`contentRef`, `listScrollRef` 등)에 `paddingBottom: 70` 필요 — FAB에 마지막 항목 가려짐 방지
