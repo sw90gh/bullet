@@ -483,7 +483,11 @@ export default function App() {
         {view === 'notes' && (
           <NotesScreen
             entries={filteredEntries}
+            onAdd={() => setModal({ mode: 'add', scope: 'daily', date: formatDateKey(curDate), defaultType: 'note', hideGoalType: true })}
             onEdit={(e) => setModal({ mode: 'edit', entry: e })}
+            onDelete={(id) => setDeleteConfirm(id)}
+            cycleStatus={cycleStatus}
+            onChangePriority={changePriority}
           />
         )}
 

@@ -132,7 +132,9 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const [linkedGoalId, setLinkedGoalId] = useState<string>(existing?.linkedGoalId || '');
 
   const isGoalType = type === 'goal-yearly' || type === 'goal-monthly';
+  const isNote = type === 'note';
   const activeGoals = allEntries.filter(e => (e.type === 'goal-yearly' || e.type === 'goal-monthly') && e.status !== 'done' && e.status !== 'cancelled');
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleSave = () => {
     if (!text.trim()) return;
@@ -148,6 +150,15 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       ? { type: recurringType as RecurringConfig['type'], interval: recurringInterval, endDate: recurringEndDate || undefined }
       : undefined;
     const isMultiDay = endDate && endDate !== date;
+    // 메모 수정 시 이전 내용을 히스토리에 기록
+    let editHistory = existing?.editHistory;
+    if (modal.mode === 'edit' && existing && isNote
+      && (existing.text !== text.trim() || (existing.memo || '') !== memo.trim())) {
+      editHistory = [
+        ...(existing.editHistory || []),
+        { text: existing.text, memo: existing.memo, editedAt: Date.now() },
+      ];
+    }
     onSaveEntry({
       text: text.trim(),
       type: type as Entry['type'],
@@ -164,6 +175,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       recurring: isGoalType ? undefined : recurring,
       targetCount: isGoalType && targetCount > 0 ? targetCount : undefined,
       linkedGoalId: !isGoalType && linkedGoalId ? linkedGoalId : undefined,
+      editHistory,
     });
   };
 
@@ -210,7 +222,9 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
           position: 'sticky', top: 0, background: C.bg, zIndex: 1,
         }}>
           <h3 style={styles.modalTitle}>
-            {isGoalType
+            {isNote
+              ? (modal.mode === 'edit' ? '메모 수정' : '새 메모')
+              : isGoalType
               ? (modal.mode === 'edit' ? '목표 수정' : '목표 추가')
               : (modal.mode === 'edit' ? '항목 수정' : '새 항목')}
           </h3>
@@ -225,6 +239,118 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
         </div>
 
         <div style={{ ...styles.modalBody, padding: '8px 0' }}>
+
+          {/* 메모 전용 UI */}
+          {isNote ? (<>
+            <input
+              style={{ ...styles.input, padding: '8px 14px', fontSize: 14 }}
+              placeholder="메모 제목"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              autoFocus
+            />
+            <div style={{ marginTop: 6 }}>
+              <textarea
+                style={{
+                  ...styles.input, padding: '10px 14px', fontSize: 13,
+                  minHeight: 120, resize: 'vertical', lineHeight: 1.6,
+                  display: 'block', width: '100%', boxSizing: 'border-box',
+                  fontFamily: '-apple-system, "Noto Sans KR", sans-serif',
+                }}
+                placeholder="내용을 입력하세요..."
+                value={memo}
+                onChange={e => setMemo(e.target.value)}
+              />
+            </div>
+
+            {/* 태그 */}
+            <div style={{ marginTop: 6 }}>
+              <label style={labelSmall}>태그</label>
+              <input style={inputSmall} value={tags}
+                placeholder="업무, 개인 (쉼표로 구분)"
+                onChange={e => setTags(e.target.value)} />
+              {suggestedTags.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                  {suggestedTags.slice(0, 8).map(tag => (
+                    <button key={tag}
+                      style={{
+                        padding: '2px 8px', borderRadius: 10, fontSize: 10,
+                        border: `1px solid ${C.blue}30`, background: `${C.blue}08`,
+                        color: C.blue, cursor: 'pointer',
+                        fontFamily: '-apple-system, sans-serif',
+                      }}
+                      onClick={() => addTag(tag)}>#{tag}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 등록일/수정일 */}
+            {modal.mode === 'edit' && existing && (
+              <div style={{ marginTop: 8, fontSize: 10, color: C.textMuted, display: 'flex', gap: 12 }}>
+                <span>등록: {new Date(existing.createdAt).toLocaleDateString('ko-KR')} {new Date(existing.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                {existing.updatedAt && (
+                  <span>수정: {new Date(existing.updatedAt).toLocaleDateString('ko-KR')} {new Date(existing.updatedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                )}
+              </div>
+            )}
+
+            {/* 수정 이력 보기 */}
+            {modal.mode === 'edit' && existing?.editHistory && existing.editHistory.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <button style={{
+                  background: 'none', border: `1px solid ${C.border}`, borderRadius: 6,
+                  padding: '4px 10px', fontSize: 10, color: C.textSecondary, cursor: 'pointer',
+                  fontFamily: '-apple-system, sans-serif',
+                }} onClick={() => setShowHistory(!showHistory)}>
+                  수정 이력 ({existing.editHistory.length}건) {showHistory ? '▲' : '▼'}
+                </button>
+                {showHistory && (
+                  <div style={{ marginTop: 6, maxHeight: 200, overflowY: 'auto' }}>
+                    {[...existing.editHistory].reverse().map((h, i) => (
+                      <div key={i} style={{
+                        padding: '6px 8px', marginBottom: 4, borderRadius: 6,
+                        background: `${C.borderLight}`, fontSize: 11,
+                      }}>
+                        <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 2 }}>
+                          {new Date(h.editedAt).toLocaleDateString('ko-KR')} {new Date(h.editedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div style={{ color: C.textPrimary, fontWeight: 600 }}>{h.text}</div>
+                        {h.memo && <div style={{ color: C.textSecondary, marginTop: 2, whiteSpace: 'pre-wrap' }}>{h.memo}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 삭제/복제 */}
+            {modal.mode === 'edit' && modal.entry && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                {onDuplicate && (
+                  <button style={{
+                    flex: 1, padding: 12, borderRadius: 10,
+                    border: `1.5px solid ${C.border}`, background: 'transparent',
+                    color: C.textSecondary, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }} onClick={() => {
+                    const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+                    onDuplicate({ text: text.trim(), type: 'note' as Entry['type'], status: 'todo' as Entry['status'], priority: priority as Entry['priority'], date, tags: parsedTags.length > 0 ? parsedTags : undefined, memo: memo.trim() || undefined });
+                    onClose();
+                  }}>복제</button>
+                )}
+                {onDelete && (
+                  <button style={{
+                    flex: 1, padding: 12, borderRadius: 10,
+                    border: `1.5px solid ${C.accent}`, background: 'transparent',
+                    color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }} onClick={() => { if (confirm('이 메모를 삭제하시겠습니까?')) { onDelete(modal.entry!.id); onClose(); } }}>삭제</button>
+                )}
+              </div>
+            )}
+          </>) : (<>
+          {/* 기존 일반 항목 UI */}
           <input
             style={{ ...styles.input, padding: '8px 14px', fontSize: 14 }}
             placeholder={isGoalType ? '목표를 입력하세요' : '내용을 입력하세요'}
@@ -614,6 +740,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
               )}
             </div>
           )}
+          </>)}
         </div>
       </div>
     </div>

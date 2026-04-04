@@ -27,6 +27,7 @@ export interface Entry {
   linkedGoalId?: string;  // 이 항목이 연결된 목표 ID
   targetCount?: number;   // 목표 달성에 필요한 횟수
   updatedAt?: number;
+  editHistory?: { text: string; memo?: string; editedAt: number }[];
 }
 
 export interface Subtask {
