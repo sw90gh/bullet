@@ -36,7 +36,7 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
 
   const filtered = useMemo(() => {
     if (showAll) return entries;
-    return entries.filter(e => e.status === 'todo' || e.status === 'progress');
+    return entries.filter(e => e.type === 'note' || e.status === 'todo' || e.status === 'progress');
   }, [entries, showAll]);
 
   // 날짜별 그루핑 (날짜순 정렬)

@@ -42,7 +42,7 @@ export function MonthlyScreen({
         return po[a.priority || 'none'] - po[b.priority || 'none'];
       return (a.createdAt || 0) - (b.createdAt || 0);
     });
-  const monthEntries = showAll ? allMonthEntries : allMonthEntries.filter(e => e.status === 'todo' || e.status === 'progress');
+  const monthEntries = showAll ? allMonthEntries : allMonthEntries.filter(e => e.type === 'note' || e.status === 'todo' || e.status === 'progress');
   const todayStr = getTodayStr();
 
   const cells: (number | null)[] = [];

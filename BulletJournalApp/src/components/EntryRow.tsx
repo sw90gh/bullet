@@ -183,12 +183,12 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
         opacity: swipeDir === 'left' ? 1 : 0,
         pointerEvents: swipeDir === 'left' ? 'auto' : 'none',
       }}>
-        {onMigrate && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
+        {entry.type !== 'note' && onMigrate && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
           <button style={{ flex: 1, background: '#c0883f', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
             onTouchEnd={(e) => { e.stopPropagation(); onMigrate(); setSwipeDir('none'); }}
             onClick={() => { onMigrate(); setSwipeDir('none'); }}>이관 →</button>
         )}
-        {onMigrateUp && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
+        {entry.type !== 'note' && onMigrateUp && entry.status !== 'migrated' && entry.status !== 'migrated_up' && (
           <button style={{ flex: 1, background: '#3a7ca5', color: 'white', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: '-apple-system, sans-serif' }}
             onTouchEnd={(e) => { e.stopPropagation(); onMigrateUp(); setSwipeDir('none'); }}
             onClick={() => { onMigrateUp(); setSwipeDir('none'); }}>상위 ←</button>
