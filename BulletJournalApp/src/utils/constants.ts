@@ -97,6 +97,7 @@ export const STATUS_CYCLE_BY_TYPE: Record<string, Array<'todo' | 'progress' | 'd
 // 유형별 상태 라벨 오버라이드
 export const STATUS_LABEL_BY_TYPE: Record<string, Record<string, string>> = {
   event: { todo: '예정', done: '완료', cancelled: '취소' },
+  note: { todo: '메모', done: '완료', cancelled: '취소' },
   'goal-yearly':  { todo: '미달성', progress: '진행 중', done: '달성', cancelled: '포기' },
   'goal-monthly': { todo: '미달성', progress: '진행 중', done: '달성', cancelled: '포기' },
 };
