@@ -835,8 +835,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       width: isStacked ? `calc(${widthPct}% - 8px)` : undefined,
                       top, height,
                       background: isDraggingThis ? `${typeColor}40`
-                        : isStacked ? typeColor + 'DD' : typeColor + '15',
-                      borderLeft: `3px solid ${typeColor}`,
+                        : isStacked ? typeColor + '45' : typeColor + '20',
+                      borderLeft: `${isStacked ? 4 : 3}px solid ${typeColor}`,
                       borderRadius: '0 6px 6px 0',
                       padding: '3px 6px',
                       cursor: 'grab',
@@ -845,7 +845,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       opacity: isEntryDone ? 0.6 : 1,
                       transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
                       touchAction: isDraggingThis ? 'none' : 'auto',
-                      boxShadow: isStacked ? '0 1px 3px rgba(0,0,0,0.2)' : undefined,
+                      boxShadow: isStacked ? '0 1px 3px rgba(0,0,0,0.15)' : undefined,
                     }}
                     onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
                     onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
@@ -854,21 +854,18 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <span style={{
                         fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
-                        background: isStacked ? 'rgba(255,255,255,0.9)' : stColor + '18',
-                        color: stColor,
+                        background: stColor + '18', color: stColor,
                       }}>{statusLabel}</span>
                       <div style={{
-                        fontSize: isStacked ? 10 : 11, fontWeight: 600, flex: 1, minWidth: 0,
-                        color: isStacked ? 'white' : (isEntryDone ? C.textMuted : C.textPrimary),
+                        fontSize: 11, fontWeight: 600, flex: 1, minWidth: 0,
+                        color: isEntryDone ? C.textMuted : C.textPrimary,
                         textDecoration: isEntryDone ? 'line-through' : 'none',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        textShadow: isStacked ? '0 0 2px rgba(0,0,0,0.3)' : undefined,
                       }}>{entry.text}</div>
                       {!isDraggingThis && (
                         <>
                         <button style={{
-                          background: isStacked ? 'rgba(255,255,255,0.3)' : `${stColor}18`,
-                          border: 'none', fontSize: 11, color: isStacked ? 'white' : stColor,
+                          background: `${stColor}18`, border: 'none', fontSize: 11, color: stColor,
                           cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
                           minWidth: 24, minHeight: 24, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -880,8 +877,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         >↻</button>
                         {onUpdateEntry && (
                         <button style={{
-                          background: isStacked ? 'rgba(255,255,255,0.3)' : `${C.textMuted}18`,
-                          border: 'none', fontSize: 12, color: isStacked ? 'white' : C.textMuted,
+                          background: `${C.textMuted}18`, border: 'none', fontSize: 12, color: C.textMuted,
                           cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
                           minWidth: 24, minHeight: 24, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -907,12 +903,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     </div>
                     {height > 36 && entry.subtasks && entry.subtasks.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                        <span style={{ fontSize: 9, color: isStacked ? 'rgba(255,255,255,0.8)' : C.textMuted }}>
+                        <span style={{ fontSize: 9, color: C.textMuted }}>
                           ☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}
                         </span>
-                        <div style={{ flex: 1, maxWidth: 40, height: 3, borderRadius: 2, background: isStacked ? 'rgba(255,255,255,0.3)' : C.borderLight, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, maxWidth: 40, height: 3, borderRadius: 2, background: C.borderLight, overflow: 'hidden' }}>
                           <div style={{
-                            height: '100%', borderRadius: 2, background: isStacked ? 'rgba(255,255,255,0.8)' : C.green,
+                            height: '100%', borderRadius: 2, background: C.green,
                             width: `${(entry.subtasks.filter(s => s.done).length / entry.subtasks.length) * 100}%`,
                           }} />
                         </div>
@@ -936,7 +932,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     >
                       <div style={{
                         width: 24, height: 3, borderRadius: 2,
-                        background: isStacked ? 'rgba(255,255,255,0.4)' : C.textMuted, opacity: 0.4,
+                        background: C.textMuted, opacity: 0.4,
                       }} />
                     </div>
                   </div>
