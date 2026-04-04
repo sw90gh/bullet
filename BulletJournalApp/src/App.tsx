@@ -502,7 +502,7 @@ export default function App() {
       </main>
 
       {/* FAB */}
-      {view !== 'gantt' && view !== 'stats' && (
+      {view !== 'gantt' && view !== 'stats' && !tagBarExpanded && (
         <button style={styles.fab as React.CSSProperties} onClick={() => {
           const defaultType = view === 'annual' ? 'goal-yearly' as const
             : view === 'notes' ? 'note' as const
