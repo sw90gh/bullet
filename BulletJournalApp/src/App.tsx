@@ -73,6 +73,7 @@ export default function App() {
   const [visibleTagCount, setVisibleTagCount] = useState<number>(999);
   const tagBarRef = useRef<HTMLDivElement>(null);
   const [backupDismissed, setBackupDismissed] = useState(false);
+  const [monthlyPopupOpen, setMonthlyPopupOpen] = useState(false);
 
   const mainRef = useRef<HTMLElement>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('bujo-notifications') !== 'off');
@@ -450,6 +451,7 @@ export default function App() {
             onChangePriority={changePriority}
             onDayTap={(d) => { setCurDate(new Date(curY, curM, d)); setView('daily'); }}
             onToggleGoalDone={toggleGoalDone}
+            onPopupChange={setMonthlyPopupOpen}
             gcalEvents={gcalEvents}
           />
         )}
@@ -502,7 +504,7 @@ export default function App() {
       </main>
 
       {/* FAB */}
-      {view !== 'gantt' && view !== 'stats' && !tagBarExpanded && (
+      {view !== 'gantt' && view !== 'stats' && !tagBarExpanded && !monthlyPopupOpen && (
         <button style={styles.fab as React.CSSProperties} onClick={() => {
           const defaultType = view === 'annual' ? 'goal-yearly' as const
             : view === 'notes' ? 'note' as const

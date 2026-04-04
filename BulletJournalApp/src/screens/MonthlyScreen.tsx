@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -20,16 +20,18 @@ interface MonthlyScreenProps {
   onChangePriority?: (id: string, priority: EntryPriority) => void;
   onDayTap: (d: number) => void;
   onToggleGoalDone: (id: string) => void;
+  onPopupChange?: (open: boolean) => void;
   gcalEvents?: GoogleCalendarEvent[];
 }
 
 export function MonthlyScreen({
   year, month, entries, cycleStatus,
-  onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone, gcalEvents = []
+  onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone, onPopupChange, gcalEvents = []
 }: MonthlyScreenProps) {
   const { styles, C } = useTheme();
   const [showAll, setShowAll] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  useEffect(() => { onPopupChange?.(selectedDay !== null); }, [selectedDay, onPopupChange]);
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
