@@ -74,6 +74,8 @@ export default function App() {
   const tagBarRef = useRef<HTMLDivElement>(null);
   const [backupDismissed, setBackupDismissed] = useState(false);
   const [monthlyPopupOpen, setMonthlyPopupOpen] = useState(false);
+  const [dailyPopupOpen, setDailyPopupOpen] = useState(false);
+  const [weeklyPopupOpen, setWeeklyPopupOpen] = useState(false);
   const [notesPopupOpen, setNotesPopupOpen] = useState(false);
 
   const mainRef = useRef<HTMLElement>(null);
@@ -417,6 +419,7 @@ export default function App() {
             onChangePriority={changePriority}
             onUpdateEntry={updateEntry}
             gcalEvents={gcalEvents}
+            onPopupChange={setDailyPopupOpen}
           />
         )}
 
@@ -435,6 +438,7 @@ export default function App() {
             setCurDate={setCurDate}
             setView={(v) => setView(v as ViewType)}
             gcalEvents={gcalEvents}
+            onPopupChange={setWeeklyPopupOpen}
           />
         )}
 
@@ -506,7 +510,7 @@ export default function App() {
       </main>
 
       {/* FAB */}
-      {view !== 'gantt' && view !== 'stats' && !tagBarExpanded && !monthlyPopupOpen && !notesPopupOpen && (
+      {view !== 'gantt' && view !== 'stats' && !tagBarExpanded && !dailyPopupOpen && !monthlyPopupOpen && !weeklyPopupOpen && !notesPopupOpen && (
         <button style={styles.fab as React.CSSProperties} onClick={() => {
           const defaultType = view === 'annual' ? 'goal-yearly' as const
             : view === 'notes' ? 'note' as const

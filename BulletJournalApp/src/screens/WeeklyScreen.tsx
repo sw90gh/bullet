@@ -22,9 +22,10 @@ interface WeeklyScreenProps {
   setCurDate: (d: Date) => void;
   setView: (v: string) => void;
   gcalEvents?: GoogleCalendarEvent[];
+  onPopupChange?: (open: boolean) => void;
 }
 
-export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, setCurDate, setView, gcalEvents = [] }: WeeklyScreenProps) {
+export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, setCurDate, setView, gcalEvents = [], onPopupChange }: WeeklyScreenProps) {
   const { styles, C } = useTheme();
   const weekDates = getWeekDates(date.getFullYear(), date.getMonth(), date.getDate());
   const todayStr = getTodayStr();
@@ -235,6 +236,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
               gcalEvents={gcalEvents}
               onSwipeLeft={() => setTimelineOffset(Math.min(4, timelineOffset + 1))}
               onSwipeRight={() => setTimelineOffset(Math.max(0, timelineOffset - 1))}
+              onPopupChange={onPopupChange}
             />
           )}
         </div>

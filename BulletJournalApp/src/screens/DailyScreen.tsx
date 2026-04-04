@@ -21,6 +21,7 @@ interface DailyScreenProps {
   onChangePriority?: (id: string, priority: EntryPriority) => void;
   onUpdateEntry?: (id: string, updates: Partial<Entry>) => void;
   gcalEvents?: GoogleCalendarEvent[];
+  onPopupChange?: (open: boolean) => void;
 }
 
 const HOUR_HEIGHT = 52;
@@ -49,7 +50,7 @@ function yToMinutes(y: number): number {
   return snapMinutes(Math.max(START_HOUR * 60, Math.min(END_HOUR * 60, raw)));
 }
 
-export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, gcalEvents = [] }: DailyScreenProps) {
+export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, gcalEvents = [], onPopupChange }: DailyScreenProps) {
   const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const [untimedOpen, setUntimedOpen] = useState(false);
@@ -85,39 +86,27 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     ? [...untimedToday, ...overdueEntries]
     : untimedToday;
 
-  // Memoized overlap layout calculation
-  const timedLayout = useMemo(() => {
+  // Overlap group calculation: group overlapping entries, show first + +N badge
+  const overlapGroups = useMemo(() => {
     const sorted = [...timedEntries].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
-    const layout: { entry: Entry; col: number; totalCols: number }[] = [];
-    const active: { entry: Entry; endMin: number; col: number }[] = [];
-
+    const groups: { entries: Entry[]; startMin: number; endMin: number }[] = [];
     sorted.forEach(entry => {
       const startMin = timeToMinutes(entry.time!);
       const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-      const overlapping = active.filter(a => a.endMin > startMin);
-      const usedCols = new Set(overlapping.map(a => a.col));
-      let col = 0;
-      while (usedCols.has(col)) col++;
-      active.push({ entry, endMin, col });
-      layout.push({ entry, col, totalCols: 0 });
+      const existing = groups.find(g => startMin < g.endMin && endMin > g.startMin);
+      if (existing) {
+        existing.entries.push(entry);
+        existing.startMin = Math.min(existing.startMin, startMin);
+        existing.endMin = Math.max(existing.endMin, endMin);
+      } else {
+        groups.push({ entries: [entry], startMin, endMin });
+      }
     });
-
-    layout.forEach(item => {
-      const startMin = timeToMinutes(item.entry.time!);
-      const endMin = item.entry.endTime ? timeToMinutes(item.entry.endTime) : startMin + 60;
-      let maxCol = item.col;
-      layout.forEach(other => {
-        const otherStart = timeToMinutes(other.entry.time!);
-        const otherEnd = other.entry.endTime ? timeToMinutes(other.entry.endTime) : otherStart + 60;
-        if (otherStart < endMin && otherEnd > startMin) {
-          maxCol = Math.max(maxCol, other.col);
-        }
-      });
-      item.totalCols = maxCol + 1;
-    });
-
-    return layout;
+    return groups;
   }, [timedEntries]);
+
+  const [overlapPopup, setOverlapPopup] = useState<{ entries: Entry[]; time: string } | null>(null);
+  useEffect(() => { onPopupChange?.(overlapPopup !== null || placePanel !== null); }, [overlapPopup, placePanel, onPopupChange]);
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -803,8 +792,10 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               </div>
             )}
 
-            {/* 시간 지정 항목 블록 - 겹침 계산 (memoized) */}
-            {timedLayout.map(({ entry, col, totalCols }) => {
+            {/* 시간 지정 항목 블록 — 대표 1건 + +N 뱃지 */}
+            {overlapGroups.map((group, gi) => {
+                const entry = group.entries[0];
+                const extraCount = group.entries.length - 1;
                 const startMin = timeToMinutes(entry.time!);
                 const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
                 const isDraggingThis = dragState?.entryId === entry.id;
@@ -820,16 +811,11 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                 const statusLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
                 const isEntryDone = entry.status === 'done' || entry.status === 'cancelled';
 
-                const colWidthPct = totalCols > 1 ? 100 / totalCols : 100;
-                const leftPct = col * colWidthPct;
-
                 return (
-                  <div key={entry.id}
+                  <div key={`og-${gi}`}
                     style={{
                       position: 'absolute',
-                      left: totalCols > 1 ? `calc(4px + ${leftPct}%)` : 4,
-                      right: totalCols > 1 ? undefined : 4,
-                      width: totalCols > 1 ? `calc(${colWidthPct}% - 8px)` : undefined,
+                      left: 4, right: 4,
                       top, height,
                       background: isDraggingThis ? `${typeColor}40` : typeColor + '15',
                       borderLeft: `3px solid ${typeColor}`,
@@ -837,14 +823,22 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       padding: '3px 6px',
                       cursor: 'grab',
                       overflow: 'hidden',
-                      zIndex: isDraggingThis ? 15 : 5 + col,
+                      zIndex: isDraggingThis ? 15 : 5,
                       opacity: isEntryDone ? 0.6 : 1,
                       transition: isDraggingThis ? 'none' : 'top 0.2s, height 0.2s',
                       touchAction: isDraggingThis ? 'none' : 'auto',
                     }}
-                    onTouchStart={e => handleEntryTouchStart(e, entry, 'move')}
-                    onMouseDown={e => handleEntryMouseDown(e, entry, 'move')}
-                    onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
+                    onTouchStart={extraCount === 0 ? e => handleEntryTouchStart(e, entry, 'move') : undefined}
+                    onMouseDown={extraCount === 0 ? e => handleEntryMouseDown(e, entry, 'move') : undefined}
+                    onClick={() => {
+                      if (!dragState && !didDragMove.current) {
+                        if (extraCount > 0) {
+                          setOverlapPopup({ entries: group.entries, time: entry.time! });
+                        } else {
+                          onEdit(entry);
+                        }
+                      }
+                    }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <span style={{
@@ -857,9 +851,14 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         textDecoration: isEntryDone ? 'line-through' : 'none',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{entry.text}</div>
-                      {!isDraggingThis && (
+                      {extraCount > 0 && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, color: 'white', background: C.blue,
+                          borderRadius: 8, padding: '1px 6px', flexShrink: 0, lineHeight: 1.3,
+                        }}>+{extraCount}</span>
+                      )}
+                      {extraCount === 0 && !isDraggingThis && (
                         <>
-                        {/* 상태 순환 버튼 */}
                         <button style={{
                           background: `${stColor}18`, border: 'none', fontSize: 11, color: stColor,
                           cursor: 'pointer', padding: 0, flexShrink: 0, lineHeight: 1,
@@ -871,7 +870,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         onTouchEnd={(e) => { e.stopPropagation(); cycleStatus(entry.id); }}
                         onClick={(e) => { e.stopPropagation(); cycleStatus(entry.id); }}
                         >↻</button>
-                        {/* 시간 해제 버튼 */}
                         {onUpdateEntry && (
                         <button style={{
                           background: `${C.textMuted}18`, border: 'none', fontSize: 12, color: C.textMuted,
@@ -898,7 +896,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         </>
                       )}
                     </div>
-                    {height > 36 && entry.subtasks && entry.subtasks.length > 0 && (
+                    {height > 36 && extraCount === 0 && entry.subtasks && entry.subtasks.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                         <span style={{ fontSize: 9, color: C.textMuted }}>
                           ☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}
@@ -911,7 +909,8 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         </div>
                       </div>
                     )}
-                    {/* 하단 리사이즈 핸들 */}
+                    {/* 하단 리사이즈 핸들 (단일 항목만) */}
+                    {extraCount === 0 && (
                     <div
                       style={{
                         position: 'absolute', left: 0, right: 0, bottom: 0, height: 12,
@@ -932,6 +931,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         background: C.textMuted, opacity: 0.4,
                       }} />
                     </div>
+                    )}
                   </div>
                 );
               })}
@@ -1072,6 +1072,58 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     setPlacePanel(null);
                     if (onAddAtTime) onAddAtTime(time);
                   }}>+ 새 항목 추가</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 겹침 항목 팝업 */}
+          {overlapPopup && (
+            <div style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+              zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            }} onClick={() => setOverlapPopup(null)}>
+              <div style={{
+                background: C.bg, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 430,
+                maxHeight: '50vh', overflow: 'auto', padding: '0 20px 24px',
+                paddingBottom: 'env(safe-area-inset-bottom, 24px)',
+              }} onClick={e => e.stopPropagation()}>
+                <div style={{
+                  padding: '14px 0 10px', borderBottom: `1px solid ${C.borderLight}`,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary }}>
+                    {overlapPopup.time} 항목 ({overlapPopup.entries.length}건)
+                  </span>
+                  <button style={{
+                    background: 'none', border: 'none', fontSize: 16, color: C.textMuted,
+                    cursor: 'pointer', padding: 4,
+                  }} onClick={() => setOverlapPopup(null)}>✕</button>
+                </div>
+                <div style={{ padding: '8px 0' }}>
+                  {overlapPopup.entries.map(entry => {
+                    const st = STATUS[entry.status] || STATUS.todo;
+                    const stLabel = STATUS_LABEL_BY_TYPE[entry.type]?.[entry.status] || st.label;
+                    return (
+                      <div key={entry.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
+                        cursor: 'pointer',
+                      }} onClick={() => { setOverlapPopup(null); onEdit(entry); }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(entry.status), width: 18, textAlign: 'center' }}>
+                          {st.symbol}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry.text}
+                          </div>
+                          <div style={{ fontSize: 10, color: C.textMuted }}>
+                            {entry.time}{entry.endTime ? ` - ${entry.endTime}` : ''} · {stLabel}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -14,6 +14,7 @@ interface WeeklyTimelineProps {
   gcalEvents?: GoogleCalendarEvent[];
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
+  onPopupChange?: (open: boolean) => void;
 }
 
 const HOUR_HEIGHT = 44;
@@ -42,7 +43,7 @@ function yToMinutes(y: number): number {
 
 const DAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus, gcalEvents = [], onSwipeLeft, onSwipeRight }: WeeklyTimelineProps) {
+export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleStatus, gcalEvents = [], onSwipeLeft, onSwipeRight, onPopupChange }: WeeklyTimelineProps) {
   const { C, isDark, statusColor } = useTheme();
   const todayStr = getTodayStr();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,6 +112,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
   // Place panel state
   const [placePanel, setPlacePanel] = useState<{ time: string; colIdx: number } | null>(null);
   const [overlapPopup, setOverlapPopup] = useState<{ entries: Entry[]; colIdx: number; time: string } | null>(null);
+  useEffect(() => { onPopupChange?.(overlapPopup !== null || placePanel !== null); }, [overlapPopup, placePanel, onPopupChange]);
 
   // Drag state
   const [dragState, setDragState] = useState<{
