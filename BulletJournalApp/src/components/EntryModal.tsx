@@ -135,6 +135,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const isNote = type === 'note';
   const activeGoals = allEntries.filter(e => (e.type === 'goal-yearly' || e.type === 'goal-monthly') && e.status !== 'done' && e.status !== 'cancelled');
   const [showHistory, setShowHistory] = useState(false);
+  const [localHistory, setLocalHistory] = useState(existing?.editHistory || []);
 
   const handleSave = () => {
     if (!text.trim()) return;
@@ -151,11 +152,11 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       : undefined;
     const isMultiDay = endDate && endDate !== date;
     // 메모 수정 시 이전 내용을 히스토리에 기록
-    let editHistory = existing?.editHistory;
+    let editHistory: Entry['editHistory'] = localHistory.length > 0 ? localHistory : undefined;
     if (modal.mode === 'edit' && existing && isNote
       && (existing.text !== text.trim() || (existing.memo || '') !== memo.trim())) {
       editHistory = [
-        ...(existing.editHistory || []),
+        ...(localHistory || []),
         { text: existing.text, memo: existing.memo, editedAt: Date.now() },
       ];
     }
@@ -296,29 +297,50 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
             )}
 
             {/* 수정 이력 보기 */}
-            {modal.mode === 'edit' && existing?.editHistory && existing.editHistory.length > 0 && (
+            {modal.mode === 'edit' && localHistory.length > 0 && (
               <div style={{ marginTop: 6 }}>
-                <button style={{
-                  background: 'none', border: `1px solid ${C.border}`, borderRadius: 6,
-                  padding: '4px 10px', fontSize: 10, color: C.textSecondary, cursor: 'pointer',
-                  fontFamily: '-apple-system, sans-serif',
-                }} onClick={() => setShowHistory(!showHistory)}>
-                  수정 이력 ({existing.editHistory.length}건) {showHistory ? '▲' : '▼'}
-                </button>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button style={{
+                    background: 'none', border: `1px solid ${C.border}`, borderRadius: 6,
+                    padding: '4px 10px', fontSize: 10, color: C.textSecondary, cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }} onClick={() => setShowHistory(!showHistory)}>
+                    수정 이력 ({localHistory.length}건) {showHistory ? '▲' : '▼'}
+                  </button>
+                  {showHistory && (
+                    <button style={{
+                      background: 'none', border: `1px solid ${C.accent}60`, borderRadius: 6,
+                      padding: '4px 8px', fontSize: 10, color: C.accent, cursor: 'pointer',
+                      fontFamily: '-apple-system, sans-serif',
+                    }} onClick={() => {
+                      if (confirm('전체 수정 이력을 삭제하시겠습니까?')) setLocalHistory([]);
+                    }}>전체 삭제</button>
+                  )}
+                </div>
                 {showHistory && (
                   <div style={{ marginTop: 6, maxHeight: 200, overflowY: 'auto' }}>
-                    {[...existing.editHistory].reverse().map((h, i) => (
-                      <div key={i} style={{
-                        padding: '6px 8px', marginBottom: 4, borderRadius: 6,
-                        background: `${C.borderLight}`, fontSize: 11,
-                      }}>
-                        <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 2 }}>
-                          {new Date(h.editedAt).toLocaleDateString('ko-KR')} {new Date(h.editedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                    {[...localHistory].reverse().map((h, ri) => {
+                      const origIdx = localHistory.length - 1 - ri;
+                      return (
+                        <div key={ri} style={{
+                          padding: '6px 8px', marginBottom: 4, borderRadius: 6,
+                          background: `${C.borderLight}`, fontSize: 11,
+                          display: 'flex', gap: 6,
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 2 }}>
+                              {new Date(h.editedAt).toLocaleDateString('ko-KR')} {new Date(h.editedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                            <div style={{ color: C.textPrimary, fontWeight: 600 }}>{h.text}</div>
+                            {h.memo && <div style={{ color: C.textSecondary, marginTop: 2, whiteSpace: 'pre-wrap' }}>{h.memo}</div>}
+                          </div>
+                          <button style={{
+                            background: 'none', border: 'none', fontSize: 12, color: C.textMuted,
+                            cursor: 'pointer', padding: '0 2px', flexShrink: 0, alignSelf: 'flex-start',
+                          }} onClick={() => setLocalHistory(localHistory.filter((_, j) => j !== origIdx))}>✕</button>
                         </div>
-                        <div style={{ color: C.textPrimary, fontWeight: 600 }}>{h.text}</div>
-                        {h.memo && <div style={{ color: C.textSecondary, marginTop: 2, whiteSpace: 'pre-wrap' }}>{h.memo}</div>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
