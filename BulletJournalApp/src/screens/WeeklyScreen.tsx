@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { DailySummary } from '../components/DailySummary';
@@ -29,6 +29,8 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
   const weekDates = getWeekDates(date.getFullYear(), date.getMonth(), date.getDate());
   const todayStr = getTodayStr();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
 
   // 3일 뷰: 현재 날짜 기준 어제-오늘-내일 (또는 주 내에서 3일)
   const [timelineOffset, setTimelineOffset] = useState(() => {
@@ -52,6 +54,19 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
     return weekDates.slice(timelineOffset, timelineOffset + 3);
   }, [weekDates, timelineOffset]);
 
+  // Measure available height for content scroll area
+  useEffect(() => {
+    const measure = () => {
+      const el = contentScrollRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setContentHeight(Math.max(200, window.innerHeight - rect.top - 12));
+    };
+    const timer = setTimeout(measure, 30);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [viewMode]);
+
   return (
     <div>
       {/* 주간 요약 */}
@@ -74,6 +89,11 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
           ...(viewMode === 'timeline' ? styles.chipActive : {}),
         }} onClick={() => setViewMode('timeline')}>시간표</button>
       </div>
+
+      <div ref={contentScrollRef} style={{
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        height: contentHeight > 0 ? contentHeight : '60vh',
+      } as React.CSSProperties}>
 
       {/* 밀린 항목 */}
       {(() => {
@@ -216,6 +236,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
           )}
         </div>
       )}
+      </div>{/* /contentScrollRef */}
     </div>
   );
 }
