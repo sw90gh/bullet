@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
 import { PRIORITY } from '../utils/constants';
@@ -11,12 +11,14 @@ interface NotesScreenProps {
   onDelete: (id: string) => void;
   cycleStatus: (id: string) => void;
   onChangePriority?: (id: string, priority: EntryPriority) => void;
+  onPopupChange?: (open: boolean) => void;
 }
 
-export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onChangePriority }: NotesScreenProps) {
+export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onChangePriority, onPopupChange }: NotesScreenProps) {
   const { styles, C } = useTheme();
   const [search, setSearch] = useState('');
   const [viewingId, setViewingId] = useState<string | null>(null);
+  useEffect(() => { onPopupChange?.(viewingId !== null); }, [viewingId, onPopupChange]);
 
   const notes = useMemo(() => {
     let list = entries
