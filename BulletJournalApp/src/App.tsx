@@ -495,6 +495,7 @@ export default function App() {
             onDelete={(id) => setDeleteConfirm(id)}
             cycleStatus={cycleStatus}
             onChangePriority={changePriority}
+            onUpdateEntry={updateEntry}
             onPopupChange={setNotesPopupOpen}
           />
         )}

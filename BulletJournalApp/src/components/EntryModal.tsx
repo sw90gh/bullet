@@ -38,6 +38,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   const savedTime = useRef<{ time: string; endTime: string }>({ time: '', endTime: '' });
   const [tags, setTags] = useState<string>(existing?.tags?.join(', ') || '');
   const [memo, setMemo] = useState<string>(existing?.memo || '');
+  const [folder, setFolder] = useState<string>(existing?.folder || '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(existing?.subtasks || []);
   const [newSubtask, setNewSubtask] = useState('');
   const [recurringType, setRecurringType] = useState<string>(existing?.recurring?.type || 'none');
@@ -177,6 +178,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       targetCount: isGoalType && targetCount > 0 ? targetCount : undefined,
       linkedGoalId: !isGoalType && linkedGoalId ? linkedGoalId : undefined,
       editHistory,
+      folder: isNote && folder ? folder : undefined,
     });
   };
 
@@ -284,6 +286,31 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* 폴더 */}
+            <div style={{ marginTop: 6 }}>
+              <label style={labelSmall}>폴더</label>
+              <input style={inputSmall} value={folder}
+                placeholder="폴더명 입력 (예: 개인, 업무)"
+                onChange={e => setFolder(e.target.value)} />
+              {/* 기존 폴더 추천 */}
+              {(() => {
+                const existingFolders = Array.from(new Set(allEntries.filter(e => e.type === 'note' && e.folder).map(e => e.folder!)));
+                const suggestions = existingFolders.filter(f => f !== folder);
+                if (suggestions.length === 0) return null;
+                return (
+                  <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                    {suggestions.slice(0, 6).map(f => (
+                      <button key={f} style={{
+                        padding: '2px 8px', borderRadius: 10, fontSize: 10,
+                        border: `1px solid ${C.border}`, background: folder === f ? `${C.primary}20` : C.bgWhite,
+                        color: C.textSecondary, cursor: 'pointer', fontFamily: '-apple-system, sans-serif',
+                      }} onClick={() => setFolder(f)}>{f}</button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* 등록일/수정일 */}

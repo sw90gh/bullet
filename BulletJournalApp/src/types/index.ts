@@ -28,6 +28,8 @@ export interface Entry {
   targetCount?: number;   // 목표 달성에 필요한 횟수
   updatedAt?: number;
   editHistory?: { text: string; memo?: string; editedAt: number }[];
+  locked?: boolean;
+  folder?: string;
 }
 
 export interface Subtask {
