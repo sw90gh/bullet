@@ -110,6 +110,7 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
       {(() => {
         const today = getTodayStr();
         const overdue = entries.filter(e => {
+          if (e.type === 'note') return false;
           if (!e.date || e.date >= today) return false;
           if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
           return true;

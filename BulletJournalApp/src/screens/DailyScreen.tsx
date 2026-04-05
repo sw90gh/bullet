@@ -68,8 +68,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     });
   const isToday = dateStr === todayStr;
 
-  // 밀린 항목: 오늘보다 이전 날짜인데 미완료인 항목
+  // 밀린 항목: 오늘보다 이전 날짜인데 미완료인 항목 (메모 제외)
   const overdueEntries = isToday ? allEntries.filter(e => {
+    if (e.type === 'note') return false;
     if (!e.date || e.date >= todayStr) return false;
     if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
     return true;

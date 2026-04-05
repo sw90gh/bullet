@@ -68,6 +68,7 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
   const todayInView = dateStrs.includes(todayStr);
   const untimedEntries = useMemo(() => {
     const untimed = entries.filter(e => {
+      if (e.type === 'note') return false;
       if (!dateStrs.includes(e.date)) {
         // 3일 범위 밖 → 밀린 항목으로만 포함 (오늘이 뷰에 포함된 경우만)
         if (!todayInView) return false;

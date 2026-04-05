@@ -100,6 +100,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
       {/* 밀린 항목 (목록 모드에서만) */}
       {viewMode === 'list' && (() => {
         const overdue = entries.filter(e => {
+          if (e.type === 'note') return false;
           if (!e.date || e.date >= todayStr) return false;
           if (e.status === 'done' || e.status === 'cancelled' || e.status === 'migrated' || e.status === 'migrated_up') return false;
           return true;
