@@ -199,25 +199,42 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
             </div>
             {dateNotes.map(entry => {
               const locked = isNoteLocked(entry);
+              const maskedEntry = locked ? { ...entry, text: '🔒 잠긴 메모' } : entry;
               return (
                 <div key={entry.id} style={{ marginBottom: 4 }}>
-                  <EntryRow
-                    entry={entry}
-                    cycleStatus={cycleStatus}
-                    onEdit={() => tryView(entry)}
-                    onDelete={() => onDelete(entry.id)}
-                    onChangePriority={onChangePriority}
-                  />
-                  {/* 본문 미리보기 — 잠금 시 마스킹 */}
-                  <div style={{
-                    fontSize: 11, color: locked ? C.textLight : C.textMuted, lineHeight: 1.4,
-                    padding: '0 8px 4px', cursor: 'pointer',
-                    overflow: 'hidden', display: '-webkit-box',
-                    WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
-                    fontStyle: locked ? 'italic' : 'normal',
-                  } as React.CSSProperties}
-                    onClick={() => tryView(entry)}
-                  >{locked ? '🔒 잠긴 메모입니다' : (entry.memo || '')}</div>
+                  {locked ? (
+                    /* 잠긴 메모: 마스킹된 행, 스와이프 없음 */
+                    <div style={{
+                      padding: '10px 8px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      borderBottom: `1px solid ${C.borderLight}`,
+                    }} onClick={() => tryView(entry)}>
+                      <span style={{ fontSize: 14 }}>🔒</span>
+                      <span style={{ fontSize: 13, color: C.textMuted, fontStyle: 'italic', flex: 1 }}>잠긴 메모</span>
+                      {entry.folder && <span style={{ fontSize: 9, color: C.textLight, background: `${C.border}40`, padding: '1px 5px', borderRadius: 4 }}>{entry.folder}</span>}
+                    </div>
+                  ) : (
+                    <>
+                    <EntryRow
+                      entry={entry}
+                      cycleStatus={cycleStatus}
+                      onEdit={() => tryView(entry)}
+                      onDelete={() => onDelete(entry.id)}
+                      onChangePriority={onChangePriority}
+                    />
+                    {/* 본문 미리보기 */}
+                    {entry.memo && (
+                      <div style={{
+                        fontSize: 11, color: C.textMuted, lineHeight: 1.4,
+                        padding: '0 8px 4px', cursor: 'pointer',
+                        overflow: 'hidden', display: '-webkit-box',
+                        WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+                      } as React.CSSProperties}
+                        onClick={() => tryView(entry)}
+                      >{entry.memo}</div>
+                    )}
+                    </>
+                  )}
                 </div>
               );
             })}
