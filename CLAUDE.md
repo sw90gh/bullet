@@ -82,6 +82,7 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - **시간 범위**: 0시~23시 (24시간 전체), 기본 6시 위치로 자동 스크롤 (오늘은 현재시각)
 - **시간표 모드에서 밀린항목/마감임박 섹션 숨김** (목록 모드에서만 표시)
 - **터치 + 마우스** 이벤트 모두 지원 (touch* + onMouseDown)
+- **롱프레스 드래그 (터치)**: 일간/주간 모두 350ms 롱프레스 후 드래그 시작, 롱프레스 전 8px 이동 시 스크롤로 취급 (진동 피드백)
 - 15분 단위 스냅
 - 탭(5px 미만 이동) → 수정창, 드래그(5px 이상) → 시간만 변경 (수정창 안뜸)
 - 두 가지 드래그 모드: `'move'` (블록 이동), `'resize'` (하단 리사이즈)
@@ -127,6 +128,7 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - **스와이프**: EntryRow 사용, 좌→우 우선순위, 우→좌 수정/삭제 (이관/상위 없음)
 - **상태**: `STATUS_CYCLE_BY_TYPE`에서 note는 빈 배열 → 상태 순환 없음, `STATUS_LABEL_BY_TYPE`에서 todo→'메모'
 - **필터**: 미완료 필터에서 메모는 항상 표시 (`e.type === 'note'` 조건 추가)
+- **달성도 제외**: 메모는 완료율/달성률 계산에서 제외 (DailySummary, StatsScreen, AnnualScreen)
 
 ### Gantt Chart
 - 주간/월간/분기 범위 전환
@@ -241,3 +243,5 @@ vercel.json               <- 루트 Vercel 설정
 16. 메모(note) 타입은 상태 순환 없음 (`STATUS_CYCLE_BY_TYPE.note = []`), 탭 시 `onEdit` 호출, 스와이프에서 이관/상위 숨김 (`entry.type !== 'note'`)
 17. `Entry.editHistory`는 메모 수정 시 이전 text/memo를 기록, Firestore에도 동기화됨
 18. 각 화면의 스크롤 컨테이너(`contentRef`, `listScrollRef` 등)에 `paddingBottom: 70` 필요 — FAB에 마지막 항목 가려짐 방지
+19. 달성도/완료율 계산 시 메모(note) 반드시 제외 (`e.type !== 'note'`) — 메모는 상태 순환 없어 항상 미완료로 집계됨
+20. 타임라인 터치 드래그는 롱프레스(350ms) 필수 — 즉시 드래그 시 스크롤과 충돌. `dragReadyRef` + `longPressTimerRef` 패턴 사용
