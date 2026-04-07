@@ -57,8 +57,9 @@ export function AnnualScreen({ year, entries, cycleStatus, onAdd, onAddGoal, onE
         {Array.from({ length: 12 }, (_, m) => {
           const mk = `${year}-${pad(m + 1)}`;
           const monthEntries = entries.filter(e => e.date?.startsWith(mk) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly');
-          const count = monthEntries.length;
-          const doneCount = monthEntries.filter(e => e.status === 'done').length;
+          const rateBase = monthEntries.filter(e => e.type !== 'note');
+          const count = rateBase.length;
+          const doneCount = rateBase.filter(e => e.status === 'done').length;
           const monthGoalCount = entries.filter(e => e.type === 'goal-monthly' && e.date?.startsWith(mk)).length;
           const isCur = year === today.getFullYear() && m === today.getMonth();
 

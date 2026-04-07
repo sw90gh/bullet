@@ -29,7 +29,11 @@ export function StatsScreen({ year, month, entries, isDark = false }: StatsScree
     const tasks = monthEntries.filter(e => e.type === 'task').length;
     const events = monthEntries.filter(e => e.type === 'event').length;
     const notes = monthEntries.filter(e => e.type === 'note').length;
-    const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+    // 달성률: 메모 제외 (상태 순환 없음)
+    const rateBase = monthEntries.filter(e => e.type !== 'note');
+    const rateTotal = rateBase.length;
+    const rateDone = rateBase.filter(e => e.status === 'done').length;
+    const rate = rateTotal > 0 ? Math.round((rateDone / rateTotal) * 100) : 0;
     return { total, done, progress, cancelled, tasks, events, notes, rate };
   }, [monthEntries]);
 
@@ -44,13 +48,14 @@ export function StatsScreen({ year, month, entries, isDark = false }: StatsScree
         const day = parseInt(e.date?.slice(8) || '0');
         return day >= weekStart && day <= weekEnd;
       });
+      const rateBase = weekEntries.filter(e => e.type !== 'note');
       const total = weekEntries.length;
-      const done = weekEntries.filter(e => e.status === 'done').length;
+      const done = rateBase.filter(e => e.status === 'done').length;
       weeks.push({
         label: `${weekNum}주`,
         total,
         done,
-        rate: total > 0 ? Math.round((done / total) * 100) : 0,
+        rate: rateBase.length > 0 ? Math.round((done / rateBase.length) * 100) : 0,
       });
       weekStart = weekEnd + 1;
       weekNum++;
@@ -62,13 +67,14 @@ export function StatsScreen({ year, month, entries, isDark = false }: StatsScree
     return Array.from({ length: 12 }, (_, m) => {
       const mk = `${year}-${pad(m + 1)}`;
       const me = allYearEntries.filter(e => e.date?.startsWith(mk));
+      const rateBase = me.filter(e => e.type !== 'note');
       const total = me.length;
-      const done = me.filter(e => e.status === 'done').length;
+      const done = rateBase.filter(e => e.status === 'done').length;
       return {
         label: `${m + 1}월`,
         total,
         done,
-        rate: total > 0 ? Math.round((done / total) * 100) : 0,
+        rate: rateBase.length > 0 ? Math.round((done / rateBase.length) * 100) : 0,
       };
     });
   }, [allYearEntries, year]);
@@ -89,8 +95,9 @@ export function StatsScreen({ year, month, entries, isDark = false }: StatsScree
   // 연간 통계
   const yearStats = useMemo(() => {
     const total = allYearEntries.length;
-    const done = allYearEntries.filter(e => e.status === 'done').length;
-    return { total, done, rate: total > 0 ? Math.round((done / total) * 100) : 0 };
+    const rateBase = allYearEntries.filter(e => e.type !== 'note');
+    const done = rateBase.filter(e => e.status === 'done').length;
+    return { total, done, rate: rateBase.length > 0 ? Math.round((done / rateBase.length) * 100) : 0 };
   }, [allYearEntries]);
 
   const yearGoals = entries.filter(e => (e.type === 'goal-yearly' || e.type === 'goal-monthly') && e.date?.startsWith(`${year}`));

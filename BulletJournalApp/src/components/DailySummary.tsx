@@ -19,8 +19,8 @@ export function DailySummary({ date, entries, filterFn, label }: DailySummaryPro
       : date
         ? entries.filter(e => e.date === formatDateKey(date))
         : [];
-    // 이관/취소 제외한 활성 항목만 집계
-    const active = filtered.filter(e => e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled');
+    // 이관/취소/메모 제외한 활성 항목만 집계 (메모는 상태 순환 없으므로 달성도에서 제외)
+    const active = filtered.filter(e => e.type !== 'note' && e.status !== 'migrated' && e.status !== 'migrated_up' && e.status !== 'cancelled');
     const total = active.length;
     const done = active.filter(e => e.status === 'done').length;
     const progress = active.filter(e => e.status === 'progress').length;

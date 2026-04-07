@@ -138,6 +138,9 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
 
   const didDragMove = useRef(false);
   const DRAG_THRESHOLD = 10;
+  const LONG_PRESS_MS = 350;
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragReadyRef = useRef(false);
 
   // Horizontal swipe detection for 3-day navigation
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -163,8 +166,16 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
 
   const handleTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
     didDragMove.current = false;
+    dragReadyRef.current = false;
     const touch = e.touches[0];
     pendingDragRef.current = { entry, startY: touch.clientY, startX: touch.clientX };
+
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      if (!pendingDragRef.current) return;
+      dragReadyRef.current = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, LONG_PRESS_MS);
   }, []);
 
   const getColIdxFromX = useCallback((clientX: number): number => {
@@ -206,10 +217,18 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
     const touch = e.touches[0];
 
     if (pendingDragRef.current && !dragStateRef.current) {
-      const dy = Math.abs(touch.clientY - pendingDragRef.current.startY);
-      const dx = Math.abs(touch.clientX - pendingDragRef.current.startX);
-      if (dy < DRAG_THRESHOLD && dx < DRAG_THRESHOLD) return;
+      if (!dragReadyRef.current) {
+        // 롱프레스 전에 이동 → 스크롤이므로 pending 취소
+        const dy = Math.abs(touch.clientY - pendingDragRef.current.startY);
+        const dx = Math.abs(touch.clientX - pendingDragRef.current.startX);
+        if (dy > 8 || dx > 8) {
+          pendingDragRef.current = null;
+          if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        }
+        return; // 스크롤 허용
+      }
 
+      // 롱프레스 완료 → 드래그 시작
       const pending = pendingDragRef.current;
       const entry = pending.entry;
       e.preventDefault();
@@ -252,6 +271,8 @@ export function WeeklyTimeline({ dates, entries, onEdit, onUpdateEntry, cycleSta
 
   handleTouchEndRef.current = () => {
     pendingDragRef.current = null;
+    dragReadyRef.current = false;
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
     const ds = dragStateRef.current;
     if (!ds) { setDragState(null); return; }
     handleDrop(ds);
