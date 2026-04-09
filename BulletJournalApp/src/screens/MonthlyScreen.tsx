@@ -28,7 +28,7 @@ export function MonthlyScreen({
   year, month, entries, cycleStatus,
   onAddEntry, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onDayTap, onToggleGoalDone, onPopupChange, gcalEvents = []
 }: MonthlyScreenProps) {
-  const { styles, C } = useTheme();
+  const { styles, C, statusColor } = useTheme();
   const [showAll, setShowAll] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   useEffect(() => { onPopupChange?.(selectedDay !== null); }, [selectedDay, onPopupChange]);
@@ -88,7 +88,7 @@ export function MonthlyScreen({
             const allItems: { text: string; color: string }[] = [
               ...dayItems.map(e => ({
                 text: e.text,
-                color: (STATUS[e.status] || STATUS.todo).color,
+                color: statusColor(e.status),
               })),
               ...dayGcal.map(ge => ({ text: ge.summary, color: '#4285f4' })),
             ];
