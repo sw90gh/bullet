@@ -81,7 +81,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   }) : [];
 
   const timedEntries = dayEntries.filter(e => e.time);
-  const untimedToday = dayEntries.filter(e => !e.time);
+  const untimedToday = dayEntries.filter(e => !e.time && e.type !== 'note');
   // 밀린 항목도 미배치 대상에 포함 (시간 유무 관계없이 — 과거 시간표 항목도 포함)
   const untimedEntries = isToday
     ? [...untimedToday, ...overdueEntries]
@@ -153,13 +153,13 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
   const lastTouchY = useRef(0);
   const dragStateRef = useRef<typeof dragState>(null);
   const pendingDragRef = useRef<{
-    type: 'move' | 'resize' | 'place';
+    type: 'move' | 'resize';
     entry: Entry;
     startY: number;
-    mode: 'move' | 'resize' | 'place';
+    mode: 'move' | 'resize';
   } | null>(null);
   const [dragState, setDragState] = useState<{
-    type: 'move' | 'resize' | 'place';
+    type: 'move' | 'resize';
     entryId: string;
     startY: number;
     origMinutes: number;
@@ -181,14 +181,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     const ds = dragStateRef.current;
     if (!ds) return;
 
-    if (ds.type === 'place') {
-      if (!timelineRef.current) return;
-      const rect = timelineRef.current.getBoundingClientRect();
-      const y = clientY - rect.top;
-      const minutes = yToMinutes(y);
-      const newTop = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-      setDragState(prev => prev ? { ...prev, currentTop: newTop, origMinutes: minutes, origEndMinutes: minutes + 60 } : null);
-    } else if (ds.type === 'move') {
+    if (ds.type === 'move') {
       if (!timelineRef.current) return;
       const rect = timelineRef.current.getBoundingClientRect();
       const y = clientY - rect.top;
@@ -278,38 +271,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     });
   }, [onUpdateEntry]);
 
-  // Mouse: place an untimed entry (PC)
-  const handleUntimedMouseDown = useCallback((e: React.MouseEvent, entry: Entry) => {
-    if (!onUpdateEntry) return;
-    e.stopPropagation();
-    didDragMove.current = false;
-    setDragState({
-      type: 'place',
-      entryId: entry.id,
-      startY: e.clientY,
-      origMinutes: START_HOUR * 60,
-      origEndMinutes: START_HOUR * 60 + 60,
-      currentTop: -999,
-      currentHeight: HOUR_HEIGHT - 2,
-    });
-  }, [onUpdateEntry]);
-
-  // Drag: place an untimed entry onto timeline
-  const handleUntimedTouchStart = useCallback((e: React.TouchEvent, entry: Entry) => {
-    if (!onUpdateEntry) return;
-    didDragMove.current = false;
-    dragReadyRef.current = false;
-    const touch = e.touches[0];
-    pendingDragRef.current = { type: 'place', entry, startY: touch.clientY, mode: 'place' };
-
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = setTimeout(() => {
-      if (!pendingDragRef.current) return;
-      dragReadyRef.current = true;
-      if (navigator.vibrate) navigator.vibrate(30);
-    }, LONG_PRESS_MS);
-  }, [onUpdateEntry]);
-
   // Use refs for handlers so the native listener always sees latest state
   const handleTouchMoveRef = useRef<(e: TouchEvent) => void>(() => {});
   const handleTouchEndRef = useRef<() => void>(() => {});
@@ -335,31 +296,19 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
       e.preventDefault();
       didDragMove.current = true;
 
-      if (pending.mode === 'place') {
-        setDragState({
-          type: 'place',
-          entryId: entry.id,
-          startY: pending.startY,
-          origMinutes: START_HOUR * 60,
-          origEndMinutes: START_HOUR * 60 + 60,
-          currentTop: -999,
-          currentHeight: HOUR_HEIGHT - 2,
-        });
-      } else {
-        const startMin = timeToMinutes(entry.time!);
-        const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
-        const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-        const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
-        setDragState({
-          type: pending.mode,
-          entryId: entry.id,
-          startY: pending.startY,
-          origMinutes: startMin,
-          origEndMinutes: endMin,
-          currentTop: top,
-          currentHeight: height,
-        });
-      }
+      const startMin = timeToMinutes(entry.time!);
+      const endMin = entry.endTime ? timeToMinutes(entry.endTime) : startMin + 60;
+      const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_HEIGHT - 2);
+      setDragState({
+        type: pending.mode,
+        entryId: entry.id,
+        startY: pending.startY,
+        origMinutes: startMin,
+        origEndMinutes: endMin,
+        currentTop: top,
+        currentHeight: height,
+      });
       pendingDragRef.current = null;
       lastTouchY.current = touch.clientY;
       return;
@@ -407,7 +356,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
     }
 
     if (didDragMove.current && ds.currentTop >= 0) {
-      if (ds.type === 'move' || ds.type === 'place') {
+      if (ds.type === 'move') {
         const newStartMin = snapMinutes(START_HOUR * 60 + (ds.currentTop / HOUR_HEIGHT) * 60);
         const duration = ds.origEndMinutes - ds.origMinutes;
         const newEndMin = newStartMin + duration;
@@ -700,20 +649,16 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
               {untimedOpen && <div style={{ padding: '0 12px 8px' }}>
               {untimedEntries.map(entry => {
                 const st = STATUS[entry.status] || STATUS.todo;
-                const isDragging = dragState?.entryId === entry.id;
                 const isOverdue = entry.date < dateStr;
                 return (
                   <div key={entry.id} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 4px',
-                    cursor: 'grab', borderRadius: 6,
-                    background: isDragging ? `${C.blue}15` : isOverdue ? `${C.accent}08` : 'transparent',
-                    border: `1px dashed ${isDragging ? C.blue : isOverdue ? `${C.accent}30` : 'transparent'}`,
+                    cursor: 'pointer', borderRadius: 6,
+                    background: isOverdue ? `${C.accent}08` : 'transparent',
+                    border: `1px dashed ${isOverdue ? `${C.accent}30` : 'transparent'}`,
                     marginBottom: 2, transition: 'background 0.15s',
-                    touchAction: isDragging ? 'none' : 'auto',
                   }}
-                  onTouchStart={e => handleUntimedTouchStart(e, entry)}
-                  onMouseDown={e => handleUntimedMouseDown(e, entry)}
-                  onClick={() => { if (!dragState && !didDragMove.current) onEdit(entry); }}
+                  onClick={() => onEdit(entry)}
                   >
                     <span style={{ fontSize: 12, fontWeight: 800, color: statusColor(entry.status), width: 16, textAlign: 'center' }}>{st.symbol}</span>
                     <span style={{
@@ -726,7 +671,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                         padding: '1px 4px', borderRadius: 3, flexShrink: 0,
                       }}>{entry.date.slice(5)}</span>
                     )}
-                    <span style={{ fontSize: 10, color: C.textMuted }}>⠿</span>
                   </div>
                 );
               })}
@@ -1005,41 +949,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       <div key={entry.id} style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '10px 4px', borderBottom: `1px solid ${C.borderLight}`,
-                        cursor: 'pointer',
                         background: isOverdue ? `${C.accent}06` : 'transparent',
-                      }}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        if (onUpdateEntry) {
-                          const endHour = parseInt(placePanel.split(':')[0]) + 1;
-                          const updates: Partial<Entry> = {
-                            time: placePanel,
-                            endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
-                          };
-                          if (entry.date !== dateStr) {
-                            updates.originalDate = entry.originalDate || entry.date;
-                            updates.date = dateStr;
-                          }
-                          onUpdateEntry(entry.id, updates);
-                        }
-                        setPlacePanel(null);
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onUpdateEntry) {
-                          const endHour = parseInt(placePanel.split(':')[0]) + 1;
-                          const updates: Partial<Entry> = {
-                            time: placePanel,
-                            endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
-                          };
-                          if (entry.date !== dateStr) {
-                            updates.originalDate = entry.originalDate || entry.date;
-                            updates.date = dateStr;
-                          }
-                          onUpdateEntry(entry.id, updates);
-                        }
-                        setPlacePanel(null);
                       }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(entry.status), width: 18, textAlign: 'center' }}>
                           {st.symbol}
@@ -1054,6 +964,27 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                             padding: '2px 6px', borderRadius: 4, flexShrink: 0,
                           }}>밀림 {entry.date.slice(5)}</span>
                         )}
+                        <button style={{
+                          flexShrink: 0, padding: '4px 10px', borderRadius: 6,
+                          border: 'none', background: C.accent, color: '#fff',
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                          fontFamily: '-apple-system, sans-serif',
+                        }} onClick={(e) => {
+                          e.stopPropagation();
+                          if (onUpdateEntry) {
+                            const endHour = parseInt(placePanel.split(':')[0]) + 1;
+                            const updates: Partial<Entry> = {
+                              time: placePanel,
+                              endTime: `${Math.min(23, endHour).toString().padStart(2, '0')}:00`,
+                            };
+                            if (entry.date !== dateStr) {
+                              updates.originalDate = entry.originalDate || entry.date;
+                              updates.date = dateStr;
+                            }
+                            onUpdateEntry(entry.id, updates);
+                          }
+                          setPlacePanel(null);
+                        }}>배치</button>
                       </div>
                     );
                   })}
@@ -1062,13 +993,6 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                     border: `1.5px dashed ${C.border}`, background: 'transparent',
                     color: C.textSecondary, fontSize: 13, cursor: 'pointer',
                     fontFamily: '-apple-system, sans-serif',
-                  }}
-                  onTouchEnd={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const time = placePanel;
-                    setPlacePanel(null);
-                    if (onAddAtTime) onAddAtTime(time);
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
