@@ -379,7 +379,9 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
       }
     }
 
-    didDragMove.current = false;
+    // didDragMove 리셋을 다음 프레임으로 지연 — mouseup 직후 click이 발생하므로
+    // click 핸들러가 didDragMove를 먼저 확인한 뒤에 리셋되어야 수정창이 안 열림
+    requestAnimationFrame(() => { didDragMove.current = false; });
     setDragState(null);
   };
 
