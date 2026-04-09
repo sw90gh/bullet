@@ -805,7 +805,7 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
                       }}>{statusLabel}</span>
                       <div style={{
                         fontSize: 11, fontWeight: 600, flex: 1, minWidth: 0,
-                        color: isEntryDone ? C.textMuted : C.textPrimary,
+                        color: isEntryDone ? C.textSecondary : C.textPrimary,
                         textDecoration: isEntryDone ? 'line-through' : 'none',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{entry.text}</div>
