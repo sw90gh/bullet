@@ -136,7 +136,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
         <div>
           {weekDates.map(wd => {
             const dateStr = formatDateKey(wd);
-            const dayEntries = entries.filter(e => e.date === dateStr).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            const dayEntries = entries.filter(e => e.date === dateStr && e.type !== 'note').sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
             const isT = dateStr === todayStr;
             const isWeekend = wd.getDay() === 0 || wd.getDay() === 6;
 

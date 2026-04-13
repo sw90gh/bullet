@@ -35,14 +35,14 @@ export function MonthlyScreen({
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${pad(month + 1)}`;
-  const allMonthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly')
+  const allMonthEntries = entries.filter(e => e.date?.startsWith(monthKey) && e.type !== 'goal-yearly' && e.type !== 'goal-monthly' && e.type !== 'note')
     .sort((a, b) => {
       const po: Record<string, number> = { 'urgent-important': 0, urgent: 1, important: 2, none: 3 };
       if (po[a.priority || 'none'] !== po[b.priority || 'none'])
         return po[a.priority || 'none'] - po[b.priority || 'none'];
       return (a.createdAt || 0) - (b.createdAt || 0);
     });
-  const monthEntries = showAll ? allMonthEntries : allMonthEntries.filter(e => e.type === 'note' || e.status === 'todo' || e.status === 'progress');
+  const monthEntries = showAll ? allMonthEntries : allMonthEntries.filter(e => e.status === 'todo' || e.status === 'progress');
   const todayStr = getTodayStr();
 
   const cells: (number | null)[] = [];

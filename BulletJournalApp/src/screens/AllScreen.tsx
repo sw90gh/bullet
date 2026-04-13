@@ -35,8 +35,9 @@ export function AllScreen({ entries, cycleStatus, onAdd, onEdit, onDelete, onMig
   }, [showAll]);
 
   const filtered = useMemo(() => {
-    if (showAll) return entries;
-    return entries.filter(e => e.type === 'note' || e.status === 'todo' || e.status === 'progress');
+    const noNotes = entries.filter(e => e.type !== 'note');
+    if (showAll) return noNotes;
+    return noNotes.filter(e => e.status === 'todo' || e.status === 'progress');
   }, [entries, showAll]);
 
   // 날짜별 그루핑 (날짜순 정렬)
