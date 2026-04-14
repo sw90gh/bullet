@@ -334,7 +334,8 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '6px 8px', marginBottom: 2, borderRadius: 6,
                         background: `${C.blue}06`, border: `1px solid ${C.blue}15`,
-                      }}>
+                        cursor: 'pointer',
+                      }} onClick={() => { setViewingId(null); onEdit(linked); }}>
                         <span style={{ fontSize: 13, fontWeight: 800, color, width: 18, textAlign: 'center' }}>{symbol}</span>
                         <span style={{
                           fontSize: 12, color: C.textPrimary, flex: 1,
@@ -343,6 +344,7 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
                         {linked.date && (
                           <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>{linked.date.slice(5)}</span>
                         )}
+                        <span style={{ fontSize: 10, color: C.textMuted }}>›</span>
                       </div>
                     );
                   })}

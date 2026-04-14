@@ -586,6 +586,9 @@ export default function App() {
             setModal(null);
             setMigrateTarget({ entry, type: 'migrated' });
           }}
+          onNavigateToEntry={(entry) => {
+            setModal({ mode: 'edit', entry });
+          }}
           onDelete={(id) => {
             deleteEntryWithCleanup(id);
             setModal(null);

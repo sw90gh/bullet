@@ -13,6 +13,7 @@ interface EntryModalProps {
   onDelete?: (id: string) => void;
   onDuplicate?: (data: Partial<Entry>) => void;
   onRequestMigrate?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
   allTags?: string[];
   allEntries?: Entry[];  // 목표 연결용
 }
@@ -23,7 +24,7 @@ const ENTRY_TYPES = {
   note:  TYPES.note,
 };
 
-export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, onRequestMigrate, allTags = [], allEntries = [] }: EntryModalProps) {
+export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate, onRequestMigrate, onNavigateToEntry, allTags = [], allEntries = [] }: EntryModalProps) {
   const { styles, C } = useTheme();
   const existing = modal.entry;
 
@@ -394,7 +395,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '5px 8px', marginBottom: 2, borderRadius: 6,
                         background: `${C.blue}08`, border: `1px solid ${C.blue}20`,
-                      }}>
+                        cursor: onNavigateToEntry ? 'pointer' : undefined,
+                      }} onClick={() => onNavigateToEntry?.(linked)}>
                         <span style={{ fontSize: 12, fontWeight: 800, width: 16, textAlign: 'center',
                           color: linked.type === 'event' ? C.accent : linked.type === 'goal-yearly' ? C.blue : C.textPrimary,
                         }}>{symbol}</span>
@@ -405,7 +407,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                         <button style={{
                           background: 'none', border: 'none', fontSize: 14, color: C.textMuted,
                           cursor: 'pointer', padding: '2px 4px', flexShrink: 0,
-                        }} onClick={() => setLinkedNoteIds(prev => prev.filter(i => i !== id))}>✕</button>
+                        }} onClick={(e) => { e.stopPropagation(); setLinkedNoteIds(prev => prev.filter(i => i !== id)); }}>✕</button>
                       </div>
                     );
                   })}
@@ -708,7 +710,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '5px 8px', marginBottom: 2, borderRadius: 6,
                       background: `${C.blue}08`, border: `1px solid ${C.blue}20`,
-                    }}>
+                      cursor: onNavigateToEntry ? 'pointer' : undefined,
+                    }} onClick={() => onNavigateToEntry?.(linked)}>
                       <span style={{ fontSize: 12, fontWeight: 800, width: 16, textAlign: 'center',
                         color: linked.type === 'note' ? C.textSecondary : linked.type === 'event' ? C.accent : C.textPrimary,
                       }}>{symbol}</span>
@@ -719,7 +722,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
                       <button style={{
                         background: 'none', border: 'none', fontSize: 14, color: C.textMuted,
                         cursor: 'pointer', padding: '2px 4px', flexShrink: 0,
-                      }} onClick={() => setLinkedNoteIds(prev => prev.filter(i => i !== id))}>✕</button>
+                      }} onClick={(e) => { e.stopPropagation(); setLinkedNoteIds(prev => prev.filter(i => i !== id)); }}>✕</button>
                     </div>
                   );
                 })}
