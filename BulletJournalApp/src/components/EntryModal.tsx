@@ -377,6 +377,50 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
               </div>
             )}
 
+            {/* 연결된 항목 */}
+            <div style={{ marginTop: 6 }}>
+              <label style={labelSmall}>연결된 항목</label>
+              {linkedNoteIds.length > 0 && (
+                <div style={{ marginBottom: 4 }}>
+                  {linkedNoteIds.map(id => {
+                    const linked = allEntries.find(e => e.id === id);
+                    if (!linked) return null;
+                    const st = STATUS[linked.status] || STATUS.todo;
+                    const symbol = linked.type === 'event' ? '○'
+                      : linked.type === 'goal-yearly' ? '◎'
+                      : st.symbol;
+                    return (
+                      <div key={id} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '5px 8px', marginBottom: 2, borderRadius: 6,
+                        background: `${C.blue}08`, border: `1px solid ${C.blue}20`,
+                      }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, width: 16, textAlign: 'center',
+                          color: linked.type === 'event' ? C.accent : linked.type === 'goal-yearly' ? C.blue : C.textPrimary,
+                        }}>{symbol}</span>
+                        <span style={{
+                          fontSize: 12, color: C.textPrimary, flex: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{linked.text}</span>
+                        <button style={{
+                          background: 'none', border: 'none', fontSize: 14, color: C.textMuted,
+                          cursor: 'pointer', padding: '2px 4px', flexShrink: 0,
+                        }} onClick={() => setLinkedNoteIds(prev => prev.filter(i => i !== id))}>✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <button style={{
+                width: '100%', padding: '8px 0', borderRadius: 8,
+                border: `1.5px dashed ${C.border}`, background: 'transparent',
+                color: C.textSecondary, fontSize: 12, cursor: 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+              }} onClick={() => setShowLinkPopup(true)}>
+                + 항목 연결
+              </button>
+            </div>
+
             {/* 삭제/복제 */}
             {modal.mode === 'edit' && modal.entry && (
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
