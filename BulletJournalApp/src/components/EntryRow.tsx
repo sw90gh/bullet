@@ -302,6 +302,11 @@ export function EntryRow({ entry, cycleStatus, onEdit, onDelete, onMigrate, onMi
               {entry.memo}
             </div>
           )}
+          {entry.linkedNoteIds && entry.linkedNoteIds.length > 0 && (
+            <div style={{ fontSize: 10, color: C.blue, marginTop: 2 }}>
+              📎 {entry.type === 'note' ? '항목' : '메모'} {entry.linkedNoteIds.length}건
+            </div>
+          )}
           {entry.subtasks && entry.subtasks.length > 0 && (
             <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span>☑ {entry.subtasks.filter(s => s.done).length}/{entry.subtasks.length}</span>

@@ -89,6 +89,20 @@ export default function App() {
   useNotifications(entries, notificationsEnabled);
   const { events: gcalEvents, loading: gcalLoading, error: gcalError, refresh: gcalRefresh } = useGoogleCalendar(googleAccessToken, gcalEnabled);
 
+  // 삭제 시 양방향 연결 정리 + 삭제
+  const deleteEntryWithCleanup = useCallback((id: string) => {
+    const target = entries.find(e => e.id === id);
+    if (target?.linkedNoteIds) {
+      target.linkedNoteIds.forEach(linkedId => {
+        const linked = entries.find(e => e.id === linkedId);
+        if (linked?.linkedNoteIds) {
+          updateEntry(linkedId, { linkedNoteIds: linked.linkedNoteIds.filter(i => i !== id) });
+        }
+      });
+    }
+    deleteEntry(id);
+  }, [entries, updateEntry, deleteEntry]);
+
   const toggleGcal = useCallback((on: boolean) => {
     setGcalEnabled(on);
     localStorage.setItem('bujo-gcal', on ? 'on' : 'off');
@@ -529,10 +543,42 @@ export default function App() {
           allTags={allTags}
           allEntries={entries}
           onSaveEntry={(data) => {
+            let savedId: string;
             if (modal.mode === 'edit' && modal.entry) {
-              updateEntry(modal.entry.id, data);
+              savedId = modal.entry.id;
+              updateEntry(savedId, data);
             } else {
-              addEntry(data as Entry);
+              savedId = genId();
+              addEntry({ ...data, id: savedId } as Entry);
+            }
+            if (savedId && data.linkedNoteIds) {
+              const oldLinked = modal.entry?.linkedNoteIds || [];
+              const newLinked = data.linkedNoteIds || [];
+              // 새로 추가된 연결: 상대방에도 추가
+              newLinked.filter(id => !oldLinked.includes(id)).forEach(id => {
+                const target = entries.find(e => e.id === id);
+                if (target) {
+                  const targetLinks = target.linkedNoteIds || [];
+                  if (!targetLinks.includes(savedId)) {
+                    updateEntry(id, { linkedNoteIds: [...targetLinks, savedId] });
+                  }
+                }
+              });
+              // 제거된 연결: 상대방에서도 제거
+              oldLinked.filter(id => !newLinked.includes(id)).forEach(id => {
+                const target = entries.find(e => e.id === id);
+                if (target && target.linkedNoteIds) {
+                  updateEntry(id, { linkedNoteIds: target.linkedNoteIds.filter(i => i !== savedId) });
+                }
+              });
+            } else if (savedId && !data.linkedNoteIds && modal.entry?.linkedNoteIds) {
+              // 모든 연결 제거됨 → 상대방에서도 제거
+              modal.entry.linkedNoteIds.forEach(id => {
+                const target = entries.find(e => e.id === id);
+                if (target && target.linkedNoteIds) {
+                  updateEntry(id, { linkedNoteIds: target.linkedNoteIds.filter(i => i !== savedId) });
+                }
+              });
             }
             setModal(null);
           }}
@@ -541,7 +587,7 @@ export default function App() {
             setMigrateTarget({ entry, type: 'migrated' });
           }}
           onDelete={(id) => {
-            deleteEntry(id);
+            deleteEntryWithCleanup(id);
             setModal(null);
           }}
           onDuplicate={(data) => {
@@ -556,7 +602,7 @@ export default function App() {
         <DeleteConfirm
           onCancel={() => setDeleteConfirm(null)}
           onDelete={() => {
-            deleteEntry(deleteConfirm);
+            deleteEntryWithCleanup(deleteConfirm);
             setDeleteConfirm(null);
           }}
         />
@@ -598,7 +644,7 @@ export default function App() {
           onClose={() => setShowSearch(false)}
           onEdit={(e) => { setModal({ mode: 'edit', entry: e }); setShowSearch(false); }}
           cycleStatus={cycleStatus}
-          onDelete={(id) => deleteEntry(id)}
+          onDelete={(id) => deleteEntryWithCleanup(id)}
         />
       )}
 

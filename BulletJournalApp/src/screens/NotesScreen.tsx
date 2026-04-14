@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTheme } from '../hooks/useDarkModeContext';
 import { EntryRow } from '../components/EntryRow';
-import { PRIORITY } from '../utils/constants';
+import { PRIORITY, STATUS } from '../utils/constants';
 import { Entry, EntryPriority } from '../types';
 import { hasPin, setPin, verifyPin, removePin, isSessionUnlocked, unlockSession, lockSession, getLockedFolders, toggleFolderLock, isFolderLocked } from '../utils/notePin';
 
@@ -17,7 +17,7 @@ interface NotesScreenProps {
 }
 
 export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onChangePriority, onUpdateEntry, onPopupChange }: NotesScreenProps) {
-  const { styles, C } = useTheme();
+  const { styles, C, statusColor } = useTheme();
   const [search, setSearch] = useState('');
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<string>('전체');
@@ -314,6 +314,38 @@ export function NotesScreen({ entries, onAdd, onEdit, onDelete, cycleStatus, onC
               {viewingEntry.priority && viewingEntry.priority !== 'none' && (
                 <div style={{ marginTop: 8, fontSize: 11, color: C.textSecondary }}>
                   우선순위: {PRIORITY[viewingEntry.priority]?.symbol} {PRIORITY[viewingEntry.priority]?.label}
+                </div>
+              )}
+              {viewingEntry.linkedNoteIds && viewingEntry.linkedNoteIds.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, marginBottom: 4 }}>연결된 항목</div>
+                  {viewingEntry.linkedNoteIds.map(id => {
+                    const linked = entries.find(e => e.id === id);
+                    if (!linked) return null;
+                    const st = STATUS[linked.status] || STATUS.todo;
+                    const symbol = linked.type === 'event' ? '○'
+                      : linked.type === 'goal-yearly' ? '◎'
+                      : st.symbol;
+                    const color = linked.type === 'event' ? C.accent
+                      : linked.type === 'goal-yearly' ? C.blue
+                      : statusColor(linked.status);
+                    return (
+                      <div key={id} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '6px 8px', marginBottom: 2, borderRadius: 6,
+                        background: `${C.blue}06`, border: `1px solid ${C.blue}15`,
+                      }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color, width: 18, textAlign: 'center' }}>{symbol}</span>
+                        <span style={{
+                          fontSize: 12, color: C.textPrimary, flex: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{linked.text}</span>
+                        {linked.date && (
+                          <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>{linked.date.slice(5)}</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

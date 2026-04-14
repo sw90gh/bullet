@@ -129,6 +129,13 @@ iPhone PWA 불렛저널 앱. Vite + React + TypeScript. Vercel 자동배포 (Git
 - **상태**: `STATUS_CYCLE_BY_TYPE`에서 note는 빈 배열 → 상태 순환 없음, `STATUS_LABEL_BY_TYPE`에서 todo→'메모'
 - **필터**: 미완료 필터에서 메모는 항상 표시 (`e.type === 'note'` 조건 추가)
 - **달성도 제외**: 메모는 완료율/달성률 계산에서 제외 (DailySummary, StatsScreen, AnnualScreen)
+- **메모↔항목 양방향 연결**: `linkedNoteIds` 필드로 메모↔할일/일정 연결
+  - EntryModal: "연결된 메모"/"연결된 항목" 섹션 + LinkEntryPopup 검색/선택
+  - EntryRow: `📎 메모 N건` 표시
+  - NotesScreen 뷰어: 연결된 항목 목록 표시
+  - 양방향 동기화: 한쪽에서 연결/해제 시 상대방도 자동 업데이트
+  - 삭제 시 상대방 linkedNoteIds에서 자동 제거 (`deleteEntryWithCleanup`)
+- **메모 전용 표시**: 메모는 메모 탭에서만 표시 (전체/일간/주간/월간에서 제외)
 
 ### Gantt Chart
 - 주간/월간/분기 범위 전환

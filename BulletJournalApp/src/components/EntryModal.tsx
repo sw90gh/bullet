@@ -4,6 +4,7 @@ import { STATUS, TYPES, PRIORITY, STATUS_CYCLE_BY_TYPE, STATUS_LABEL_BY_TYPE } f
 import { getTodayStr } from '../utils/date';
 import { ModalState, Entry, RecurringConfig, Subtask } from '../types';
 import { uid as genId } from '../utils/date';
+import { LinkEntryPopup } from './LinkEntryPopup';
 
 interface EntryModalProps {
   modal: ModalState;
@@ -131,6 +132,8 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
   }, []);
   const [targetCount, setTargetCount] = useState<number>(existing?.targetCount || 0);
   const [linkedGoalId, setLinkedGoalId] = useState<string>(existing?.linkedGoalId || '');
+  const [linkedNoteIds, setLinkedNoteIds] = useState<string[]>(existing?.linkedNoteIds || []);
+  const [showLinkPopup, setShowLinkPopup] = useState(false);
 
   const isGoalType = type === 'goal-yearly' || type === 'goal-monthly';
   const isNote = type === 'note';
@@ -179,6 +182,7 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
       linkedGoalId: !isGoalType && linkedGoalId ? linkedGoalId : undefined,
       editHistory,
       folder: isNote && folder ? folder : undefined,
+      linkedNoteIds: linkedNoteIds.length > 0 ? linkedNoteIds : undefined,
     });
   };
 
@@ -642,6 +646,51 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
             </div>
           )}
 
+          {/* 연결된 메모/항목 */}
+          <div style={{ marginTop: 4 }}>
+            <label style={labelSmall}>{isNote ? '연결된 항목' : '연결된 메모'}</label>
+            {linkedNoteIds.length > 0 && (
+              <div style={{ marginBottom: 4 }}>
+                {linkedNoteIds.map(id => {
+                  const linked = allEntries.find(e => e.id === id);
+                  if (!linked) return null;
+                  const st = STATUS[linked.status] || STATUS.todo;
+                  const symbol = linked.type === 'note' ? '—'
+                    : linked.type === 'event' ? '○'
+                    : linked.type === 'goal-yearly' ? '◎'
+                    : st.symbol;
+                  return (
+                    <div key={id} style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '5px 8px', marginBottom: 2, borderRadius: 6,
+                      background: `${C.blue}08`, border: `1px solid ${C.blue}20`,
+                    }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, width: 16, textAlign: 'center',
+                        color: linked.type === 'note' ? C.textSecondary : linked.type === 'event' ? C.accent : C.textPrimary,
+                      }}>{symbol}</span>
+                      <span style={{
+                        fontSize: 12, color: C.textPrimary, flex: 1,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{linked.text}</span>
+                      <button style={{
+                        background: 'none', border: 'none', fontSize: 14, color: C.textMuted,
+                        cursor: 'pointer', padding: '2px 4px', flexShrink: 0,
+                      }} onClick={() => setLinkedNoteIds(prev => prev.filter(i => i !== id))}>✕</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button style={{
+              width: '100%', padding: '8px 0', borderRadius: 8,
+              border: `1.5px dashed ${C.border}`, background: 'transparent',
+              color: C.textSecondary, fontSize: 12, cursor: 'pointer',
+              fontFamily: '-apple-system, sans-serif',
+            }} onClick={() => setShowLinkPopup(true)}>
+              + {isNote ? '항목 연결' : '메모 연결'}
+            </button>
+          </div>
+
           {/* 서브태스크 (체크리스트) */}
           <div style={{ marginTop: 4 }}>
             <label style={labelSmall}>체크리스트</label>
@@ -792,6 +841,21 @@ export function EntryModal({ modal, onClose, onSaveEntry, onDelete, onDuplicate,
           </>)}
         </div>
       </div>
+      {showLinkPopup && (
+        <LinkEntryPopup
+          entries={isNote
+            ? allEntries.filter(e => e.type !== 'note' && e.id !== existing?.id)
+            : allEntries.filter(e => e.type === 'note' && e.id !== existing?.id)
+          }
+          alreadyLinked={linkedNoteIds}
+          mode={isNote ? 'entry' : 'note'}
+          onLink={(id) => {
+            setLinkedNoteIds(prev => [...prev, id]);
+            setShowLinkPopup(false);
+          }}
+          onClose={() => setShowLinkPopup(false)}
+        />
+      )}
     </div>
   );
 }

@@ -25,6 +25,7 @@ export interface Entry {
   originalDate?: string;  // 밀린 항목 배치 시 원래 날짜 보관 (✕ 해제 시 복원용)
   linkedEntryId?: string; // 상위 이관 시 원본 항목 ID
   linkedGoalId?: string;  // 이 항목이 연결된 목표 ID
+  linkedNoteIds?: string[]; // 연결된 메모/항목 ID 목록 (양방향)
   targetCount?: number;   // 목표 달성에 필요한 횟수
   updatedAt?: number;
   editHistory?: { text: string; memo?: string; editedAt: number }[];
