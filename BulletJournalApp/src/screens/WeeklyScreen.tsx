@@ -30,6 +30,7 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
   const weekDates = getWeekDates(date.getFullYear(), date.getMonth(), date.getDate());
   const todayStr = getTodayStr();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
+  const [overdueCollapsed, setOverdueCollapsed] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState(0);
 
@@ -115,11 +116,12 @@ export function WeeklyScreen({ date, entries, cycleStatus, onAdd, onEdit, onDele
             <div style={{
               fontSize: 12, fontWeight: 700, color: C.accent,
               padding: '6px 2px 4px', borderBottom: `1px solid ${C.accent}40`,
-              marginBottom: 4,
-            }}>
-              밀린 항목 ({overdue.length}건)
+              marginBottom: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }} onClick={() => setOverdueCollapsed(prev => !prev)}>
+              <span>밀린 항목 ({overdue.length}건)</span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>{overdueCollapsed ? '▶' : '▼'}</span>
             </div>
-            {overdue.map(entry => (
+            {!overdueCollapsed && overdue.map(entry => (
               <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
                 onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
                 onMigrate={onMigrate ? () => onMigrate(entry) : undefined}

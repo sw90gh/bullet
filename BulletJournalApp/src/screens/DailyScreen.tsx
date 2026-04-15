@@ -53,6 +53,7 @@ function yToMinutes(y: number): number {
 export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onAddAtTime, onEdit, onDelete, onMigrate, onMigrateUp, onChangePriority, onUpdateEntry, gcalEvents = [], onPopupChange }: DailyScreenProps) {
   const { styles, isDark, C, statusColor } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
+  const [overdueCollapsed, setOverdueCollapsed] = useState(false);
   const [untimedOpen, setUntimedOpen] = useState(false);
   const [placePanel, setPlacePanel] = useState<string | null>(null); // 시간 문자열 or null
   const dateStr = formatDateKey(date);
@@ -496,11 +497,12 @@ export function DailyScreen({ date, entries, allEntries, cycleStatus, onAdd, onA
           <div style={{
             fontSize: 12, fontWeight: 700, color: C.accent,
             padding: '6px 2px 4px', borderBottom: `1px solid ${C.accent}40`,
-            marginBottom: 4,
-          }}>
-            밀린 항목 ({overdueEntries.length}건)
+            marginBottom: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }} onClick={() => setOverdueCollapsed(prev => !prev)}>
+            <span>밀린 항목 ({overdueEntries.length}건)</span>
+            <span style={{ fontSize: 10, opacity: 0.7 }}>{overdueCollapsed ? '▶' : '▼'}</span>
           </div>
-          {overdueEntries.map(entry => (
+          {!overdueCollapsed && overdueEntries.map(entry => (
             <EntryRow key={entry.id} entry={entry} cycleStatus={cycleStatus}
               onEdit={() => onEdit(entry)} onDelete={() => onDelete(entry.id)}
               onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
